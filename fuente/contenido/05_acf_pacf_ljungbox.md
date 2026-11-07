@@ -1,0 +1,296 @@
+## 🔗 Análisis de autocorrelación: ACF y PACF {#acf-pacf}
+@mapa Correlograma, bandas de Bartlett, efectos directos e indirectos, PACF deducida a mano y patrones de identificación.
+
+### La ACF y el correlograma {#correlograma}
+
+:::definicion Correlograma
+Es la gráfica de las autocorrelaciones muestrales $\hat\rho(k)$ [[autocorr]] contra el rezago $k = 1, 2, \dots$, con **bandas de confianza** alrededor de 0. Cada barra responde: *¿qué tan correlacionados están los valores separados $k$ periodos?* Las barras que **salen** de la banda son significativamente distintas de 0.
+:::
+
+```python
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+
+fig, ejes = plt.subplots(1, 2, figsize=(11, 3.5))
+plot_acf(serie, lags=36, ax=ejes[0], title="ACF de AirPassengers")
+plot_pacf(serie, lags=36, ax=ejes[1], method="ywm", title="PACF de AirPassengers")
+plt.show()
+print("Primeras autocorrelaciones:", np.round(acf(serie, nlags=4), 3))
+```
+
+Una ACF que empieza en casi 1 y **baja muy despacio** (0.95, 0.92, 0.88…) es la firma de una serie con tendencia o raíz unitaria [[paseo-demo]]: hay que diferenciar antes de interpretar nada más.
+
+### Bandas de confianza (Bartlett) {#bartlett}
+
+:::definicion Banda para ruido blanco
+Si la serie es ruido blanco [[ruido-blanco]], para $n$ grande cada autocorrelación muestral se comporta como una normal con media 0 y varianza $1/n$:
+
+$$\hat\rho(k) \;\approx\; N\!\left(0,\; \frac{1}{n}\right) \qquad\Longrightarrow\qquad \text{banda al 95\%:}\;\; \pm\frac{\tip{z196}{1.96}}{\sqrt{\tip{n}{n}}}$$
+
+La deducción de la banda a partir de la normal está en [[normal]]. Con $n = 100$: $\pm 0.196$; con $n = 144$ (AirPassengers): $\pm 1.96/12 = \pm 0.163$; con $n = 400$: $\pm 0.098$. **Más datos ⇒ bandas más angostas** ⇒ detectamos correlaciones más pequeñas.
+:::
+
+:::definicion Banda de Bartlett (la que dibuja `plot_acf`)
+`plot_acf` dibuja por defecto una banda que **se ensancha** con el rezago:
+
+$$\Var\big(\hat\rho(k)\big) \approx \frac{1}{n}\left(1 + 2\sum_{j=1}^{k-1}\hat\rho(j)^2\right), \qquad \text{banda: } \pm 1.96\sqrt{\Var\big(\hat\rho(k)\big)}$$
+
+Supone que las autocorrelaciones **hasta $k - 1$** pueden ser distintas de 0 (un MA($k-1$)) y pregunta si la del rezago $k$ también lo es. Para $k = 1$ coincide con $\pm 1.96/\sqrt n$.
+:::
+
+:::ejemplo Bandas a mano
+Con $n = 100$ y $\hat\rho(1) = 0.5$:
+
+:::pasos
+= k = 1:\quad \pm\frac{1.96}{\sqrt{100}} = \pm 0.196
+> El primer rezago usa la banda de ruido blanco.
+= k = 2:\quad \Var(\hat\rho(2)) \approx \frac{1 + 2(0.5)^2}{100} = \frac{1.5}{100} = 0.015
+> La suma solo tiene el término $j = 1$.
+= \pm 1.96\sqrt{0.015} = \pm 1.96 \times 0.12247 = \pm 0.240
+> La banda del rezago 2 es más ancha porque el rezago 1 fue grande.
+:::
+
+Así, $\hat\rho(1) = 0.5$ (fuera de $\pm 0.196$) es significativa, pero un $\hat\rho(2) = 0.22$ quedaría **dentro** de $\pm 0.240$.
+:::
+
+:::cuidado 5% de falsas alarmas
+Con bandas al 95%, aunque la serie sea ruido blanco, **1 de cada 20 barras** saldrá de la banda por azar. Ver una barra aislada fuera en el rezago 17 no significa mucho; por eso existe una prueba **conjunta**: Ljung–Box [[ljung-box]].
+:::
+
+:::interactivo bartlett | Ruido blanco y bandas de confianza
+Mueve $n$ y genera nuevas muestras. La banda se angosta como $1/\sqrt n$ y, en promedio, alrededor del 5% de las barras cae fuera (marcadas en rosa).
+:::
+
+### Efectos directos e indirectos {#indirectos}
+
+En un AR(1), $y_t$ depende **directamente** solo de $y_{t-1}$. Sin embargo $\rho(2) = \phi^2 \ne 0$ [[ar1-acf]]. ¿Por qué hay correlación con $y_{t-2}$ si no aparece en el modelo?
+
+:::intuicion La cadena de influencia
+$y_{t-2}$ influye en $y_{t-1}$, y $y_{t-1}$ influye en $y_t$. La correlación entre $y_t$ y $y_{t-2}$ es un efecto **indirecto** que viaja por $y_{t-1}$: con $\phi = 0.8$, el rezago 2 hereda $0.8 \times 0.8 = 0.64$.
+
+- La **ACF** mide la correlación **total** (directa + indirecta).
+- La **PACF** mide solo la parte **directa**: la relación que queda entre $y_t$ y $y_{t-k}$ después de descontar los rezagos intermedios $y_{t-1}, \dots, y_{t-k+1}$.
+:::
+
+### La PACF (autocorrelación parcial) {#pacf}
+
+:::definicion Autocorrelación parcial
+La PACF en el rezago $k$, $\tip{phikk}{\phi_{kk}}$, es el **último coeficiente** de la regresión de $y_t$ sobre sus $k$ primeros rezagos:
+
+$$y_t = \phi_{k1}\,y_{t-1} + \phi_{k2}\,y_{t-2} + \dots + \tip{phikk}{\phi_{kk}}\,y_{t-k} + e_t$$
+
+Como los rezagos intermedios están en la regresión, $\phi_{kk}$ mide el efecto de $y_{t-k}$ **manteniendo fijos** los demás. En el rezago 1 no hay intermedios, así que $\phi_{11} = \rho(1)$.
+:::
+
+:::demo La PACF del rezago 2 en función de la ACF {#pacf-2}
+Trabajamos con la serie centrada (media 0) y la regresión de orden 2: $y_t = \phi_{21}\,y_{t-1} + \phi_{22}\,y_{t-2} + e_t$, donde $e_t$ no está correlacionado con $y_{t-1}$ ni con $y_{t-2}$.
+
+:::pasos
+= \E[y_t\,y_{t-1}] = \phi_{21}\,\E[y_{t-1}^2] + \phi_{22}\,\E[y_{t-2}\,y_{t-1}]
+> Multiplicamos la regresión por $y_{t-1}$ y tomamos esperanza; el término $\E[e_t y_{t-1}] = 0$.
+= \gamma(1) = \phi_{21}\,\gamma(0) + \phi_{22}\,\gamma(1) \;\Longrightarrow\; \rho_1 = \phi_{21} + \phi_{22}\,\rho_1
+> Reconocemos autocovarianzas y dividimos todo entre $\gamma(0)$ (escribimos $\rho_k = \rho(k)$).
+= \E[y_t\,y_{t-2}] = \phi_{21}\,\E[y_{t-1}y_{t-2}] + \phi_{22}\,\E[y_{t-2}^2] \;\Longrightarrow\; \rho_2 = \phi_{21}\,\rho_1 + \phi_{22}
+> Lo mismo multiplicando por $y_{t-2}$. Estas son las **ecuaciones de Yule–Walker**.
+= \phi_{21} = \rho_1\,(1 - \phi_{22})
+> De la primera ecuación: $\phi_{21} = \rho_1 - \phi_{22}\rho_1$.
+= \rho_2 = \rho_1^2\,(1 - \phi_{22}) + \phi_{22} = \rho_1^2 + \phi_{22}\,(1 - \rho_1^2)
+> Sustituimos en la segunda y agrupamos los términos con $\phi_{22}$.
+= \phi_{22} = \frac{\rho_2 - \rho_1^2}{1 - \rho_1^2}
+> Despejamos. El numerador es lo que $\rho_2$ tiene **de más** respecto a lo que explicaría la cadena $\rho_1 \times \rho_1$.
+:::
+
+**Comprobación con el AR(1):** $\rho_1 = \phi$ y $\rho_2 = \phi^2$, así que $\phi_{22} = (\phi^2 - \phi^2)/(1 - \phi^2) = 0$. ✓ La PACF de un AR(1) **se corta** después del rezago 1: todo lo que hay en el rezago 2 era indirecto.
+:::
+
+:::ejemplo PACF a mano con la serie diminuta
+De [[autocorr]]: $\hat\rho_1 = 0.1$ y $\hat\rho_2 = -0.6$.
+
+:::pasos
+= \hat\phi_{11} = \hat\rho_1 = 0.1
+> En el rezago 1, PACF y ACF coinciden.
+= \hat\phi_{22} = \frac{-0.6 - (0.1)^2}{1 - (0.1)^2} = \frac{-0.6 - 0.01}{1 - 0.01} = \frac{-0.61}{0.99} = -0.6162
+> Casi toda la correlación del rezago 2 es **directa**: la cadena a través del rezago 1 solo explicaría $0.1 \times 0.1 = 0.01$.
+:::
+
+Para rezagos mayores se repite la idea con más ecuaciones (el algoritmo de **Durbin–Levinson** las resuelve de forma recursiva).
+:::
+
+```python
+from statsmodels.tsa.stattools import pacf
+
+y = np.array([2, 4, 6, 5, 3, 4], dtype=float)
+print("PACF (método 'ywm', Yule-Walker con la ACF de la sección 4):", np.round(pacf(y, nlags=2, method="ywm"), 4))
+```
+
+### Patrones para identificar modelos {#patrones}
+
+Para completar el cuadro necesitamos un proceso cuya ACF **se corte**: el MA(1).
+
+:::demo ACF del MA(1): ρ(1) = θ/(1 + θ²) y luego 0 {#ma1-acf}
+Modelo: $y_t = \varepsilon_t + \theta\,\varepsilon_{t-1}$, con $\varepsilon_t \sim \mathrm{RB}(0, \sigma^2)$. Su media es 0.
+
+:::pasos
+= \gamma(0) = \Var(\varepsilon_t) + \theta^2\Var(\varepsilon_{t-1}) = (1 + \theta^2)\,\sigma^2
+> Choques no correlacionados: se suman las varianzas [[cov-prop]].
+= \gamma(1) = \Cov(\varepsilon_t + \theta\varepsilon_{t-1},\; \varepsilon_{t-1} + \theta\varepsilon_{t-2}) = \theta\,\Var(\varepsilon_{t-1}) = \theta\,\sigma^2
+> De los cuatro productos, solo el que comparte $\varepsilon_{t-1}$ no es cero.
+= \gamma(k) = 0 \quad (k \ge 2)
+> $y_t$ y $y_{t-k}$ ya no comparten ningún choque.
+= \rho(1) = \frac{\theta\,\sigma^2}{(1 + \theta^2)\,\sigma^2} = \frac{\theta}{1 + \theta^2}, \qquad \rho(k) = 0 \;\; (k \ge 2)
+> La ACF **se corta** después del rezago 1. Con $\theta = 0.5$: $\rho(1) = 0.5/1.25 = 0.4$. El máximo posible es $0.5$ (con $\theta = 1$).
+:::
+:::
+
+| Proceso | ACF | PACF |
+|---|---|---|
+| Ruido blanco | todas ≈ 0 | todas ≈ 0 |
+| AR(1), $\phi > 0$ | decae geométricamente ($\phi^k$) | **se corta** después de 1 |
+| AR(1), $\phi < 0$ | decae alternando signo | se corta después de 1 (negativa) |
+| AR($p$) | decae gradualmente | **se corta** después de $p$ |
+| MA(1) | **se corta** después de 1 | decae gradualmente |
+| MA($q$) | **se corta** después de $q$ | decae gradualmente |
+| ARMA($p, q$) | decae gradualmente | decae gradualmente |
+| Paseo aleatorio / tendencia | decae **muy lento** desde ≈ 1 | pico ≈ 1 en el rezago 1 |
+| Estacional (periodo $s$) | picos en $s, 2s, 3s, \dots$ | pico en $s$ |
+
+:::examen Regla rápida de la guía
+- Corte claro en la **ACF** ⇒ posible componente **MA($q$)**.
+- Corte claro en la **PACF** ⇒ posible componente **AR($p$)**.
+- Ambas decaen gradualmente ⇒ posible **ARMA**.
+- Después de ajustar un modelo, la ACF/PACF de los **residuos** no debe mostrar patrones: si quedan barras significativas, el modelo dejó señal sin capturar.
+:::
+
+:::interactivo correlograma | Galería de correlogramas
+Elige un proceso y su parámetro. Verás la serie, la ACF y la PACF con sus bandas. Compara lo que ves con la tabla de arriba: con $n$ pequeño los patrones son más ruidosos; súbelo para verlos con claridad.
+:::
+
+:::definicion Cómo leer ACF y PACF en la práctica
+1. **Grafica la serie.** Si tiene tendencia o la ACF decae muy lento, primero transforma o diferencia [[diferenciacion]].
+2. **Busca estacionalidad**: picos en $s, 2s, \dots$ ⇒ diferencia estacional.
+3. Con la serie ya estacionaria, mira **dónde se corta** cada función (ACF ⇒ $q$, PACF ⇒ $p$).
+4. Ignora barras aisladas en rezagos altos (5% de falsas alarmas) y confirma con **Ljung–Box** [[ljung-box]].
+:::
+
+## 📦 La prueba de Ljung–Box {#ljung-box}
+@mapa Prueba conjunta de autocorrelación: la fórmula parte por parte, cálculo a mano y cómo elegir h.
+
+### ¿Por qué una prueba conjunta? {#lb-por-que}
+
+:::demo Revisar barra por barra produce falsas alarmas {#falsas-alarmas}
+Supón que la serie es ruido blanco y revisas 20 rezagos, cada uno con 5% de probabilidad de salir de la banda por azar (y, para simplificar, independientes entre sí).
+
+:::pasos
+= P(\text{una barra queda dentro}) = 0.95
+> Complemento del 5%.
+= P(\text{las 20 quedan dentro}) = 0.95^{20} = 0.3585
+> Eventos independientes: se multiplican las probabilidades.
+= P(\text{al menos una sale}) = 1 - 0.95^{20} = 0.6415
+> Complemento: ¡casi dos de cada tres veces verías alguna barra «significativa» en ruido puro!
+:::
+:::
+
+Ljung–Box resume **todas** las autocorrelaciones hasta el rezago $h$ en un solo número y una sola decisión.
+
+### La fórmula parte por parte {#lb-formula}
+
+:::definicion Estadístico de Ljung–Box
+$$\tip{Q}{Q} = \tip{n}{n}\,(n + 2)\sum_{k=1}^{\tip{h}{h}} \frac{\hat\rho(k)^2}{n - k} \;\;\overset{H_0}{\sim}\;\; \chi^2_{h}$$
+
+- $\hat\rho(k)^2$: cada autocorrelación **al cuadrado** (así las negativas también suman evidencia).
+- $\frac{1}{n-k}$: da más peso a los rezagos altos, que se estiman con menos parejas [[rezago]].
+- $n(n+2)$: escala la suma para que, bajo $H_0$, siga una $\chi^2$.
+- $h$: cuántos rezagos se evalúan juntos; son los grados de libertad.
+
+$$H_0: \rho(1) = \rho(2) = \dots = \rho(h) = 0 \quad(\text{no hay autocorrelación}) \qquad H_1: \text{alguna es distinta de 0}$$
+
+Regla: **p-value < 0.05 ⇒ hay dependencia temporal significativa**.
+:::
+
+:::demo De dónde sale la ji-cuadrada {#lb-chi2}
+:::pasos
+= \sqrt{n}\;\hat\rho(k) \approx N(0, 1)
+> Bajo ruido blanco, $\hat\rho(k) \approx N(0, 1/n)$ [[bartlett]]; multiplicar por $\sqrt n$ estandariza [[normal]].
+= n\,\hat\rho(k)^2 \approx \chi^2_1
+> Una normal estándar al cuadrado es, por definición, una $\chi^2$ con 1 grado de libertad.
+= Q_{BP} = n\sum_{k=1}^{h}\hat\rho(k)^2 \approx \chi^2_h
+> Las $\hat\rho(k)$ de rezagos distintos son aproximadamente independientes: la suma de $h$ ji-cuadradas de 1 g.l. es una $\chi^2_h$. Este es el estadístico de **Box–Pierce**.
+= \Var\big(\hat\rho(k)\big) \approx \frac{n - k}{n(n+2)} \;\Longrightarrow\; Q = n(n+2)\sum_{k=1}^{h}\frac{\hat\rho(k)^2}{n - k}
+> Con muestras pequeñas la varianza exacta es un poco menor que $1/n$; Ljung y Box estandarizan con ella y la aproximación $\chi^2_h$ mejora mucho.
+:::
+:::
+
+### Ljung–Box calculada a mano {#lb-mano}
+
+:::ejemplo (a) La serie diminuta, h = 2
+Con $n = 6$, $\hat\rho(1) = 0.1$ y $\hat\rho(2) = -0.6$ [[autocorr]]:
+
+:::pasos
+= Q = 6 \cdot 8\left(\frac{0.1^2}{6 - 1} + \frac{(-0.6)^2}{6 - 2}\right) = 48\left(\frac{0.01}{5} + \frac{0.36}{4}\right)
+> Sustituimos $n = 6$, $n + 2 = 8$ y los dos rezagos.
+= Q = 48\,(0.002 + 0.09) = 48 \times 0.092 = 4.416
+> Casi todo viene del rezago 2.
+= \text{p-value} = P(\chi^2_2 > 4.416) = e^{-4.416/2} = e^{-2.208} = 0.1099
+> Con 2 grados de libertad la cola de la $\chi^2$ tiene fórmula exacta: $P(\chi^2_2 > q) = e^{-q/2}$.
+= 0.1099 > 0.05 \;\Longrightarrow\; \text{no se rechaza } H_0
+> Con solo 6 datos no hay evidencia suficiente, aunque $\hat\rho(2) = -0.6$ parezca grande. (El valor crítico es $\chi^2_{2;\,0.95} = 5.991$.)
+:::
+:::
+
+:::ejemplo (b) n = 100 y tres autocorrelaciones
+Con $\hat\rho = (0.30,\; 0.10,\; -0.05)$ y $h = 3$:
+
+:::pasos
+= Q = 100 \cdot 102\left(\frac{0.09}{99} + \frac{0.01}{98} + \frac{0.0025}{97}\right)
+> Los cuadrados son 0.09, 0.01 y 0.0025.
+= Q = 10200\,(0.000909 + 0.000102 + 0.000026) = 10200 \times 0.001037 = 10.58
+> Sumamos las tres contribuciones.
+= 10.58 > 7.815 = \chi^2_{3;\,0.95} \;\Longrightarrow\; \text{se rechaza } H_0 \;(\text{p-value} = 0.014)
+> Hay autocorrelación significativa (sobre todo por el rezago 1).
+:::
+:::
+
+```python
+from statsmodels.stats.diagnostic import acorr_ljungbox
+from scipy.stats import chi2
+
+print(acorr_ljungbox(np.array([2, 4, 6, 5, 3, 4.]), lags=[2]))
+Q = 100 * 102 * (0.30**2 / 99 + 0.10**2 / 98 + 0.05**2 / 97)
+print(f"\nCaso (b): Q = {Q:.3f}   p-value = {chi2.sf(Q, 3):.4f}   crítico 5% = {chi2.ppf(0.95, 3):.3f}")
+```
+
+### ¿Qué h usar? Y cómo se aplica a residuos {#lb-h}
+
+| Situación | $h$ recomendado |
+|---|---|
+| Serie no estacional | $h = 10$ (o $\min(10,\, n/5)$) |
+| Serie estacional de periodo $s$ | $h = 2s$ (24 en mensuales) |
+| Regla alternativa | $h \approx \ln(n)$ |
+
+- Un $h$ **muy pequeño** puede no ver autocorrelaciones en rezagos lejanos (por ejemplo, la estacional en 12).
+- Un $h$ **muy grande** diluye la evidencia entre muchos rezagos sin señal y pierde potencia.
+- Al aplicar Ljung–Box a los **residuos** de un ARMA($p, q$) se restan los parámetros estimados de los grados de libertad: $\chi^2_{h - p - q}$ (lo verás en la Unidad II).
+
+:::cuidado Estacionaria no es lo mismo que ruido blanco
+Un AR(1) con $\phi = 0.5$ es **estacionario** [[ar1]], pero **sí** tiene autocorrelación: Ljung–Box la rechaza. Las pruebas ADF/KPSS responden «¿es estable?»; Ljung–Box responde «¿tiene memoria lineal?». Un buen modelo deja **residuos** que pasan ambas: estables y sin memoria.
+:::
+
+```python
+rng = np.random.default_rng(3)
+rb = rng.normal(size=200)
+ar = np.zeros(200)
+for t in range(1, 200):
+    ar[t] = 0.5 * ar[t - 1] + rb[t]
+print("Ruido blanco:"); print(acorr_ljungbox(rb, lags=[5, 10]))
+print("AR(1) con φ = 0.5 (estacionario):"); print(acorr_ljungbox(ar, lags=[5, 10]))
+```
+
+:::interactivo ljungbox | Ljung–Box paso a paso
+Las barras muestran cuánto aporta cada rezago a $Q$; la línea, cómo se acumula $Q$ hasta el rezago $h$, comparada con el valor crítico de la $\chi^2_h$. Cambia $\phi$ (0 = ruido blanco) y $h$.
+:::
+
+:::resumen Lo esencial de las secciones 7 y 8
+- ACF: correlación total; PACF: correlación directa ($\phi_{kk}$ = último coeficiente de la regresión de orden $k$).
+- Bandas: $\pm 1.96/\sqrt n$ (Bartlett las ensancha con el rezago).
+- AR($p$): PACF se corta en $p$. MA($q$): ACF se corta en $q$. Raíz unitaria: ACF decae muy lento.
+- Ljung–Box: $Q = n(n+2)\sum_{k=1}^h \hat\rho(k)^2/(n-k) \sim \chi^2_h$; p-value < 0.05 ⇒ hay autocorrelación.
+:::
