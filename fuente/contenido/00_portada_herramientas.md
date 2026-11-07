@@ -77,19 +77,28 @@ $$\sum_{t=1}^{\tip{n}{n}} y_t = y_1 + y_2 + \dots + y_n$$
 Se lee «la suma de $y_t$ desde $t = 1$ hasta $t = n$». El número de abajo es **dónde empiezas**, el de arriba **dónde terminas**, y lo de la derecha es **lo que sumas** en cada paso.
 :::
 
-:::ejemplo Sumatorias con números
-Con $y_1 = 3,\; y_2 = 5,\; y_3 = 2,\; y_4 = 6$:
+:::guiado Sumatorias con números
+Datos: $y_1 = 3,\; y_2 = 5,\; y_3 = 2,\; y_4 = 6$.
 
-:::pasos
+| $t$ | $y_t$ | $y_{t-1}$ | $y_t\,y_{t-1}$ |
+|---|---|---|---|
+| 1 | 3 | — | — |
+| 2 | 5 | 3 | 15 |
+| 3 | 2 | 5 | 10 |
+| 4 | 6 | 2 | 12 |
+---
 = \sum_{t=1}^{4} y_t = y_1 + y_2 + y_3 + y_4 = 3 + 5 + 2 + 6 = 16
-> Se sustituye $t = 1, 2, 3, 4$ y se suman los cuatro términos.
+> Se sustituye $t = 1, 2, 3, 4$ y se suman los cuatro valores de la columna $y_t$.
+@ usa c2[1-4]
 = \sum_{t=2}^{4} y_t = y_2 + y_3 + y_4 = 5 + 2 + 6 = 13
-> Ahora empieza en $t = 2$: solo hay **tres** términos. Ojo con el índice de abajo.
-= \sum_{t=2}^{4} y_t\,y_{t-1} = y_2 y_1 + y_3 y_2 + y_4 y_3
-> Cada término multiplica un valor por el **anterior**. Empezamos en $t = 2$ porque $y_0$ no existe.
-= = 5\cdot 3 + 2\cdot 5 + 6\cdot 2 = 15 + 10 + 12 = 37
-> Esta forma (producto de un valor con su rezago) es exactamente la que aparece en la autocovarianza [[autocov]].
-:::
+> Ahora empieza en $t = 2$: solo entran **tres** renglones. Ojo con el índice de abajo.
+@ usa c2[2-4]
+= y_{t-1} = (\text{—},\; 3,\; 5,\; 2)
+> El rezago de cada renglón es el valor del renglón **anterior**. En $t = 1$ no existe, porque $y_0$ no se observó.
+@ usa c2[1-3]; da c3[2-4]
+= \sum_{t=2}^{4} y_t\,y_{t-1} = 5\cdot 3 + 2\cdot 5 + 6\cdot 2 = 15 + 10 + 12 = 37
+> Cada término multiplica un valor por el anterior. Es exactamente la forma de la autocovarianza [[autocov]].
+@ usa c2[2-4] c3[2-4]; da c4[2-4]
 :::
 
 :::duda ¿Por qué tantas fórmulas «suman»?
@@ -293,25 +302,33 @@ Llamemos $Z_X = X/\sigma_X$ y $Z_Y = Y/\sigma_Y$. Por [[var-prop]] (b), $\Var(Z_
 Por eso cualquier **autocorrelación** $\rho(k)$ también vive entre $-1$ y $1$ [[autocorr]].
 :::
 
-:::ejemplo Covarianza y correlación con 4 datos
-Datos: $x = (1, 2, 3, 4)$ y $y = (2, 4, 5, 9)$. Medias: $\bar x = 10/4 = 2.5$ y $\bar y = 20/4 = 5$.
-
-| $i$ | $x_i - \bar x$ | $y_i - \bar y$ | producto | $(x_i-\bar x)^2$ | $(y_i - \bar y)^2$ |
-|---|---|---|---|---|---|
-| 1 | −1.5 | −3 | 4.5 | 2.25 | 9 |
-| 2 | −0.5 | −1 | 0.5 | 0.25 | 1 |
-| 3 | 0.5 | 0 | 0 | 0.25 | 0 |
-| 4 | 1.5 | 4 | 6 | 2.25 | 16 |
-| **Suma** | 0 | 0 | **11** | **5** | **26** |
-
-:::pasos
-= \widehat{\Cov}(x,y) = \frac{11}{4} = 2.75
+:::guiado Covarianza y correlación con 4 datos
+| $i$ | $x_i$ | $y_i$ | $x_i - \bar x$ | $y_i - \bar y$ | producto | $(x_i-\bar x)^2$ | $(y_i - \bar y)^2$ |
+|---|---|---|---|---|---|---|---|
+| 1 | 1 | 2 | −1.5 | −3 | 4.5 | 2.25 | 9 |
+| 2 | 2 | 4 | −0.5 | −1 | 0.5 | 0.25 | 1 |
+| 3 | 3 | 5 | 0.5 | 0 | 0 | 0.25 | 0 |
+| 4 | 4 | 9 | 1.5 | 4 | 6 | 2.25 | 16 |
+| **Suma** | 10 | 20 | 0 | 0 | **11** | **5** | **26** |
+---
+= \bar x = \frac{1 + 2 + 3 + 4}{4} = \frac{10}{4} = 2.5, \qquad \bar y = \frac{2 + 4 + 5 + 9}{4} = \frac{20}{4} = 5
+> Sumamos cada columna de datos y dividimos entre $n = 4$.
+@ usa c2[1-4] c3[1-4]; da c2[5] c3[5]
+= x_i - 2.5 = (-1.5,\, -0.5,\, 0.5,\, 1.5), \qquad y_i - 5 = (-3,\, -1,\, 0,\, 4)
+> A cada dato le restamos su media. Las dos columnas de desviaciones suman 0 [[suma-desv]].
+@ usa c2[1-4] c3[1-4] c2[5] c3[5]; da c4[1-5] c5[1-5]
+= (x_i - \bar x)(y_i - \bar y) = (4.5,\; 0.5,\; 0,\; 6)
+> Multiplicamos renglón por renglón: $(-1.5)(-3) = 4.5$, $(-0.5)(-1) = 0.5$, $(0.5)(0) = 0$, $(1.5)(4) = 6$.
+@ usa c4[1-4] c5[1-4]; da c6[1-4]
+= \widehat{\Cov}(x,y) = \frac{4.5 + 0.5 + 0 + 6}{4} = \frac{11}{4} = 2.75
 > Promedio de los productos (dividimos entre $n = 4$).
-= \hat\sigma_x^2 = \frac{5}{4} = 1.25, \qquad \hat\sigma_y^2 = \frac{26}{4} = 6.5
-> Promedio de los cuadrados de cada columna.
+@ usa c6[1-4]; da c6[5]
+= \hat\sigma_x^2 = \frac{2.25 + 0.25 + 0.25 + 2.25}{4} = \frac{5}{4} = 1.25, \qquad \hat\sigma_y^2 = \frac{9 + 1 + 0 + 16}{4} = \frac{26}{4} = 6.5
+> Elevamos al cuadrado cada desviación y promediamos.
+@ usa c4[1-4] c5[1-4]; da c7[1-5] c8[1-5]
 = \widehat{\Corr}(x, y) = \frac{2.75}{\sqrt{1.25}\,\sqrt{6.5}} = \frac{2.75}{2.8504} = 0.9648
-> Correlación muy alta y positiva: cuando $x$ crece, $y$ también.
-:::
+> Covarianza entre el producto de las desviaciones estándar: correlación muy alta y positiva.
+@ usa c6[5] c7[5] c8[5]
 :::
 
 ### Logaritmos {#logaritmos}

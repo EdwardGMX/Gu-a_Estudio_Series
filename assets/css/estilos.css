@@ -405,3 +405,49 @@ li.check input:checked + * , li.check label:has(input:checked) { color: var(--te
 .w-leer-cab { font-family: var(--fuente-titulo); font-weight: 600; color: var(--rosa-o); margin-top: 10px; }
 .w-leer ul { margin: .4em 0; } .w-leer li { margin: .25em 0; font-size: .95rem; }
 .w-leer p { margin: .5em 0; font-size: .95rem; }
+
+/* Ejemplos guiados */
+.guiado .g-fijo { position: sticky; top: calc(var(--alto-barra) + 6px); z-index: 5; background: var(--durazno-f); padding: 2px 0 4px; }
+.guiado .g-tabla { margin: .5em 0; max-height: 52vh; overflow: auto; }
+.guiado .g-tabla td, .guiado .g-tabla th { transition: background-color .2s ease, color .2s ease, box-shadow .2s ease; text-align: center; }
+.guiado td.g-usa, .guiado th.g-usa { background: #fff1a8 !important; box-shadow: inset 0 0 0 2px #f0c94a; font-weight: 800; }
+.guiado td.g-da, .guiado th.g-da { background: #c9f0dc !important; box-shadow: inset 0 0 0 2px #4fbf8f; font-weight: 800; }
+.guiado td.g-oculta { color: transparent !important; background: repeating-linear-gradient(45deg, #fbf7f3, #fbf7f3 6px, #f4ece4 6px, #f4ece4 12px) !important; }
+.guiado td.g-oculta * { visibility: hidden; }
+.g-leyenda { display: flex; gap: 12px; flex-wrap: wrap; font-size: .8rem; font-weight: 700; color: var(--texto-suave); }
+.g-leyenda span::before { content: ""; display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 5px; vertical-align: -2px; }
+.g-l-usa::before { background: #fff1a8; box-shadow: inset 0 0 0 2px #f0c94a; }
+.g-l-da::before { background: #c9f0dc; box-shadow: inset 0 0 0 2px #4fbf8f; }
+.g-control { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 4px; }
+.g-control button { border: 0; border-radius: 999px; padding: 6px 14px; font: inherit; font-size: .86rem; font-weight: 800; cursor: pointer; background: var(--durazno); color: #6e2f12; }
+.g-control button:disabled { opacity: .4; cursor: default; }
+.g-control .g-iniciar { background: linear-gradient(90deg, #ffcdb5, #f7bdd6); }
+.g-pos { font-size: .86rem; font-weight: 700; color: var(--durazno-o); }
+.g-pasos .paso { cursor: pointer; transition: opacity .2s ease, box-shadow .2s ease; }
+.g-pasos .paso:hover { box-shadow: 0 0 0 2px var(--durazno); }
+.g-pasos .paso.g-actual { box-shadow: 0 0 0 3px var(--durazno-o); background: #fffaf6; }
+.guiado.g-recorriendo .paso.g-futuro { opacity: .35; }
+@media (max-width: 760px) { .guiado .g-fijo { position: static; } .guiado .g-tabla { max-height: none; } }
+/* Tabla del dataset */
+.tabla-ap td { text-align: center; font-family: var(--fuente-mono); font-size: .8rem; padding: 4px 6px; cursor: default; }
+.tabla-ap th { text-align: center; padding: 5px 6px; font-size: .8rem; }
+.tabla-ap td.sel-f, .tabla-ap td.sel-c { outline: 2px solid var(--lavanda-o); outline-offset: -2px; }
+.tabla-ap td.sel { outline: 3px solid var(--rosa-o); outline-offset: -3px; font-weight: 800; }
+
+.guiado .g-tabla td, .guiado .g-tabla th { padding: 5px 9px; }
+.guiado.g-alto .g-fijo { position: static; }
+.guiado .g-fijo { box-shadow: 0 8px 12px -10px rgba(110, 60, 30, .25); }
+.g-espejo { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 4px 10px; align-items: center; margin: 6px 0 2px; padding: 8px 12px; border-radius: 14px; background: #fff; border: 2px solid var(--durazno-o); }
+.g-espejo[hidden] { display: none; }
+.g-espejo .p-num { background: var(--durazno); color: #6e2f12; }
+.g-esp-f { overflow-x: auto; } .g-esp-f .ecuacion { margin: 0; padding: 2px; border: 0; background: transparent; }
+.g-esp-r { grid-column: 2; font-size: .9rem; color: var(--texto-suave); }
+
+/* Vistas extra de las gráficas */
+.w-extra { margin-top: 12px; padding: 4px 12px 10px; border-radius: 14px; background: var(--fondo-2); border: 1px solid var(--borde); }
+.w-extra-cab { font-family: var(--fuente-titulo); font-weight: 600; color: var(--lavanda-o); margin: 8px 2px 4px; }
+.w-extra .w-graf { background: #fff; border-radius: 12px; }
+.w-extra .w-tabla { background: #fff; border-radius: 12px; }
+.w-extra .w-tabla td, .w-extra .w-tabla th { text-align: center; }
+.tabla-ap th:first-child { position: sticky; left: 0; background: var(--lavanda-f); }
+.w-fila { align-items: start; }

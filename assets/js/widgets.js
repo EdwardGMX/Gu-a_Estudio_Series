@@ -203,6 +203,18 @@
 
   /* ============================== Widgets =============================== */
   const W = Object.create(null);
+  // ---- Ayudas para vistas extra
+  function tablaHTML(cab, filas, clases) {
+    return '<table><thead><tr>' + cab.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>' +
+      filas.map((f, i) => `<tr class="${(clases && clases[i]) || ''}">` + f.map(v => `<td>${v}</td>`).join('') + '</tr>').join('') + '</tbody></table>';
+  }
+  function extra(c, titulo) {
+    const caja = el('div', { class: 'w-extra' }, el('div', { class: 'w-extra-cab' }, '🔎 ' + titulo));
+    c.append(caja);
+    return caja;
+  }
+  const dispersion = (xs, ys, color, etiquetas) => ({ x: xs, y: ys, mode: 'markers', marker: { color: color || 'rgba(124,105,214,.55)', size: 7, line: { color: '#fff', width: 0.6 } }, text: etiquetas, hovertemplate: (etiquetas ? '%{text}<br>' : '') + 'x = %{x:.3f}<br>y = %{y:.3f}<extra></extra>' });
+
 
   // 1.1 Realizaciones de un proceso
   W.realizaciones = c => {
@@ -212,7 +224,9 @@
     boton(ctr, 'Observar otra historia', () => { sel = (sel + 1) % 8; dibujar(); });
     boton(ctr, 'Nuevas historias', () => { base += 37; dibujar(); }, 'sec');
     const ens = casilla(ctr, 'Mostrar media del conjunto (200 historias)', false, dibujar);
-    const g = lamina(c), lec = lectura(c);
+    const tc = slider(ctr, { etiqueta: 'Corte en el instante t', min: 1, max: 100, paso: 1, valor: 60 }, dibujar);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: el valor en un instante t es una variable aleatoria'), fx = fila(ex), gx1 = lamina(fx), gx2 = el('div', { class: 'w-tabla' });
+    fx.append(gx2);
     const gen = (p, s) => p === 'ar' ? TS.sim.ar1(n, 0.8, { semilla: s }) : p === 'paseo' ? TS.sim.paseo(n, { semilla: s }) : TS.sim.ruido(n, { semilla: s });
     function dibujar() {
       const p = proc.get(), t = TS.rango(n, 1), tr = [];
@@ -237,6 +251,12 @@
         paseo: 'La media del conjunto se queda cerca de 0, pero las historias se separan cada vez más: la dispersión <b>crece con t</b> (varianza tσ²). No es estacionario.',
         ruido: 'Cada historia es puro azar sin memoria; el conjunto tiene media 0 y la misma dispersión en todo t.'
       }[p] + (ens.get() ? '' : ' Activa «Mostrar media del conjunto» para verlo con números.');
+      const T0 = tc.get(), vals = TS.rango(200).map(j => gen(p, 5000 + base + j)[T0 - 1]), m0 = TS.media(vals), s0 = TS.desv(vals);
+      window.Plotly.relayout(g, { shapes: [{ type: 'line', x0: T0, x1: T0, yref: 'paper', y0: 0, y1: 1, line: { color: PAL.mant, width: 3, dash: 'dot' } }] });
+      graf(gx1, [{ type: 'histogram', x: vals, nbinsx: 25, marker: { color: 'rgba(217,165,32,.55)', line: { color: '#fff', width: 1 } } }], { height: 250, title: { text: `Valores de Y(${T0}) en 200 historias` }, showlegend: false, bargap: 0.03, xaxis: { title: { text: `y(${T0})` } } });
+      const m1 = TS.rango(200).map(j => gen(p, 5000 + base + j)[9]);
+      gx2.innerHTML = tablaHTML(['Instante', 'Media entre historias', 'Desv. entre historias'], [['t = 10', fmt(TS.media(m1), 2), fmt(TS.desv(m1), 2)], [`t = ${T0}`, fmt(m0, 2), fmt(s0, 2)]]) +
+        `<p style="font-size:.88rem;margin:6px 4px">La línea amarilla punteada de la gráfica principal marca el instante elegido. El histograma son los 200 valores posibles de <b>Y(${T0})</b>: su promedio estima E[y(t)] y su dispersión estima la desviación de y(t). ${p === 'paseo' ? 'En el paseo la dispersión en t = ' + T0 + ' es mucho mayor que en t = 10.' : 'Compara con t = 10: son parecidas.'}</p>`;
     }
     dibujar();
   };
@@ -247,7 +267,7 @@
     let barajada = false, semilla = 3;
     const datos = seleccion(ctr, { etiqueta: 'Serie', valor: 'ap', opciones: [['ap', 'AirPassengers'], ['ar', 'AR(1) simulado (φ = 0.85)']] }, () => { barajada = false; dibujar(); });
     const bt = boton(ctr, '🔀 Barajar los datos', () => { barajada = !barajada; if (barajada) semilla++; dibujar(); });
-    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c), ex = extra(c, 'Vista extra: lag plot y(t−1) contra y(t)'), gx = lamina(ex);
     function dibujar() {
       const x0 = datos.get() === 'ap' ? TS.datos.airpassengers.slice() : TS.sim.ar1(144, 0.85, { c: 7.5, semilla: 5 });
       const x = barajada ? barajar(x0, semilla) : x0;
@@ -258,6 +278,7 @@
       graf(g2, trazasACF(r, x.length), layoutACF('ACF'));
       lec.innerHTML = `Media: <b>${fmt(TS.media(x), 2)}</b> · Varianza: <b>${fmt(TS.varianza(x), 2)}</b> (idénticas en orden y barajadas) · ρ̂(1) en orden: <b>${fmt(r0[1])}</b>` +
         (barajada ? ` · ρ̂(1) barajada: <b>${fmt(r[1])}</b>. Los números son los mismos, pero la memoria desapareció.` : '. Presiona «Barajar» y compara.');
+      graf(gx, [dispersion(x.slice(0, -1), x.slice(1), barajada ? 'rgba(238,138,95,.6)' : undefined)], { height: 280, title: { text: `${barajada ? 'Barajados' : 'En orden'}: cada punto es (y(t−1), y(t)); ρ̂(1) = ${fmt(r[1])}` }, xaxis: { title: { text: 'y(t−1)' } }, yaxis: { title: { text: 'y(t)' } }, showlegend: false });
     }
     dibujar();
   };
@@ -267,7 +288,8 @@
     const ctr = lienzo(c);
     const modo = segmentado(ctr, { etiqueta: 'Vista', valor: 'lineas', opciones: [['lineas', 'Una línea por año'], ['caja', 'Boxplot por mes']] }, dibujar);
     const lg = casilla(ctr, 'Usar logaritmo', false, dibujar);
-    const g = lamina(c), lec = lectura(c);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: perfil estacional promedio'), fx = fila(ex), gx = lamina(fx), tx = el('div', { class: 'w-tabla' });
+    fx.append(tx);
     function dibujar() {
       const ap = TS.datos.airpassengers.map(v => lg.get() ? Math.log(v) : v), tr = [], lineas = modo.get() === 'lineas';
       if (lineas) {
@@ -279,6 +301,9 @@
       lec.innerHTML = lineas
         ? (lg.get() ? 'En logaritmos las líneas son casi <b>paralelas</b>: el patrón tiene el mismo tamaño cada año. Era multiplicativo y el logaritmo lo volvió aditivo.' : 'Todas las líneas tienen la misma forma (pico en julio–agosto, valle en noviembre) y cada año está más arriba: hay <b>estacionalidad</b> y <b>tendencia</b>. Las líneas recientes oscilan más: la amplitud crece.')
         : 'Julio y agosto tienen las medianas más altas y noviembre la más baja. Las cajas son altas porque mezclan años con niveles muy distintos (la tendencia).';
+      const prom = MESES.map((_, m) => TS.media(TS.rango(12).map(a => ap[12 * a + m]))), gm = TS.media(prom);
+      graf(gx, [{ type: 'bar', x: MESES, y: prom.map(v => v - gm), marker: { color: prom.map(v => v >= gm ? PAL.rosa : PAL.cel) }, hovertemplate: '%{x}: %{y:.3f}<extra></extra>' }], { height: 260, title: { text: 'Promedio de cada mes menos el promedio general' }, showlegend: false });
+      tx.innerHTML = tablaHTML(['Mes', 'Promedio 1949–1960', 'Diferencia'], MESES.map((m, i) => [m, fmt(prom[i], lg.get() ? 3 : 1), (prom[i] >= gm ? '+' : '') + fmt(prom[i] - gm, lg.get() ? 3 : 1)]));
     }
     dibujar();
   };
@@ -289,7 +314,8 @@
     const series = { ar: TS.sim.ar1(200, 0.8, { semilla: 21 }), arn: TS.sim.ar1(200, -0.7, { semilla: 22 }), rb: TS.sim.ruido(200, { semilla: 23 }), ap: TS.datos.airpassengers };
     const s = seleccion(ctr, { etiqueta: 'Serie', valor: 'ar', opciones: [['ar', 'AR(1) con φ = 0.8'], ['arn', 'AR(1) con φ = −0.7'], ['rb', 'Ruido blanco'], ['ap', 'AirPassengers']] }, dibujar);
     const k = slider(ctr, { etiqueta: 'Rezago k', min: 1, max: 24, paso: 1, valor: 1 }, dibujar);
-    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c), ex = extra(c, 'Vista extra: las primeras parejas que forman la nube'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
     function dibujar() {
       const x = series[s.get()], kk = k.get(), n = x.length, r = TS.acf(x, 24), b = 1.96 / Math.sqrt(n);
       graf(g1, [{ x: x.slice(0, n - kk), y: x.slice(kk), mode: 'markers', marker: { color: 'rgba(124,105,214,.55)', size: 6, line: { color: '#fff', width: 0.5 } }, hovertemplate: 'y(t−k) = %{x:.2f}<br>y(t) = %{y:.2f}<extra></extra>' }],
@@ -298,6 +324,8 @@
       lec.innerHTML = `Con k = ${kk} hay n − k = <b>${n - kk}</b> parejas. ` +
         (Math.abs(r[kk]) > b ? `La autocorrelación es <b>significativa</b> (sale de la banda ±${fmt(b)}). ` : 'La autocorrelación queda <b>dentro</b> de la banda: no es significativa. ') +
         (r[kk] > 0.3 ? 'La nube sube: valores altos siguen a valores altos.' : r[kk] < -0.3 ? 'La nube baja: la serie alterna.' : 'La nube es casi redonda.');
+      const mx = TS.media(x), filasP = TS.rango(10).map(i => { const t1 = i + kk + 1, a = x[t1 - 1 - kk], b2 = x[t1 - 1]; return [t1, fmt(a, 2), fmt(b2, 2), fmt((b2 - mx) * (a - mx), 2)]; });
+      tx.innerHTML = tablaHTML(['t', `y(t−${kk})`, 'y(t)', '(y(t) − ȳ)(y(t−k) − ȳ)'], filasP) + `<p style="font-size:.88rem;margin:6px 4px">Cada renglón es un punto de la nube. Si la mayoría de los productos de la última columna son positivos, ρ̂(${kk}) sale positivo (suma de todos los productos ÷ n ÷ varianza). Hay ${n - kk} renglones en total.</p>`;
     }
     dibujar();
   };
@@ -308,7 +336,9 @@
     const S = { rb: TS.sim.ruido(200, { semilla: 31, media: 10 }), tend: TS.sim.tendencia(200, { a: 5, b: 0.05, semilla: 32 }), het: TS.sim.heteroc(200, { factor: 4, semilla: 33 }), ap: TS.datos.airpassengers };
     const s = seleccion(ctr, { etiqueta: 'Serie', valor: 'rb', opciones: [['rb', 'Ruido blanco (estacionaria)'], ['tend', 'Tendencia + ruido'], ['het', 'Varianza creciente'], ['ap', 'AirPassengers']] }, dibujar);
     const w = slider(ctr, { etiqueta: 'Ventana m', min: 4, max: 36, paso: 1, valor: 12 }, dibujar);
-    const g = lamina(c), lec = lectura(c);
+    const po = slider(ctr, { etiqueta: 'Ver la ventana que termina en t', min: 12, max: 200, paso: 1, valor: 60 }, dibujar);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: los datos de una ventana'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
     function dibujar() {
       const x = S[s.get()], m = w.get(), t = TS.rango(x.length, 1), mm = TS.mediaMovil(x, m), sd = TS.desvMovil(x, m);
       graf(g, [
@@ -322,6 +352,10 @@
       const cM = Math.abs(m2 - m1) > 0.6 * TS.media(vs), cS = s2 / s1 > 1.5 || s1 / s2 > 1.5;
       lec.className = 'w-lectura ' + (cM || cS ? 'mal' : 'ok');
       lec.innerHTML = `Media móvil: de <b>${fmt(m1, 2)}</b> al inicio a <b>${fmt(m2, 2)}</b> al final → ${cM ? '<b>cambia</b>: la media no es constante.' : 'casi constante.'} Desviación móvil: de <b>${fmt(s1, 2)}</b> a <b>${fmt(s2, 2)}</b> → ${cS ? '<b>cambia</b>: la varianza no es constante.' : 'casi constante.'}`;
+      const T0 = Math.min(Math.max(po.get(), m), x.length), ven = x.slice(T0 - m, T0), mv = TS.media(ven), sv = TS.desv(ven, 1);
+      window.Plotly.relayout(g, { shapes: [{ type: 'rect', x0: T0 - m + 0.5, x1: T0 + 0.5, yref: 'paper', y0: 0, y1: 1, fillcolor: 'rgba(248,225,156,.35)', line: { width: 0 } }] });
+      tx.innerHTML = `<p style="font-size:.88rem;margin:4px">Ventana sombreada en amarillo: t = ${T0 - m + 1} a ${T0} (${m} datos). Su media es <b>${fmt(mv, 2)}</b> (punto rosa en t = ${T0}) y su desviación <b>${fmt(sv, 2)}</b>.</p>` +
+        tablaHTML(['t'].concat(TS.rango(Math.min(m, 12), T0 - Math.min(m, 12) + 1).map(String)), [['y(t)'].concat(ven.slice(-Math.min(m, 12)).map(v => fmt(v, 2)))]) + (m > 12 ? '<p style="font-size:.8rem;margin:4px">(se muestran los últimos 12 datos de la ventana)</p>' : '');
     }
     dibujar();
   };
@@ -374,7 +408,8 @@
   W.logaritmo = c => {
     const ctr = lienzo(c);
     const esc = segmentado(ctr, { etiqueta: 'Escala', valor: 'orig', opciones: [['orig', 'Original'], ['log', 'Logaritmo']] }, dibujar);
-    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c), ex = extra(c, 'Vista extra: de dónde sale cada barra'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
     const fechas = TS.datos.fechasMensuales(1949, 144);
     function dibujar() {
       const lg = esc.get() === 'log', x = TS.datos.airpassengers.map(v => lg ? Math.log(v) : v);
@@ -383,6 +418,7 @@
       graf(g2, [{ type: 'bar', x: TS.rango(12, 1949).map(String), y: rangos, marker: { color: lg ? PAL.menta : PAL.dur }, hovertemplate: '%{x}: %{y:.3f}<extra></extra>' }], { height: 300, title: { text: 'Rango de cada año (máx − mín)' }, showlegend: false, yaxis: { rangemode: 'tozero' } });
       lec.className = 'w-lectura ' + (lg ? 'ok' : 'mal');
       lec.innerHTML = `El rango de 1960 es <b>${fmt(rangos[11] / rangos[0], 2)}</b> veces el de 1949` + (lg ? ': casi igual. En logaritmos la amplitud es <b>estable</b>.' : ': la amplitud <b>crece</b> con el nivel (modelo multiplicativo).');
+      tx.innerHTML = tablaHTML(['Año', 'Mes máximo', 'Mes mínimo', 'Rango'], TS.rango(12).map(a => { const b2 = x.slice(12 * a, 12 * a + 12), mx = Math.max(...b2), mn = Math.min(...b2); return [1949 + a, `${MESES[b2.indexOf(mx)]}: ${fmt(mx, lg ? 3 : 0)}`, `${MESES[b2.indexOf(mn)]}: ${fmt(mn, lg ? 3 : 0)}`, fmt(mx - mn, lg ? 3 : 0)]; }));
     }
     dibujar();
   };
@@ -393,7 +429,9 @@
     let semilla = 51;
     const v = segmentado(ctr, { etiqueta: 'Ventana', valor: 4, opciones: [[3, '3'], [4, '4 (2×4)'], [5, '5'], [8, '8 (2×8)']] }, dibujar);
     boton(ctr, 'Nuevo ruido', () => { semilla++; dibujar(); }, 'sec');
-    const g1 = lamina(c), g2 = lamina(c, 'min-height:200px'), lec = lectura(c);
+    const po = slider(ctr, { etiqueta: 'Calcular la media en t', min: 5, max: 36, paso: 1, valor: 12 }, dibujar);
+    const g1 = lamina(c), g2 = lamina(c, 'min-height:200px'), lec = lectura(c), ex = extra(c, 'Vista extra: la cuenta de la media móvil en un punto'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
     function dibujar() {
       const n = 40, t = TS.rango(n, 1), P = [8, -3, -10, 5], e = TS.rng(semilla).normales(n, 1.5);
       const T = t.map(i => 50 + 0.8 * i), y = t.map((i, j) => T[j] + P[(i - 1) % 4] + e[j]);
@@ -412,6 +450,11 @@
         ? `La ventana de ${m} abarca ${m === 4 ? 'un periodo completo' : 'dos periodos completos'}: dentro de ella el patrón estacional suma 0 y desaparece.`
         : `La ventana de ${m} no abarca periodos completos: la «tendencia» conserva ondas del patrón estacional.`) +
         ` Distancia típica a la tendencia verdadera: <b>${fmt(rms, 2)}</b>.`;
+      const T0 = Math.min(Math.max(po.get(), h + 1), n - h), idx = TS.rango(w.length, T0 - h);
+      window.Plotly.addTraces(g1, [{ x: idx, y: idx.map(i => y[i - 1]), mode: 'markers', marker: { size: 13, color: 'rgba(248,225,156,.9)', line: { color: PAL.mant, width: 2 } }, name: `datos usados en t = ${T0}` }, { x: [T0], y: [mm[T0 - 1]], mode: 'markers', marker: { size: 13, color: PAL.rosa, symbol: 'diamond' }, name: `media en t = ${T0}` }]);
+      const filasM = idx.map((i, j) => [i === T0 ? 't' : (i > T0 ? 't+' + (i - T0) : 't' + (i - T0)), i, fmt(y[i - 1], 2), fracc(w[j]), fmt(w[j] * y[i - 1], 3)]);
+      filasM.push(['', '', '', '<b>Suma</b>', `<b>${fmt(mm[T0 - 1], 3)}</b>`]);
+      tx.innerHTML = tablaHTML(['posición', 't', 'y(t)', 'peso', 'peso × y'], filasM, filasM.map((_, i) => i === filasM.length - 1 ? 'suma' : '')) + `<p style="font-size:.88rem;margin:6px 4px">Los puntos amarillos de la gráfica son los datos usados; el rombo rosa es el resultado. La media móvil es la suma de la última columna.</p>`;
     }
     dibujar();
   };
@@ -422,6 +465,11 @@
     const mod = segmentado(ctr, { etiqueta: 'Modelo', valor: 'multiplicativo', opciones: [['aditivo', 'Aditivo'], ['multiplicativo', 'Multiplicativo']] }, dibujar);
     const g = lamina(c), tabla = el('div', { class: 'w-tabla' }), lec = el('div', { class: 'w-lectura' });
     c.append(tabla, lec);
+    const ex = extra(c, 'Vista extra: de dónde sale el índice de un mes'), cx = el('div', { class: 'w-controles' });
+    ex.append(cx);
+    const mes = seleccion(cx, { etiqueta: 'Mes', valor: '6', opciones: MESES.map((m, i) => [String(i), m]) }, dibujar);
+    const fx = fila(ex), gx = lamina(fx), tx = el('div', { class: 'w-tabla' });
+    fx.append(tx);
     const x = TS.datos.airpassengers, fechas = TS.datos.fechasMensuales(1949, 144);
     function dibujar() {
       const mu = mod.get() === 'multiplicativo', d = TS.descomponer(x, 12, mod.get());
@@ -440,6 +488,14 @@
       lec.className = 'w-lectura ' + (mu ? 'ok' : 'mal');
       lec.innerHTML = `Dispersión del residuo en los primeros 4 años: <b>${fmt(a, mu ? 4 : 2)}</b>; en los últimos 4: <b>${fmt(b, mu ? 4 : 2)}</b>. ` +
         (mu ? 'Con el modelo multiplicativo el residuo es un factor alrededor de 1 y su dispersión es parecida en toda la muestra: <b>modelo adecuado</b>.' : 'Con el aditivo el residuo forma un <b>embudo</b>: pequeño al inicio y grande al final, porque el patrón estacional real crece con el nivel.');
+      const mi = Number(mes.get()), anios = [], vals = [];
+      for (let a = 0; a < 12; a++) { const v = d.sinTendencia[12 * a + mi]; if (v !== null) { anios.push(String(1949 + a)); vals.push(v); } }
+      const pr = TS.media(vals), base = mu ? 1 : 0;
+      graf(gx, [{ type: 'bar', x: anios, y: vals.map(v => v - base), base: base, marker: { color: PAL.cel }, hovertemplate: '%{x}: %{y:.3f}<extra></extra>', name: mu ? 'y / T' : 'y − T' },
+        { x: anios, y: anios.map(() => pr), mode: 'lines', line: { color: PAL.rosa, width: 3 }, name: 'promedio' }],
+        { height: 260, title: { text: `${MESES[mi]}: ${mu ? 'y(t) / tendencia' : 'y(t) − tendencia'} en cada año` }, showlegend: false });
+      tx.innerHTML = tablaHTML(['Año', mu ? 'y / T' : 'y − T'], anios.map((a, i) => [a, fmt(vals[i], mu ? 4 : 2)]).concat([['<b>Promedio</b>', `<b>${fmt(pr, mu ? 4 : 2)}</b>`], ['<b>Índice centrado</b>', `<b>${fmt(d.indices[mi], mu ? 4 : 2)}</b>`]])) +
+        `<p style="font-size:.85rem;margin:6px 4px">Se promedian los ${vals.length} años con tendencia disponible y después se centra (${mu ? 'se divide entre el promedio de los 12 meses' : 'se resta el promedio de los 12 meses'}).</p>`;
     }
     dibujar();
   };
@@ -483,6 +539,12 @@
         tex(`\\hat{\\rho}(${kk}) = \\frac{\\hat{\\gamma}(${kk})}{\\hat{\\gamma}(0)} = \\frac{${num(gk)}}{${num(g0)}} = ${num(rk)}`, true);
       const K = Math.min(n - 1, 20);
       graf(g, trazasACF(TS.acf(y, K), n, { resaltar: kk || null }), layoutACF('ACF de tus datos (rosa = rezago elegido)'));
+      const exc = c.querySelector('.w-extra') || extra(c, 'Vista extra: cada producto de la tabla es un punto');
+      let gx = exc.querySelector('.w-graf');
+      if (!gx) { gx = lamina(exc); }
+      const ks = TS.rango(n - kk, kk + 1), xs = ks.map(t1 => d[t1 - 1 - kk]), ys = ks.map(t1 => d[t1 - 1]);
+      graf(gx, [Object.assign(dispersion(xs, ys, ys.map((v, i) => v * xs[i] >= 0 ? 'rgba(63,174,138,.75)' : 'rgba(224,112,159,.75)'), ks.map(t1 => 't = ' + t1)), { mode: 'markers+text', textposition: 'top center', textfont: { size: 10 } })], {
+        height: 280, title: { text: `d(t−${kk}) contra d(t): verde = producto positivo, rosa = negativo` }, showlegend: false, xaxis: { title: { text: `d(t−${kk})` }, zeroline: true, zerolinecolor: '#c9c3e3' }, yaxis: { title: { text: 'd(t)' }, zeroline: true, zerolinecolor: '#c9c3e3' } });
     }
     dibujar();
   };
@@ -522,7 +584,8 @@
     const cc = slider(ctr, { etiqueta: 'c (constante)', min: -2, max: 4, paso: 0.5, valor: 2, fmt: v => v.toFixed(1) }, dibujar);
     const sg = slider(ctr, { etiqueta: 'σ (choques)', min: 0.5, max: 3, paso: 0.1, valor: 2, fmt: v => v.toFixed(1) }, dibujar);
     boton(ctr, 'Nueva muestra', () => { semilla++; dibujar(); }, 'sec');
-    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c), ex = extra(c, 'Vista extra: la regla del AR(1) y la comparación teoría vs. muestra'), fx = fila(ex), gx = lamina(fx), tx = el('div', { class: 'w-tabla' });
+    fx.append(tx);
     function dibujar() {
       const phi = ph.get(), cst = cc.get(), s = sg.get(), n = 300, t = TS.rango(n, 1);
       const x = TS.sim.ar1(n, phi, { c: cst, sigma: s, semilla }), est = Math.abs(phi) < 1;
@@ -553,6 +616,12 @@
           ? 'Con φ = 1 la fórmula de la media pide dividir entre 1 − φ = 0 y la de la varianza entre 1 − φ² = 0: <b>no existen</b>. Es una <b>raíz unitaria</b>: los choques se acumulan y la serie no regresa a ningún nivel. ' + ref('raiz-unitaria', 'raíz unitaria')
           : 'Con φ > 1 el proceso es <b>explosivo</b>: cada choque se amplifica y la serie crece sin límite.';
       }
+      const xs = x.slice(0, -1), ys2 = x.slice(1), lo = Math.min(...xs), hi = Math.max(...xs);
+      graf(gx, [dispersion(xs, ys2), { x: [lo, hi], y: [cst + phi * lo, cst + phi * hi], mode: 'lines', line: { color: PAL.rosa, width: 3 }, name: 'c + φ·y(t−1)' }],
+        { height: 300, title: { text: 'y(t−1) contra y(t): la recta es la parte predecible' }, showlegend: false, xaxis: { title: { text: 'y(t−1)' } }, yaxis: { title: { text: 'y(t)' } } });
+      const rr = TS.acf(x, 3);
+      tx.innerHTML = tablaHTML(['Cantidad', 'Teórica', 'Muestral'], [['μ', est ? fmt(mu, 3) : '—', fmt(TS.media(x), 3)], ['γ(0)', est ? fmt(g0, 3) : '—', fmt(TS.varianza(x), 3)], ['ρ(1)', est ? fmt(phi, 3) : '—', fmt(rr[1], 3)], ['ρ(2)', est ? fmt(phi * phi, 3) : '—', fmt(rr[2], 3)], ['ρ(3)', est ? fmt(phi ** 3, 3) : '—', fmt(rr[3], 3)]]) +
+        '<p style="font-size:.85rem;margin:6px 4px">La distancia vertical de cada punto a la recta es el choque ε(t). La pendiente de la recta es φ.</p>';
     }
     dibujar();
   };
@@ -563,7 +632,7 @@
     let semilla = 81;
     const pr = segmentado(ctr, { etiqueta: 'Proceso', valor: 'paseo', opciones: [['paseo', 'Paseo aleatorio'], ['ar', 'AR(1) con φ = 0.5']] }, dibujar);
     boton(ctr, 'Nuevas trayectorias', () => { semilla += 300; dibujar(); }, 'sec');
-    const g = lamina(c), lec = lectura(c);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: la distribución de y(t) en dos instantes'), gx = lamina(ex);
     function dibujar() {
       const n = 100, M = 200, t = TS.rango(n, 1), xs = [], ys = [], s1 = new Array(n).fill(0), s2 = new Array(n).fill(0), paseo = pr.get() === 'paseo';
       for (let j = 0; j < M; j++) {
@@ -579,6 +648,9 @@
         { x: t, y: teo.map(v => -v), mode: 'lines', line: { color: PAL.rosa, width: 3 }, showlegend: false }
       ], { height: 380, title: { text: paseo ? 'Paseo aleatorio: la nube se abre como abanico' : 'AR(1) estacionario: la nube se queda en una franja' }, xaxis: { title: { text: 't' } }, yaxis: { range: [-30, 30] } });
       lec.innerHTML = `Desviación entre trayectorias en t = 10: <b>${fmt(sd[9], 2)}</b> · en t = 100: <b>${fmt(sd[99], 2)}</b> (teoría: ${paseo ? '√10 = 3.16 y √100 = 10' : '1.15 en ambos casos'}). ` + (paseo ? 'La varianza crece con t: no es estacionario.' : 'La varianza no depende de t: estacionario.');
+      const en = i => TS.rango(M).map(j => ys[j * (n + 1) + i]);
+      graf(gx, [{ type: 'histogram', x: en(9), name: 't = 10', opacity: 0.65, marker: { color: PAL.cel }, nbinsx: 30 }, { type: 'histogram', x: en(99), name: 't = 100', opacity: 0.55, marker: { color: PAL.rosa }, nbinsx: 30 }],
+        { height: 280, barmode: 'overlay', title: { text: 'Valores de las 200 trayectorias en t = 10 (azul) y t = 100 (rosa)' }, bargap: 0.03 });
     }
     dibujar();
   };
@@ -588,7 +660,8 @@
     const ctr = lienzo(c);
     const ph = slider(ctr, { etiqueta: 'φ', min: 0, max: 1.05, paso: 0.01, valor: 0.9, fmt: v => v.toFixed(2) }, dibujar);
     const tm = slider(ctr, { etiqueta: 'Tamaño del choque', min: 1, max: 20, paso: 1, valor: 10 }, dibujar);
-    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c), ex = extra(c, 'Vista extra: la respuesta al choque en números'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
     const circ = TS.rango(121).map(i => 2 * Math.PI * i / 120);
     function dibujar() {
       const phi = ph.get(), s = tm.get(), h = TS.rango(31);
@@ -613,6 +686,8 @@
         lec.className = 'w-lectura mal';
         lec.innerHTML = `Raíz z = ${fmt(z, 3)}: <b>dentro</b> del círculo. Proceso explosivo: el choque crece en lugar de apagarse.`;
       }
+      const hh = TS.rango(11);
+      tx.innerHTML = tablaHTML(['h'].concat(hh.map(String)), [['efecto = tamaño·φʰ'].concat(hh.map(k => fmt(s * Math.pow(phi, k), 3))), ['% del choque que queda'].concat(hh.map(k => fmt(100 * Math.pow(phi, k), 1) + '%'))]);
     }
     dibujar();
   };
@@ -623,7 +698,7 @@
     let semilla = 91;
     const tt = segmentado(ctr, { etiqueta: 'Tratamiento', valor: 'orig', opciones: [['orig', 'Original'], ['recta', 'Restar la recta'], ['dif', 'Diferenciar']] }, dibujar);
     boton(ctr, 'Nuevos choques', () => { semilla++; dibujar(); }, 'sec');
-    const g = lamina(c), lec = lectura(c);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: la ACF de cada resultado'), fx = fila(ex), gx1 = lamina(fx), gx2 = lamina(fx);
     function tratar(y, modo) {
       if (modo === 'recta') { const r = TS.ols(y.map((_, i) => [1, i + 1]), y); return r.resid; }
       if (modo === 'dif') return TS.diff(y);
@@ -654,6 +729,8 @@
         dif: [`✗ Sobre-diferenciada: ρ̂(1) = ${fmt(r1)} ≈ −0.5.`, `✓ Queda ruido alrededor de b = 0.3 (ρ̂(1) = ${fmt(r2)}). Tratamiento correcto.`]
       }[modo];
       lec.innerHTML = `<b style="color:${PAL.cel}">Determinística:</b> ${txt[0]}<br><b style="color:${PAL.rosa}">Estocástica:</b> ${txt[1]}` + (modo === 'dif' ? ' ' + ref('sobre-diferenciar', 'por qué −0.5') : '');
+      graf(gx1, trazasACF(TS.acf(d1, 20), d1.length, { color: PAL.cel }), layoutACF('ACF · determinística'));
+      graf(gx2, trazasACF(TS.acf(d2, 20), d2.length, { color: PAL.rosa }), layoutACF('ACF · estocástica'));
     }
     dibujar();
   };
@@ -663,7 +740,8 @@
     const ctr = lienzo(c);
     const s = seleccion(ctr, { etiqueta: 'Serie', valor: 'deriva', opciones: [['deriva', 'Paseo con deriva'], ['cuad', 'Tendencia cuadrática'], ['est', 'Estacionalidad que se acumula (s = 12)'], ['ap', 'ln AirPassengers']] }, dibujar);
     const op = segmentado(ctr, { etiqueta: 'Transformación', valor: 'orig', opciones: [['orig', 'Original'], ['d1', 'Δ'], ['d2', 'Δ²'], ['ds', 'Δ₁₂'], ['d1ds', 'Δ Δ₁₂']] }, dibujar);
-    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c), ex = extra(c, 'Vista extra: la resta renglón por renglón'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
     const e = TS.rng(101).normales(240);
     const S = {
       deriva: (() => { let y = 0; return e.slice(0, 200).map(v => (y = 0.5 + y + v)); })(),
@@ -692,6 +770,10 @@
       const adf = TS.adf(x, { regression: 'c' }), kp = TS.kpss(x, { regression: 'c' });
       lec.className = 'w-lectura ' + (o === NEC[nom] ? 'ok' : o === 'orig' ? '' : 'mal');
       lec.innerHTML = `${MSJ[nom][o]} · ρ̂(1) = <b>${fmt(r[1])}</b> · ρ̂(12) = <b>${fmt(r[12])}</b> · ADF p = <b>${fp(adf.p)}</b> · KPSS p ${kp.fueraDeTabla === 'mayor' ? '> 0.10' : kp.fueraDeTabla === 'menor' ? '< 0.01' : '= ' + fp(kp.p)}`;
+      const X0 = S[nom], lagO = o === 'd1' ? 1 : o === 'ds' ? 12 : null, desde = o === 'orig' ? 1 : o === 'd1' ? 2 : o === 'd2' ? 3 : o === 'ds' ? 13 : 14;
+      const filasD = TS.rango(8, desde).map(t1 => [t1, fmt(X0[t1 - 1], 3)].concat(lagO ? [fmt(X0[t1 - 1 - lagO], 3)] : []).concat([o === 'orig' ? '—' : fmt(x[t1 - desde], 3)]));
+      tx.innerHTML = tablaHTML(['t', 'y(t)'].concat(lagO ? [`y(t−${lagO})`] : []).concat([{ orig: 'sin transformar', d1: 'Δy = y(t) − y(t−1)', d2: 'Δ²y = Δy(t) − Δy(t−1)', ds: 'Δ₁₂y = y(t) − y(t−12)', d1ds: 'ΔΔ₁₂y' }[o]]), filasD) +
+        `<p style="font-size:.85rem;margin:6px 4px">${o === 'orig' ? 'Elige una transformación para ver la resta.' : `El primer resultado aparece en t = ${desde}: se pierden ${desde - 1} datos.`}</p>`;
     }
     dibujar();
   };
@@ -713,7 +795,7 @@
     const p = seleccion(ctr, { etiqueta: 'Proceso', valor: 'rb', opciones: Object.entries(GAL).map(([k, v]) => [k, v.nombre]) }, dibujar);
     const w = slider(ctr, { etiqueta: 'Ventana de la media móvil', min: 6, max: 48, paso: 1, valor: 24 }, dibujar);
     boton(ctr, 'Nueva muestra', () => { semilla++; dibujar(); }, 'sec');
-    const g = lamina(c), lec = lectura(c);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: el correlograma del mismo proceso'), gx = lamina(ex);
     function dibujar() {
       const G = GAL[p.get()], x = G.gen(semilla), t = TS.rango(x.length, 1), m = w.get(), mm = TS.mediaMovil(x, m), sd = TS.desvMovil(x, m);
       graf(g, [
@@ -725,6 +807,7 @@
       const adf = TS.adf(x, { regression: 'c' }), kp = TS.kpss(x, { regression: 'c' });
       lec.className = 'w-lectura ' + (G.ok ? 'ok' : 'mal');
       lec.innerHTML = `<b>${G.ok ? '✓ Estacionario' : '✗ No estacionario'}.</b> ${G.texto} ${ref(G.ref, 'ver la explicación')}<br><span style="font-size:.88em">Pruebas en esta muestra: ADF p = ${fp(adf.p)} · KPSS p ${kp.fueraDeTabla === 'mayor' ? '> 0.10' : kp.fueraDeTabla === 'menor' ? '< 0.01' : '= ' + fp(kp.p)}</span>`;
+      graf(gx, trazasACF(TS.acf(x, 36), x.length), layoutACF(`ACF · ${G.nombre}`));
     }
     dibujar();
   };
@@ -736,7 +819,8 @@
     const sp = segmentado(ctr, { etiqueta: 'Especificación', valor: 'c', opciones: [['n', 'sin constante'], ['c', 'con constante'], ['ct', 'constante + tendencia']] }, simular);
     const nn = segmentado(ctr, { etiqueta: 'n', valor: 100, opciones: [[50, '50'], [100, '100'], [250, '250']] }, simular);
     boton(ctr, 'Simular 2000 paseos nuevos', () => { base += 2000; simular(); });
-    const g = lamina(c), lec = lectura(c);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: percentiles simulados contra las tablas'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
     function simular() {
       lec.textContent = 'Simulando…';
       setTimeout(() => {
@@ -760,6 +844,9 @@
         });
         const p1 = taus.filter(v => v < -1.645).length / M, p2 = taus.filter(v => v < crit).length / M;
         lec.innerHTML = `Con el crítico de la normal (−1.645) rechazarías H₀ <b>verdadera</b> en el <b>${(100 * p1).toFixed(1)}%</b> de los casos, en lugar del 5%. Con el crítico de Dickey–Fuller (${crit.toFixed(2)}) se rechaza el <b>${(100 * p2).toFixed(1)}%</b>, como debe ser.`;
+        const ord = taus.slice().sort((a, b2) => a - b2), q = pp => ord[Math.floor(pp * (M - 1))], cr = TS.mackinnoncrit(reg, n - 1);
+        tx.innerHTML = tablaHTML(['Percentil', 'τ simulado (tu simulación)', 'Dickey–Fuller (MacKinnon)', 'Normal estándar'], [['1%', fmt(q(0.01), 3), fmt(cr['1%'], 3), '−2.326'], ['5%', fmt(q(0.05), 3), fmt(cr['5%'], 3), '−1.645'], ['10%', fmt(q(0.10), 3), fmt(cr['10%'], 3), '−1.282']]) +
+          '<p style="font-size:.85rem;margin:6px 4px">Los percentiles de tu simulación se parecen a los valores críticos de Dickey–Fuller y no a los de la normal: por eso existen tablas especiales.</p>';
       }, 20);
     }
     simular();
@@ -777,6 +864,7 @@
     boton(ctr, 'Nueva muestra', () => { semilla++; dibujar(); }, 'sec');
     const g = lamina(c), dec = el('div', { class: 'w-decision' }), mat = el('div', { class: 'w-tabla w-matriz' });
     c.append(dec, mat);
+    const ex = extra(c, 'Vista extra: ACF de la serie y de su primera diferencia'), fx = fila(ex), gx1 = lamina(fx), gx2 = lamina(fx);
     function generar(p, n) {
       if (p === 'rb') return TS.sim.ruido(n, { semilla });
       if (p === 'ar') return TS.sim.ar1(n, ph.get(), { semilla });
@@ -798,6 +886,9 @@
       mat.innerHTML = `<table><thead><tr><th></th><th>KPSS no rechaza</th><th>KPSS rechaza</th></tr></thead><tbody>
         <tr><th>ADF rechaza</th>${celda(true, false, '✅ Estacionaria')}${celda(true, true, '⚠️ Ambas rechazan: revisar')}</tr>
         <tr><th>ADF no rechaza</th>${celda(false, false, '❓ Evidencia insuficiente')}${celda(false, true, '❌ No estacionaria')}</tr></tbody></table>`;
+      graf(gx1, trazasACF(TS.acf(x, 24), n), layoutACF('ACF de la serie'));
+      const dx = TS.diff(x);
+      graf(gx2, trazasACF(TS.acf(dx, 24), dx.length, { color: PAL.menta }), layoutACF('ACF de Δy'));
     }
     ph.mostrar(true);
     dibujar();
@@ -810,12 +901,16 @@
     const NS = [20, 30, 50, 75, 100, 150, 200, 300, 500, 750, 1000];
     const nn = slider(ctr, { etiqueta: 'n', min: 0, max: NS.length - 1, paso: 1, valor: 4, fmt: v => NS[v] }, dibujar);
     boton(ctr, 'Nueva muestra', () => { semilla++; dibujar(); }, 'sec');
-    const g = lamina(c), lec = lectura(c);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: las autocorrelaciones se distribuyen N(0, 1/n)'), gx = lamina(ex);
     function dibujar() {
       const n = NS[nn.get()], x = TS.sim.ruido(n, { semilla }), K = Math.min(40, n - 1), r = TS.acf(x, K), b = 1.96 / Math.sqrt(n);
       const fuera = r.slice(1).filter(v => Math.abs(v) > b).length;
       graf(g, trazasACF(r, n), layoutACF(`ACF de ruido blanco con n = ${n}`, { height: 300, yaxis: { range: [-0.6, 0.6] } }));
       lec.innerHTML = `Banda: ±1.96/√${n} = <b>±${fmt(b)}</b> · barras fuera: <b>${fuera} de ${K}</b> (${fmt(100 * fuera / K, 1)}%; se espera alrededor de 5%).`;
+      const sdv = 1 / Math.sqrt(n), xs2 = TS.rango(81).map(i => -4 * sdv + i * sdv / 10);
+      graf(gx, [{ type: 'histogram', x: r.slice(1), histnorm: 'probability density', nbinsx: 14, marker: { color: 'rgba(201,188,247,.85)', line: { color: '#fff', width: 1 } }, name: `ρ̂(1)…ρ̂(${K})` },
+        { x: xs2, y: xs2.map(v => Math.exp(-v * v / (2 * sdv * sdv)) / (sdv * Math.sqrt(2 * Math.PI))), mode: 'lines', line: { color: PAL.rosa, width: 2.5 }, name: 'N(0, 1/n)' }],
+        { height: 260, title: { text: 'Histograma de las barras del correlograma' }, bargap: 0.03, shapes: [-1, 1].map(sg => ({ type: 'line', x0: sg * b, x1: sg * b, yref: 'paper', y0: 0, y1: 1, line: { color: PAL.dur, dash: 'dash' } })) });
     }
     dibujar();
   };
@@ -869,7 +964,8 @@
     const nn = slider(ctr, { etiqueta: 'n', min: 30, max: 500, paso: 10, valor: 100 }, dibujar);
     const hh = slider(ctr, { etiqueta: 'h (rezagos evaluados)', min: 1, max: 30, paso: 1, valor: 10 }, dibujar);
     boton(ctr, 'Nueva muestra', () => { semilla++; dibujar(); }, 'sec');
-    const g = lamina(c), lec = lectura(c);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: la tabla de la que sale cada barra'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
     function dibujar() {
       const n = nn.get(), h = hh.get(), x = TS.sim.ar1(n, ph.get(), { semilla }), lb = TS.ljungBox(x, h), ks = TS.rango(h, 1);
       const crit = ks.map(k => TS.chi2ppf(0.95, k));
@@ -882,6 +978,7 @@
       lec.className = 'w-lectura ' + (rech ? 'mal' : 'ok');
       lec.innerHTML = tex(`Q = n(n+2)\\sum_{k=1}^{${h}}\\frac{\\hat{\\rho}(k)^2}{n-k} = ${num(lb.Q)} \\qquad \\chi^2_{${h};\\,0.95} = ${num(crit[h - 1])}`, true) +
         `p-value = <b>${fp(lb.p)}</b> → ${rech ? '<b>se rechaza H₀</b>: hay autocorrelación.' : '<b>no se rechaza H₀</b>: no hay evidencia de autocorrelación.'}`;
+      tx.innerHTML = tablaHTML(['k', 'ρ̂(k)', 'ρ̂(k)²', 'n − k', 'aporte n(n+2)ρ̂²/(n−k)', 'Q acumulado', 'crítico χ²(k)', 'p-value'], lb.filas.map((fl, i) => [fl.k, fmt(fl.rho), fmt(fl.rho * fl.rho, 4), n - fl.k, fmt(fl.aporte), fmt(fl.Q), fmt(crit[i]), fp(fl.p)]), lb.filas.map(fl => fl.k === h ? 'suma' : ''));
     }
     dibujar();
   };
@@ -893,6 +990,7 @@
     const sp = segmentado(ctr, { etiqueta: 'Especificación ADF/KPSS', valor: 'ct', opciones: [['c', 'c'], ['ct', 'ct']] }, dibujar);
     const f = fila(c), g1 = lamina(f), g2 = lamina(f), dec = el('div', { class: 'w-decision' }), lec = lectura(c);
     c.insertBefore(dec, lec);
+    const ex = extra(c, 'Vista extra: la PACF de la misma serie'), gx = lamina(ex);
     const L = TS.datos.airpassengers.map(Math.log), fechas = TS.datos.fechasMensuales(1949, 144);
     const NOTA = {
       orig: 'Tendencia, estacionalidad y amplitud creciente: primero logaritmo.',
@@ -920,6 +1018,7 @@
         `<div class="w-prueba ${kr ? 'rechaza' : 'no-rechaza'}"><h5>KPSS</h5>p-value ${k.fueraDeTabla ? pk : '= ' + pk}<div class="dec">${kr ? 'rechaza la estacionariedad' : 'no rechaza la estacionariedad'}</div></div>` +
         `<div class="w-prueba ${lb.p < 0.05 ? 'rechaza' : 'no-rechaza'}"><h5>Ljung–Box (h = 24)</h5>p-value = <b>${fp(lb.p)}</b><div class="dec">${lb.p < 0.05 ? 'hay autocorrelación' : 'sin autocorrelación'}</div></div>`;
       lec.innerHTML = `<b>Lectura conjunta:</b> ${lect} · ρ̂(1) = ${fmt(r[1])} · ρ̂(12) = ${fmt(r[12])}. ${NOTA[t]}`;
+      graf(gx, trazasACF(TS.pacf(x, 36), n, { color: PAL.cel, nombre: 'PACF' }), layoutACF('PACF (36 rezagos)', { height: 270 }));
     }
     dibujar();
   };
@@ -932,6 +1031,48 @@
     const f = fila(c), g1 = lamina(f), g2 = lamina(f);
     graf(g1, trazasACF(TS.acf(x, 20), n), layoutACF('ACF', { height: 240 }));
     graf(g2, trazasACF(TS.pacf(x, 20), n, { nombre: 'PACF' }), layoutACF('PACF', { height: 240 }));
+  };
+
+
+  // Tabla del dataset AirPassengers (mapa de calor enlazado con la gráfica)
+  W['tabla-ap'] = c => {
+    const ctr = lienzo(c), AP = TS.datos.airpassengers, fechas = TS.datos.fechasMensuales(1949, 144);
+    const vista = segmentado(ctr, { etiqueta: 'Mostrar', valor: 'y', opciones: [['y', 'pasajeros'], ['log', 'ln(pasajeros)'], ['pct', 'cambio vs. mismo mes del año anterior (%)']] }, () => { dibujar(); if (sel !== null) marcar(sel); });
+    const tx = el('div', { class: 'w-tabla tabla-ap' }), info = el('div', { class: 'w-lectura' });
+    c.append(tx, info);
+    const g = lamina(c);
+    let sel = null, vals = [];
+    const valor = i => vista.get() === 'y' ? AP[i] : vista.get() === 'log' ? Math.log(AP[i]) : (i < 12 ? null : 100 * (AP[i] / AP[i - 12] - 1));
+    const dec = () => vista.get() === 'y' ? 0 : vista.get() === 'log' ? 3 : 1;
+    function dibujar() {
+      vals = TS.rango(144).map(valor);
+      const ok = vals.filter(v => v !== null), lo = Math.min(...ok), hi = Math.max(...ok);
+      let h = '<table><thead><tr><th>Año</th>' + MESES.map(m => `<th>${m}</th>`).join('') + '<th>Media</th></tr></thead><tbody>';
+      for (let a = 0; a < 12; a++) {
+        const fila_ = vals.slice(12 * a, 12 * a + 12);
+        h += `<tr><th>${1949 + a}</th>` + fila_.map((v, m) => v === null ? `<td data-i="${12 * a + m}">—</td>` : `<td data-i="${12 * a + m}" data-a="${a}" data-m="${m}" style="background:${mezcla('#f6f3ff', '#f2a0c2', (v - lo) / (hi - lo || 1))}">${fmt(v, dec())}</td>`).join('') +
+          `<td><b>${fila_.some(v => v === null) ? '—' : fmt(TS.media(fila_), dec())}</b></td></tr>`;
+      }
+      tx.innerHTML = h + '</tbody></table>';
+      graf(g, [{ x: fechas, y: vals, mode: 'lines', line: { color: PAL.lav, width: 1.8 }, hovertemplate: '%{x|%b %Y}: %{y:.3f}<extra></extra>' },
+        { x: [], y: [], mode: 'markers', marker: { size: 14, color: PAL.rosa, line: { color: '#fff', width: 2 } }, hoverinfo: 'skip' }],
+        { height: 260, title: { text: 'La misma tabla como serie de tiempo (el punto rosa es la celda elegida)' }, showlegend: false });
+      info.innerHTML = 'Pasa el cursor (o toca) una celda: se resaltan su año y su mes, y aparece en la gráfica.';
+    }
+    function marcar(i) {
+      sel = i;
+      const a = Math.floor(i / 12), m = i % 12;
+      tx.querySelectorAll('td').forEach(td => td.classList.remove('sel', 'sel-f', 'sel-c'));
+      tx.querySelectorAll(`td[data-a="${a}"]`).forEach(td => td.classList.add('sel-f'));
+      tx.querySelectorAll(`td[data-m="${m}"]`).forEach(td => td.classList.add('sel-c'));
+      const td = tx.querySelector(`td[data-i="${i}"]`); if (td) td.classList.add('sel');
+      if (vals[i] !== null) window.Plotly.restyle(g, { x: [[fechas[i]]], y: [[vals[i]]] }, [1]);
+      info.innerHTML = `<b>${MESES[m]} de ${1949 + a}</b>: ${vals[i] === null ? 'sin dato (no hay año anterior)' : fmt(vals[i], dec())} · es <b>y<sub>t</sub> con t = ${i + 1}</b> · en pandas: <code>serie.loc["${fechas[i]}"]</code> o <code>serie.iloc[${i}]</code>` +
+        (m === 6 || m === 7 ? ' · julio y agosto son los meses más altos de cada año.' : m === 10 ? ' · noviembre es el mes más bajo.' : '');
+    }
+    tx.addEventListener('mouseover', e => { const td = e.target.closest('td[data-i]'); if (td) marcar(Number(td.dataset.i)); });
+    tx.addEventListener('click', e => { const td = e.target.closest('td[data-i]'); if (td) marcar(Number(td.dataset.i)); });
+    dibujar();
   };
 
   /* ===================== Simuladores de Python ===================== */

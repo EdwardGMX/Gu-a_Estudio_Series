@@ -439,6 +439,8 @@ class Documento:
         cab, id_ = self.separar_id(cab)
         if tipo == "pasos":
             return self.render_pasos(hijos)
+        if tipo == "guiado":
+            return self.render_guiado(cab, hijos, id_)
         if tipo == "ejercicio":
             return self.render_ejercicio(cab, hijos)
         if tipo == "cols":
@@ -491,14 +493,21 @@ class Documento:
     def num_actual(self):
         return f"{self.sec}.{self.sub}" if self.sub else str(self.sec)
 
-    def render_pasos(self, hijos):
+    def render_pasos(self, hijos, dims=None):
         pasos = []
         for l in hijos:
             s = l.strip()
             if not s:
                 continue
             if s.startswith("= "):
-                pasos.append({"f": s[2:].strip(), "r": []})
+                pasos.append({"f": s[2:].strip(), "r": [], "usa": [], "da": []})
+            elif s.startswith("@ ") and pasos:
+                for parte in s[2:].split(";"):
+                    clave, _, refs = parte.strip().partition(" ")
+                    if clave in ("usa", "da"):
+                        pasos[-1][clave] += self.expandir_celdas(refs, dims)
+                    else:
+                        self.errores.append(f"Marca de celdas desconocida: {s}")
             elif s.startswith("> "):
                 pasos[-1]["r"].append(s[2:])
             elif pasos:
@@ -510,9 +519,87 @@ class Documento:
             r = self.md_inline(" ".join(p["r"])) if p["r"] else ""
             visible = len(re.sub(r"\\[A-Za-z]+|[{}_^]|\\[,;!: ]", "", p["f"]))
             clase = "paso largo" if visible > 48 else "paso"
-            filas.append(f'<div class="{clase}"><div class="p-num">{k}</div><div class="p-formula">{f}</div>'
+            datos = ""
+            if dims is not None:
+                datos = f' data-usa="{" ".join(p["usa"])}" data-da="{" ".join(p["da"])}" tabindex="0"'
+            filas.append(f'<div class="{clase}"{datos}><div class="p-num">{k}</div><div class="p-formula">{f}</div>'
                          f'<div class="p-razon">{r}</div></div>')
-        return f'<div class="pasos">{"".join(filas)}</div>'
+        return f'<div class="pasos{" g-pasos" if dims is not None else ""}">{"".join(filas)}</div>'
+
+    def expandir_celdas(self, refs, dims):
+        """'c2[1-6] t2.c3[1,4] c*[7]' → ids de celdas (y de los encabezados de esas columnas)."""
+        ids = []
+        for m in re.finditer(r"(?:t(\d+)\.)?c(\d+|\*)\[([^\]]+)\]", refs):
+            t = int(m.group(1) or 1)
+            if not dims or t > len(dims):
+                self.errores.append(f"Tabla inexistente en marca de celdas: {refs}")
+                continue
+            nf, nc = dims[t - 1]
+            cols = range(1, nc + 1) if m.group(2) == "*" else [int(m.group(2))]
+            filas = []
+            for parte in m.group(3).split(","):
+                parte = parte.strip()
+                if parte == "*":
+                    filas += list(range(1, nf + 1))
+                elif "-" in parte:
+                    a, z = parte.split("-")
+                    filas += list(range(int(a), int(z) + 1))
+                elif parte:
+                    filas.append(int(parte))
+            for c in cols:
+                if c > nc:
+                    self.errores.append(f"Columna {c} fuera de la tabla {t}: {refs}")
+                ids.append(f"t{t}-h{c}")
+                for f in filas:
+                    if f > nf:
+                        self.errores.append(f"Fila {f} fuera de la tabla {t}: {refs}")
+                    ids.append(f"t{t}-r{f}-c{c}")
+        return list(dict.fromkeys(ids))
+
+    def render_guiado(self, cab, hijos, id_):
+        lineas = [l.rstrip() for l in hijos]
+        k = [l.strip() for l in lineas].index("---")
+        antes, pasos = lineas[:k], lineas[k + 1:]
+        celdas = lambda l: [x.strip() for x in l.strip().strip("|").split("|")]
+        partes, dims, buf, i = [], [], [], 0
+        while i < len(antes):
+            l = antes[i]
+            if l.strip().startswith("|") and i + 1 < len(antes) and re.match(r"^\s*\|[\s:|-]+\|\s*$", antes[i + 1]):
+                if buf:
+                    partes.append(self.render(self.parsear(buf)))
+                    buf = []
+                n = len(dims) + 1
+                enc = celdas(l)
+                i += 2
+                filas = []
+                while i < len(antes) and antes[i].strip().startswith("|"):
+                    filas.append(celdas(antes[i]))
+                    i += 1
+                dims.append((len(filas), len(enc)))
+                h = "".join(f'<th data-celda="t{n}-h{c}">{self.md_inline(x)}</th>' for c, x in enumerate(enc, 1))
+                cuerpo = ""
+                for r, fila in enumerate(filas, 1):
+                    clase = ' class="suma"' if fila and fila[0].startswith("**") else ""
+                    cuerpo += f"<tr{clase}>" + "".join(
+                        f'<td data-celda="t{n}-r{r}-c{c}">{self.md_inline(x)}</td>' for c, x in enumerate(fila, 1)) + "</tr>"
+                partes.append(f'<div class="tabla g-tabla"><table data-tabla="{n}"><thead><tr>{h}</tr></thead><tbody>{cuerpo}</tbody></table></div>')
+            else:
+                buf.append(l)
+                i += 1
+        if buf:
+            partes.append(self.render(self.parsear(buf)))
+        if id_:
+            self.ancla(id_, self.num_actual(), cab, "bloque")
+        pas = self.render_pasos(pasos, dims)
+        idattr = f' id="{id_}"' if id_ else ""
+        control = ('<div class="g-control"><button type="button" class="g-iniciar">▶ Recorrer paso a paso</button>'
+                   '<button type="button" class="g-ant" disabled>◀ Anterior</button><span class="g-pos">Pasa el cursor por un paso para ver qué datos usa</span>'
+                   '<button type="button" class="g-sig" disabled>Siguiente ▶</button><button type="button" class="g-todo" disabled>Ver todo</button></div>')
+        leyenda = ('<div class="g-leyenda"><span class="g-l-usa">datos que se usan</span>'
+                   '<span class="g-l-da">resultado del paso</span></div>')
+        return (f'<div class="bloque b-ejemplo guiado"{idattr}><div class="b-cab"><span class="b-ico">✍️</span>'
+                f'<span class="b-tipo">Ejemplo a mano · guiado</span><span class="b-titulo">{self.md_inline(cab)}</span></div>'
+                f'<div class="b-cuerpo"><div class="g-fijo">{"".join(partes)}{leyenda}{control}<div class="g-espejo" hidden></div></div>{pas}</div></div>')
 
     def render_ejercicio(self, cab, hijos):
         self.n_ejercicio += 1
@@ -611,8 +698,7 @@ def main():
     html_cuerpo = re.sub(r"@@R(\d+)@@", sust_r, html_cuerpo)
     html_cuerpo = html_cuerpo.replace("<li>[ ] ", '<li class="check"><label><input type="checkbox"> ')
     html_cuerpo = re.sub(r'(<li class="check"><label><input type="checkbox"> .*?)</li>', r"\1</label></li>", html_cuerpo)
-    html_cuerpo = re.sub(r"<table>", '<div class="tabla"><table>', html_cuerpo)
-    html_cuerpo = html_cuerpo.replace("</table>", "</table></div>")
+    html_cuerpo = re.sub(r"<table>(.*?)</table>", r'<div class="tabla"><table>\1</table></div>', html_cuerpo, flags=re.S)
 
     # ---- índice lateral y mapa ----
     toc = []

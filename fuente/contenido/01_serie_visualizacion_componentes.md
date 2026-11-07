@@ -103,6 +103,16 @@ print(serie.head(4))
 print("Frecuencia:", serie.index.freqstr, "| n =", len(serie), "| faltantes:", serie.isna().sum())
 ```
 
+:::interactivo tabla-ap | El dataset completo: AirPassengers mes por mes {#tabla-airpassengers}
+Estos son los 144 datos de `serie`, acomodados con un año por renglón y un mes por columna (es lo que produce `serie.to_frame().pivot_table(...)`). El color es más rosa cuanto más alto el valor.
+@@@
+- **Cada celda** es una observación $y_t$; al pasar el cursor se resaltan su renglón (año) y su columna (mes) y se marca en la gráfica de abajo.
+- **Leer por renglón** (un año): ves el patrón estacional, con el pico en julio–agosto.
+- **Leer por columna** (un mes): ves la tendencia, porque cada año ese mes es mayor.
+- **«ln(pasajeros)»**: los valores crecen de forma más pareja.
+- **«cambio vs. mismo mes del año anterior»**: es $100\,(y_t / y_{t-12} - 1)$, un crecimiento anual en %. El primer año queda vacío porque no tiene año anterior. Es casi lo mismo que $\Delta_{12}\ln y_t$ [[logaritmos]].
+:::
+
 `asfreq` es muy útil porque **revela los huecos**: si falta una fecha, aparece con `NaN` en lugar de esconderse.
 
 ```python
@@ -213,17 +223,36 @@ $$\tip{MA}{\mathrm{MM}_t} = \frac{1}{\tip{m}{m}}\sum_{j=0}^{m-1} y_{t-j}, \qquad
 - $s_t$ divide entre $m - 1$ (la convención de pandas para la desviación estándar muestral).
 :::
 
-:::ejemplo Media y desviación móviles con m = 3
-Serie: $y = (4,\, 6,\, 5,\, 7,\, 9,\, 8)$. La primera ventana completa termina en $t = 3$.
+:::guiado Media y desviación móviles con m = 3
+Serie: $y = (4,\, 6,\, 5,\, 7,\, 9,\, 8)$. Cada ventana toma el periodo actual y los dos anteriores.
 
-| $t$ | ventana | $\mathrm{MM}_t$ | desviaciones | $s_t$ |
-|---|---|---|---|---|
-| 3 | (4, 6, 5) | 15/3 = **5** | −1, 1, 0 → suma de cuadrados 2 | $\sqrt{2/2} = $ **1** |
-| 4 | (6, 5, 7) | 18/3 = **6** | 0, −1, 1 → 2 | **1** |
-| 5 | (5, 7, 9) | 21/3 = **7** | −2, 0, 2 → 8 | $\sqrt{8/2} = $ **2** |
-| 6 | (7, 9, 8) | 24/3 = **8** | −1, 1, 0 → 2 | **1** |
-
-La media móvil sube de 5 a 8: **la media no es constante** (hay tendencia). La desviación casi no cambia.
+| $t$ | $y_t$ | $\mathrm{MM}_t$ | $s_t$ |
+|---|---|---|---|
+| 1 | 4 | — | — |
+| 2 | 6 | — | — |
+| 3 | 5 | 5 | 1 |
+| 4 | 7 | 6 | 1 |
+| 5 | 9 | 7 | 2 |
+| 6 | 8 | 8 | 1 |
+---
+= t = 1, 2:\quad \text{ventana incompleta}
+> No hay 3 datos hasta $t$: en pandas quedan como `NaN`.
+@ usa c2[1-2]
+= \mathrm{MM}_3 = \frac{4 + 6 + 5}{3} = \frac{15}{3} = 5
+> Primera ventana completa: $t = 1, 2, 3$.
+@ usa c2[1-3]; da c3[3]
+= s_3 = \sqrt{\frac{(4-5)^2 + (6-5)^2 + (5-5)^2}{3 - 1}} = \sqrt{\frac{1 + 1 + 0}{2}} = 1
+> Desviaciones respecto a la media **de la ventana** y división entre $m - 1 = 2$.
+@ usa c2[1-3] c3[3]; da c4[3]
+= \mathrm{MM}_4 = \frac{6 + 5 + 7}{3} = 6, \qquad s_4 = \sqrt{\frac{0 + 1 + 1}{2}} = 1
+> La ventana se recorre un lugar: sale el 4 y entra el 7.
+@ usa c2[2-4]; da c3[4] c4[4]
+= \mathrm{MM}_5 = \frac{5 + 7 + 9}{3} = 7, \qquad s_5 = \sqrt{\frac{4 + 0 + 4}{2}} = 2
+> Desviaciones $-2, 0, 2$ respecto a 7.
+@ usa c2[3-5]; da c3[5] c4[5]
+= \mathrm{MM}_6 = \frac{7 + 9 + 8}{3} = 8, \qquad s_6 = \sqrt{\frac{1 + 1 + 0}{2}} = 1
+> La media móvil sube de 5 a 8: **la media no es constante** (hay tendencia). La desviación casi no cambia.
+@ usa c2[4-6]; da c3[6] c4[6]
 :::
 
 ```python
@@ -318,17 +347,31 @@ $$y_t = T_t + S_t + R_t$$
 Cada componente **se suma**. El efecto estacional $S_t$ se mide en las **mismas unidades** que la serie y su tamaño **no depende del nivel**: «en diciembre se venden 8 mil unidades más que el promedio», ya sea que el promedio sea 100 o 1000. Los índices estacionales suman 0 a lo largo de un periodo completo.
 :::
 
-:::ejemplo Armar una serie aditiva a mano
-Tendencia $T_t = 100 + 2t$, efecto estacional trimestral $S = (+8,\,-3,\,-10,\,+5)$ (suman $0$) y ruido $\varepsilon = (1,\,-2,\,0.5,\,-1)$:
+:::guiado Armar una serie aditiva a mano
+Tendencia $T_t = 100 + 2t$, efecto estacional trimestral $S = (+8,\,-3,\,-10,\,+5)$ (suman 0) y ruido $\varepsilon = (1,\,-2,\,0.5,\,-1)$.
 
 | $t$ | $T_t = 100 + 2t$ | $S_t$ | $\varepsilon_t$ | $y_t = T_t + S_t + \varepsilon_t$ |
 |---|---|---|---|---|
-| 1 | 102 | +8 | 1 | **111** |
-| 2 | 104 | −3 | −2 | **99** |
-| 3 | 106 | −10 | 0.5 | **96.5** |
-| 4 | 108 | +5 | −1 | **112** |
-
-Si muchos años después la tendencia vale 1000, el primer trimestre seguirá sumando **+8**: $1000 + 8 = 1008$. La amplitud estacional es **constante**.
+| 1 | 102 | +8 | 1 | 111 |
+| 2 | 104 | −3 | −2 | 99 |
+| 3 | 106 | −10 | 0.5 | 96.5 |
+| 4 | 108 | +5 | −1 | 112 |
+---
+= T_t = 100 + 2t = (102,\; 104,\; 106,\; 108)
+> Evaluamos la recta en $t = 1, 2, 3, 4$.
+@ usa c1[1-4]; da c2[1-4]
+= y_1 = 102 + 8 + 1 = 111
+> Primer trimestre: tendencia más su efecto estacional más el ruido.
+@ usa c2[1] c3[1] c4[1]; da c5[1]
+= y_2 = 104 - 3 - 2 = 99
+> Segundo trimestre: está 3 unidades abajo de la tendencia.
+@ usa c2[2] c3[2] c4[2]; da c5[2]
+= y_3 = 106 - 10 + 0.5 = 96.5, \qquad y_4 = 108 + 5 - 1 = 112
+> Los otros dos trimestres.
+@ usa c2[3-4] c3[3-4] c4[3-4]; da c5[3-4]
+= T = 1000:\quad 1000 + 8 = 1008
+> Muchos años después el primer trimestre seguirá sumando **+8**: en el modelo aditivo la amplitud estacional es **constante**.
+@ usa c3[1]
 :::
 
 ### Modelo multiplicativo {#multiplicativo}
@@ -339,21 +382,31 @@ $$y_t = T_t \times S_t \times R_t$$
 Ahora $S_t$ es un **factor**: $S_t = 1.08$ significa «8% arriba de la tendencia». Como es un porcentaje, el efecto en unidades **crece con el nivel**: 8% de 100 son 8, pero 8% de 1000 son 80. Los índices estacionales promedian **1** a lo largo de un periodo.
 :::
 
-:::ejemplo La misma idea, ahora multiplicativa
-Mismas tendencias; factores estacionales $S = (1.08,\, 0.97,\, 0.90,\, 1.05)$ y ruido multiplicativo $R = (1.01,\, 0.98,\, 1.005,\, 0.99)$:
+:::guiado La misma idea, ahora multiplicativa
+Mismas tendencias; factores estacionales $S = (1.08,\, 0.97,\, 0.90,\, 1.05)$ y ruido multiplicativo $R = (1.01,\, 0.98,\, 1.005,\, 0.99)$.
 
-:::pasos
-= y_1 = 102 \times 1.08 \times 1.01 = 102 \times 1.0908 = 111.2616
-> Primero multiplicamos los factores $1.08 \times 1.01$; luego por la tendencia.
-= y_2 = 104 \times 0.97 \times 0.98 = 104 \times 0.9506 = 98.8624
-> El segundo trimestre está 3% abajo de la tendencia.
-= y_3 = 106 \times 0.90 \times 1.005 = 106 \times 0.9045 = 95.877
-> Tercer trimestre: 10% abajo.
-= y_4 = 108 \times 1.05 \times 0.99 = 108 \times 1.0395 = 112.266
-> Cuarto trimestre: 5% arriba.
+| $t$ | $T_t$ | $S_t$ | $R_t$ | $S_t \times R_t$ | $y_t = T_t \times S_t \times R_t$ |
+|---|---|---|---|---|---|
+| 1 | 102 | 1.08 | 1.01 | 1.0908 | 111.2616 |
+| 2 | 104 | 0.97 | 0.98 | 0.9506 | 98.8624 |
+| 3 | 106 | 0.90 | 1.005 | 0.9045 | 95.877 |
+| 4 | 108 | 1.05 | 0.99 | 1.0395 | 112.266 |
+---
+= S_t \times R_t = (1.0908,\; 0.9506,\; 0.9045,\; 1.0395)
+> Primero multiplicamos los dos factores de cada trimestre.
+@ usa c3[1-4] c4[1-4]; da c5[1-4]
+= y_1 = 102 \times 1.0908 = 111.2616
+> El primer trimestre queda 9.08% arriba de la tendencia.
+@ usa c2[1] c5[1]; da c6[1]
+= y_2 = 104 \times 0.9506 = 98.8624
+> El segundo, casi 5% abajo.
+@ usa c2[2] c5[2]; da c6[2]
+= y_3 = 106 \times 0.9045 = 95.877, \qquad y_4 = 108 \times 1.0395 = 112.266
+> Los otros dos trimestres.
+@ usa c2[3-4] c5[3-4]; da c6[3-4]
 = T = 1000:\quad 1000 \times 1.08 = 1080 \;(\text{efecto de } {+80})
 > Con nivel 1000, el mismo factor produce un efecto **diez veces mayor** que con nivel 100: la amplitud crece.
-:::
+@ usa c3[1]
 :::
 
 :::duda ¿La amplitud es el efecto estacional en la descomposición?
@@ -500,48 +553,62 @@ Serie trimestral con tendencia, estacionalidad y ruido. Prueba ventanas de 3, 4 
 4. **Residuo**: $\hat R_t = y_t - \hat T_t - \hat S_t$ (en el multiplicativo, $y_t / (\hat T_t \hat S_t)$).
 :::
 
-:::ejemplo Descomposición clásica de una serie trimestral (3 años)
+:::guiado Descomposición clásica de una serie trimestral (3 años) {#guia-descomp}
 $$y = (24,\, 18,\, 14,\, 26,\;\; 28,\, 21,\, 18,\, 30,\;\; 31,\, 25,\, 21,\, 34)$$
 
-**Paso 1 · Tendencia con la media 2×4.** Para $t = 3$:
-
-:::pasos
-= \hat T_3 = \tfrac18 y_1 + \tfrac14 (y_2 + y_3 + y_4) + \tfrac18 y_5
-> Fórmula 2×4 centrada en $t = 3$ (necesita dos datos antes y dos después).
-= = \tfrac18(24) + \tfrac14(18 + 14 + 26) + \tfrac18(28) = 3 + 14.5 + 3.5 = 21
-> Sustituimos y sumamos.
-= \hat T_4 = \tfrac18(18) + \tfrac14(14 + 26 + 28) + \tfrac18(21) = 2.25 + 17 + 2.625 = 21.875
-> Se recorre la ventana un lugar.
-:::
-
-Repitiendo hasta $t = 10$ (en $t = 1, 2, 11, 12$ no hay datos suficientes):
-
-| $t$ | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
-|---|---|---|---|---|---|---|---|---|
-| trimestre | Q3 | Q4 | Q1 | Q2 | Q3 | Q4 | Q1 | Q2 |
-| $y_t$ | 14 | 26 | 28 | 21 | 18 | 30 | 31 | 25 |
-| $\hat T_t$ | 21 | 21.875 | 22.75 | 23.75 | 24.625 | 25.5 | 26.375 | 27.25 |
-| $y_t - \hat T_t$ | −7 | 4.125 | 5.25 | −2.75 | −6.625 | 4.5 | 4.625 | −2.25 |
-
-**Paso 2 y 3 · Promedio por trimestre y centrado.**
+| $t$ | trim. | $y_t$ | $\hat T_t$ | $y_t - \hat T_t$ | $\hat S_t$ | $\hat R_t$ |
+|---|---|---|---|---|---|---|
+| 1 | Q1 | 24 | — | — | 4.9531 | — |
+| 2 | Q2 | 18 | — | — | −2.4844 | — |
+| 3 | Q3 | 14 | 21 | −7 | −6.7969 | −0.2031 |
+| 4 | Q4 | 26 | 21.875 | 4.125 | 4.3281 | −0.2031 |
+| 5 | Q1 | 28 | 22.75 | 5.25 | 4.9531 | 0.2969 |
+| 6 | Q2 | 21 | 23.75 | −2.75 | −2.4844 | −0.2656 |
+| 7 | Q3 | 18 | 24.625 | −6.625 | −6.7969 | 0.1719 |
+| 8 | Q4 | 30 | 25.5 | 4.5 | 4.3281 | 0.1719 |
+| 9 | Q1 | 31 | 26.375 | 4.625 | 4.9531 | −0.3281 |
+| 10 | Q2 | 25 | 27.25 | −2.25 | −2.4844 | 0.2344 |
+| 11 | Q3 | 21 | — | — | −6.7969 | — |
+| 12 | Q4 | 34 | — | — | 4.3281 | — |
 
 | Trimestre | valores de $y_t - \hat T_t$ | promedio | índice centrado $\hat S$ |
 |---|---|---|---|
-| Q1 | 5.25, 4.625 | 4.9375 | **4.9531** |
-| Q2 | −2.75, −2.25 | −2.5 | **−2.4844** |
-| Q3 | −7, −6.625 | −6.8125 | **−6.7969** |
-| Q4 | 4.125, 4.5 | 4.3125 | **4.3281** |
-
-:::pasos
+| Q1 | 5.25, 4.625 | 4.9375 | 4.9531 |
+| Q2 | −2.75, −2.25 | −2.5 | −2.4844 |
+| Q3 | −7, −6.625 | −6.8125 | −6.7969 |
+| Q4 | 4.125, 4.5 | 4.3125 | 4.3281 |
+| **Media** | | −0.015625 | 0 |
+---
+= \hat T_3 = \tfrac18 y_1 + \tfrac14 (y_2 + y_3 + y_4) + \tfrac18 y_5 = 3 + 14.5 + 3.5 = 21
+> **Paso 1 · Tendencia.** La media 2×4 centrada en $t = 3$ usa dos datos antes y dos después [[mm-centrada]]: $\tfrac18(24) + \tfrac14(18 + 14 + 26) + \tfrac18(28)$.
+@ usa c3[1-5]; da c4[3]
+= \hat T_4 = \tfrac18(18) + \tfrac14(14 + 26 + 28) + \tfrac18(21) = 2.25 + 17 + 2.625 = 21.875
+> La ventana se recorre un lugar.
+@ usa c3[2-6]; da c4[4]
+= \hat T_5, \dots, \hat T_{10} = 22.75,\; 23.75,\; 24.625,\; 25.5,\; 26.375,\; 27.25
+> Se repite hasta $t = 10$. En $t = 1, 2, 11, 12$ no hay dos datos a cada lado: la tendencia no existe ahí.
+@ usa c3[3-12]; da c4[5-10]
+= y_t - \hat T_t = (-7,\; 4.125,\; 5.25,\; -2.75,\; -6.625,\; 4.5,\; 4.625,\; -2.25)
+> **Paso 2 · Quitar la tendencia.** Restamos renglón por renglón; queda el efecto estacional más el ruido.
+@ usa c3[3-10] c4[3-10]; da c5[3-10]
+= Q1:\; \frac{5.25 + 4.625}{2} = 4.9375
+> **Paso 3 · Promediar por temporada.** Los primeros trimestres con tendencia disponible son $t = 5$ y $t = 9$.
+@ usa c5[5,9] c2[5,9]; da t2.c2[1] t2.c3[1]
+= Q2: -2.5,\qquad Q3: -6.8125,\qquad Q4: 4.3125
+> Lo mismo con $t = 6, 10$ (Q2), $t = 3, 7$ (Q3) y $t = 4, 8$ (Q4).
+@ usa c5[3,4,6,7,8,10]; da t2.c2[2-4] t2.c3[2-4]
 = \frac{4.9375 - 2.5 - 6.8125 + 4.3125}{4} = \frac{-0.0625}{4} = -0.015625
-> Los promedios no suman exactamente 0 por el ruido; calculamos su media.
-= \hat S_{Q1} = 4.9375 - (-0.015625) = 4.953125
-> A cada promedio le restamos esa media. Ahora los 4 índices suman 0.
-:::
-
-**Paso 4 · Residuo.** Por ejemplo, $\hat R_3 = y_3 - \hat T_3 - \hat S_{Q3} = 14 - 21 - (-6.7969) = -0.2031$. Los residuos quedan pequeños (entre −0.33 y 0.30): la tendencia y la estacionalidad explican casi todo.
-
-**Lectura:** el primer trimestre está unas 5 unidades **arriba** de la tendencia y el tercero casi 7 **abajo**.
+> Los promedios no suman 0 por el ruido: calculamos su media.
+@ usa t2.c3[1-4]; da t2.c3[5]
+= \hat S_{Q} = \text{promedio} - (-0.015625):\quad (4.9531,\; -2.4844,\; -6.7969,\; 4.3281)
+> A cada promedio le restamos la media; ahora los 4 índices suman 0.
+@ usa t2.c3[1-5]; da t2.c4[1-5]
+= \hat S_t = \hat S_{\text{trimestre de } t}
+> Cada renglón de la serie recibe el índice de su trimestre (el patrón se repite los 3 años).
+@ usa t2.c4[1-4] c2[1-12]; da c6[1-12]
+= \hat R_3 = y_3 - \hat T_3 - \hat S_3 = 14 - 21 - (-6.7969) = -0.2031
+> **Paso 4 · Residuo.** Lo que queda después de quitar tendencia y estacionalidad. Todos los residuos son pequeños (entre −0.33 y 0.30): el primer trimestre está unas 5 unidades **arriba** de la tendencia y el tercero casi 7 **abajo**.
+@ usa c3[3-10] c4[3-10] c6[3-10]; da c7[3-10]
 :::
 
 ```python

@@ -110,38 +110,55 @@ Simulamos muchos paseos aleatorios (donde $H_0$ es cierta) y calculamos $\tau$ e
 
 ### Dickey–Fuller calculada a mano {#df-mano}
 
-:::ejemplo Prueba DF (sin constante) con 10 datos
+:::guiado Prueba DF (sin constante) con 10 datos {#guia-df}
 $$y = (3,\; 1,\; 2,\; -1,\; 0,\; -2,\; 1,\; 0,\; 2,\; 1)$$
 
-**Paso 1 · Armar la tabla.** Para $t = 2, \dots, 10$ calculamos $\Delta y_t = y_t - y_{t-1}$:
-
-| $t$ | $y_{t-1}$ | $\Delta y_t$ | $y_{t-1}\,\Delta y_t$ | $y_{t-1}^2$ | $\hat\varepsilon_t = \Delta y_t + 0.875\,y_{t-1}$ | $\hat\varepsilon_t^2$ |
-|---|---|---|---|---|---|---|
-| 2 | 3 | −2 | −6 | 9 | 0.625 | 0.390625 |
-| 3 | 1 | 1 | 1 | 1 | 1.875 | 3.515625 |
-| 4 | 2 | −3 | −6 | 4 | −1.25 | 1.5625 |
-| 5 | −1 | 1 | −1 | 1 | 0.125 | 0.015625 |
-| 6 | 0 | −2 | 0 | 0 | −2 | 4 |
-| 7 | −2 | 3 | −6 | 4 | 1.25 | 1.5625 |
-| 8 | 1 | −1 | −1 | 1 | −0.125 | 0.015625 |
-| 9 | 0 | 2 | 0 | 0 | 2 | 4 |
-| 10 | 2 | −1 | −2 | 4 | 0.75 | 0.5625 |
-| **Suma** | | | **−21** | **24** | | **15.625** |
-
-**Paso 2 · Estimar y probar.**
-
-:::pasos
+| $t$ | $y_t$ | $y_{t-1}$ | $\Delta y_t$ | $y_{t-1}\,\Delta y_t$ | $y_{t-1}^2$ | $\hat\varepsilon_t$ | $\hat\varepsilon_t^2$ |
+|---|---|---|---|---|---|---|---|
+| 1 | 3 | — | — | — | — | — | — |
+| 2 | 1 | 3 | −2 | −6 | 9 | 0.625 | 0.390625 |
+| 3 | 2 | 1 | 1 | 1 | 1 | 1.875 | 3.515625 |
+| 4 | −1 | 2 | −3 | −6 | 4 | −1.25 | 1.5625 |
+| 5 | 0 | −1 | 1 | −1 | 1 | 0.125 | 0.015625 |
+| 6 | −2 | 0 | −2 | 0 | 0 | −2 | 4 |
+| 7 | 1 | −2 | 3 | −6 | 4 | 1.25 | 1.5625 |
+| 8 | 0 | 1 | −1 | −1 | 1 | −0.125 | 0.015625 |
+| 9 | 2 | 0 | 2 | 0 | 0 | 2 | 4 |
+| 10 | 1 | 2 | −1 | −2 | 4 | 0.75 | 0.5625 |
+| **Suma** | | | | **−21** | **24** | | **15.625** |
+---
+= y_{t-1}:\; \text{la serie bajada un renglón}
+> Para $t = 2, \dots, 10$; la regresión tiene $m = 9$ observaciones.
+@ usa c2[1-9]; da c3[2-10]
+= \Delta y_t = y_t - y_{t-1}:\quad 1 - 3 = -2,\;\; 2 - 1 = 1,\;\; \dots
+> El cambio de cada periodo: es la variable dependiente de la regresión [[df-deduccion]].
+@ usa c2[2-10] c3[2-10]; da c4[2-10]
+= y_{t-1}\,\Delta y_t \quad\text{y}\quad y_{t-1}^2
+> Las dos columnas que pide la fórmula de mínimos cuadrados [[df-mco]].
+@ usa c3[2-10] c4[2-10]; da c5[2-10] c6[2-10]
+= \sum y_{t-1}\Delta y_t = -21, \qquad \sum y_{t-1}^2 = 24
+> Sumamos cada columna.
+@ usa c5[2-10] c6[2-10]; da c5[11] c6[11]
 = \hat\delta = \frac{\sum y_{t-1}\Delta y_t}{\sum y_{t-1}^2} = \frac{-21}{24} = -0.875
-> Fórmula de mínimos cuadrados [[df-mco]]. Equivale a $\hat\phi = 1 + \hat\delta = 0.125$.
+> Estimador de $\delta$; equivale a $\hat\phi = 1 + \hat\delta = 0.125$.
+@ usa c5[11] c6[11]
+= \hat\varepsilon_t = \Delta y_t - \hat\delta\,y_{t-1} = \Delta y_t + 0.875\,y_{t-1}
+> Residuos: por ejemplo, en $t = 2$: $-2 + 0.875 \times 3 = 0.625$.
+@ usa c3[2-10] c4[2-10]; da c7[2-10]
+= \sum\hat\varepsilon_t^2 = 15.625
+> Elevamos al cuadrado y sumamos.
+@ usa c7[2-10]; da c8[2-10] c8[11]
 = s^2 = \frac{15.625}{9 - 1} = 1.953125
-> Hay $m = 9$ observaciones y un parámetro estimado.
-= \tip{se}{\operatorname{EE}}(\hat\delta) = \sqrt{\frac{1.953125}{24}} = \sqrt{0.081380} = 0.28527
+> Varianza de los residuos: $m = 9$ observaciones y un parámetro estimado.
+@ usa c8[11]
+= \tip{se}{\operatorname{EE}}(\hat\delta) = \sqrt{\frac{s^2}{\sum y_{t-1}^2}} = \sqrt{\frac{1.953125}{24}} = \sqrt{0.081380} = 0.28527
 > Error estándar del coeficiente.
-= \tau = \frac{-0.875}{0.28527} = -3.067
+@ usa c6[11] c8[11]
+= \tau = \frac{\hat\delta}{\tip{se}{\operatorname{EE}}(\hat\delta)} = \frac{-0.875}{0.28527} = -3.067
 > Estadístico de Dickey–Fuller.
+@ usa c5[11] c6[11] c8[11]
 = \tau = -3.067 < -1.97 = \text{valor crítico al 5\% (sin constante, } m = 9)
 > Más negativo que el valor crítico ⇒ **se rechaza $H_0$**: no hay raíz unitaria; la serie regresa rápido a 0.
-:::
 :::
 
 ```python
@@ -312,31 +329,51 @@ $$\eta = \frac{\dfrac{1}{n^2}\displaystyle\sum_{t=1}^{n} S_t^2}{\lrvar}, \qquad 
 Las desviaciones respecto a la media siempre suman 0 al final [[suma-desv]]. Si la serie es estacionaria, en el camino la suma acumulada **va y viene** cerca de 0. Si la serie tiene un paseo aleatorio, pasa largas rachas arriba (o abajo) de su media y la suma acumulada hace **excursiones enormes** antes de regresar a 0 en $t = n$.
 :::
 
-:::ejemplo KPSS a mano (especificación "c", L = 0)
-**Serie A** (con tendencia): $y = (5, 7, 6, 8, 7, 9, 8, 10)$, $\bar y = 60/8 = 7.5$.
+:::guiado KPSS a mano (especificación "c", L = 0) {#guia-kpss}
+**Serie A** (con tendencia): $y = (5, 7, 6, 8, 7, 9, 8, 10)$.
 
-| $t$ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-|---|---|---|---|---|---|---|---|---|
-| $\ehat_t = y_t - 7.5$ | −2.5 | −0.5 | −1.5 | 0.5 | −0.5 | 1.5 | 0.5 | 2.5 |
-| $S_t$ | −2.5 | −3 | −4.5 | −4 | −4.5 | −3 | −2.5 | 0 |
-| $S_t^2$ | 6.25 | 9 | 20.25 | 16 | 20.25 | 9 | 6.25 | 0 |
-
-:::pasos
+| $t$ | $y_t$ | $\ehat_t = y_t - \bar y$ | $S_t$ | $S_t^2$ | $\ehat_t^2$ |
+|---|---|---|---|---|---|
+| 1 | 5 | −2.5 | −2.5 | 6.25 | 6.25 |
+| 2 | 7 | −0.5 | −3 | 9 | 0.25 |
+| 3 | 6 | −1.5 | −4.5 | 20.25 | 2.25 |
+| 4 | 8 | 0.5 | −4 | 16 | 0.25 |
+| 5 | 7 | −0.5 | −4.5 | 20.25 | 0.25 |
+| 6 | 9 | 1.5 | −3 | 9 | 2.25 |
+| 7 | 8 | 0.5 | −2.5 | 6.25 | 0.25 |
+| 8 | 10 | 2.5 | 0 | 0 | 6.25 |
+| **Suma** | 60 | 0 | | 87 | 18 |
+---
+= \bar y = \frac{60}{8} = 7.5
+> Especificación `"c"`: los residuos son la serie menos su media.
+@ usa c2[1-8]; da c2[9]
+= \ehat_t = y_t - 7.5 = (-2.5,\; -0.5,\; -1.5,\; 0.5,\; -0.5,\; 1.5,\; 0.5,\; 2.5)
+> Suman 0, como siempre [[suma-desv]].
+@ usa c2[1-8] c2[9]; da c3[1-9]
+= S_1 = -2.5,\quad S_2 = -2.5 - 0.5 = -3,\quad S_3 = -3 - 1.5 = -4.5,\;\dots,\; S_8 = 0
+> **Sumas acumuladas**: cada $S_t$ es el anterior más el residuo de $t$. Se van hasta −4.5 antes de regresar a 0.
+@ usa c3[1-8]; da c4[1-8]
 = \frac{1}{n^2}\sum S_t^2 = \frac{87}{64} = 1.359375
-> La suma de la última fila es 87 y $n^2 = 64$.
-= \lrvar = \frac{1}{8}\sum \ehat_t^2 = \frac{6.25 + 0.25 + 2.25 + 0.25 + 0.25 + 2.25 + 0.25 + 6.25}{8} = \frac{18}{8} = 2.25
-> Con $L = 0$ no hay corrección por autocorrelación.
+> Numerador: cuadrados de las sumas acumuladas entre $n^2 = 64$.
+@ usa c4[1-8]; da c5[1-9]
+= \lrvar = \frac{1}{8}\sum \ehat_t^2 = \frac{18}{8} = 2.25
+> Con $L = 0$ el denominador es el promedio de los residuos al cuadrado.
+@ usa c3[1-8]; da c6[1-9]
 = \eta = \frac{1.359375}{2.25} = 0.6042
 > Estadístico KPSS.
+@ usa c5[9] c6[9]
 = 0.6042 > 0.463 = \text{crítico al 5\%}
-> **Se rechaza $H_0$**: la suma acumulada se fue muy lejos (hasta −4.5); la serie no es estacionaria en nivel.
+> **Se rechaza $H_0$**: la suma acumulada se fue muy lejos; la serie no es estacionaria en nivel.
 = \text{p-value} = 0.025 - 0.015\cdot\frac{0.6042 - 0.574}{0.739 - 0.574} = 0.0223
 > El p-value se **interpola** en la tabla de KPSS: 0.6042 está entre los críticos del 2.5% (0.574) y del 1% (0.739).
 :::
 
-**Serie B** (sin tendencia): $y = (6, 8, 5, 7, 9, 6, 8, 7)$, $\bar y = 7$. Residuos $(-1, 1, -2, 0, 2, -1, 1, 0)$, sumas acumuladas $(-1, 0, -2, -2, 0, -1, 0, 0)$, $\sum S_t^2 = 10$ y $\sum \ehat_t^2 = 12$:
+:::ejemplo La serie B, sin tendencia
+$y = (6, 8, 5, 7, 9, 6, 8, 7)$, $\bar y = 7$. Residuos $(-1, 1, -2, 0, 2, -1, 1, 0)$, sumas acumuladas $(-1, 0, -2, -2, 0, -1, 0, 0)$, $\sum S_t^2 = 10$ y $\sum \ehat_t^2 = 12$:
 
 $$\eta = \frac{10/64}{12/8} = \frac{0.15625}{1.5} = 0.1042 < 0.347 \;(\text{crítico al 10\%}) \Rightarrow \text{no se rechaza: estacionaria}$$
+
+Las sumas acumuladas nunca pasan de −2: la serie regresa constantemente a su media.
 :::
 
 ```python

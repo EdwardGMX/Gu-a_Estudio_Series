@@ -178,21 +178,44 @@ Centramos la serie: $x_t = y_t - \mu$. Como $\mu = c + \phi\mu$, restando queda 
 **Conclusión:** con $|\phi| < 1$ se cumplen las tres condiciones: el AR(1) es estacionario.
 :::
 
-:::ejemplo AR(1) con c = 2, φ = 0.6 y σ² = 4
-:::pasos
+:::guiado AR(1) con c = 2, φ = 0.6 y σ² = 4
+Simulamos tres pasos con los choques $\varepsilon = (1, -2, 0.5)$, empezando en la media, y llenamos la tabla de la ACF teórica.
+
+| $t$ | $\varepsilon_t$ | $y_{t-1}$ | $c + \phi\,y_{t-1}$ | $y_t$ |
+|---|---|---|---|---|
+| 0 | — | — | — | 5 |
+| 1 | 1 | 5 | 5 | 6 |
+| 2 | −2 | 6 | 5.6 | 3.6 |
+| 3 | 0.5 | 3.6 | 4.16 | 4.66 |
+
+| $k$ | $\gamma(k) = \phi^k\gamma(0)$ | $\rho(k) = \phi^k$ |
+|---|---|---|
+| 0 | 6.25 | 1 |
+| 1 | 3.75 | 0.6 |
+| 2 | 2.25 | 0.36 |
+| 3 | 1.35 | 0.216 |
+---
 = \mu = \frac{c}{1 - \phi} = \frac{2}{1 - 0.6} = \frac{2}{0.4} = 5
-> La serie oscila alrededor de 5.
-= \gamma(0) = \frac{\sigma^2}{1 - \phi^2} = \frac{4}{1 - 0.36} = \frac{4}{0.64} = 6.25 \quad (\text{desv. est.} = 2.5)
-> La varianza de la serie es **mayor** que la del choque (4): la memoria acumula variabilidad.
-= \gamma(1) = 0.6 \times 6.25 = 3.75, \qquad \gamma(2) = 0.6^2 \times 6.25 = 2.25
-> Regla $\gamma(k) = \phi^k\gamma(0)$.
-= \rho(1) = 0.6,\quad \rho(2) = 0.36,\quad \rho(3) = 0.216
-> Cada rezago multiplica por 0.6.
-= y_0 = 5,\; \varepsilon = (1, -2, 0.5):\quad y_1 = 2 + 0.6(5) + 1 = 6
-> Simulamos tres pasos a mano, empezando en la media.
-= y_2 = 2 + 0.6(6) - 2 = 3.6, \qquad y_3 = 2 + 0.6(3.6) + 0.5 = 4.66
-> Tras cada choque la serie «tira» de regreso hacia 5.
-:::
+> La serie oscila alrededor de 5; por eso empezamos en $y_0 = 5$ [[ar1-media]].
+@ da c5[1]
+= y_1 = c + \phi\,y_0 + \varepsilon_1 = 2 + 0.6(5) + 1 = 5 + 1 = 6
+> La parte predecible es $2 + 0.6 \times 5 = 5$; el choque la sube a 6.
+@ usa c5[1] c2[2]; da c3[2] c4[2] c5[2]
+= y_2 = 2 + 0.6(6) - 2 = 5.6 - 2 = 3.6
+> El choque negativo la baja.
+@ usa c5[2] c2[3]; da c3[3] c4[3] c5[3]
+= y_3 = 2 + 0.6(3.6) + 0.5 = 4.16 + 0.5 = 4.66
+> Tras cada choque, la serie «tira» de regreso hacia 5.
+@ usa c5[3] c2[4]; da c3[4] c4[4] c5[4]
+= \gamma(0) = \frac{\sigma^2}{1 - \phi^2} = \frac{4}{1 - 0.36} = \frac{4}{0.64} = 6.25
+> La varianza de la serie es **mayor** que la del choque (4): la memoria acumula variabilidad [[ar1-varianza]].
+@ da t2.c2[1] t2.c3[1]
+= \gamma(1) = 0.6 \times 6.25 = 3.75,\quad \gamma(2) = 0.36 \times 6.25 = 2.25,\quad \gamma(3) = 0.216 \times 6.25 = 1.35
+> Cada rezago multiplica por $\phi = 0.6$ [[ar1-acf]].
+@ usa t2.c2[1]; da t2.c2[2-4]
+= \rho(k) = \frac{\gamma(k)}{\gamma(0)} = (1,\; 0.6,\; 0.36,\; 0.216)
+> Dividimos entre $\gamma(0)$: queda $\phi^k$.
+@ usa t2.c2[1-4]; da t2.c3[2-4]
 :::
 
 ```python
@@ -248,8 +271,30 @@ Hoy es igual a ayer más un choque. No hay ninguna fuerza que lo regrese a un ni
 :::
 :::
 
-:::ejemplo Un paseo de 5 pasos
-Con $y_0 = 0$ y choques $\varepsilon = (1,\, -2,\, 0.5,\, 1.5,\, -1)$: $y_1 = 1$, $y_2 = 1 - 2 = -1$, $y_3 = -1 + 0.5 = -0.5$, $y_4 = -0.5 + 1.5 = 1$, $y_5 = 1 - 1 = 0$. Comprobación: $y_5 = 0 + (1 - 2 + 0.5 + 1.5 - 1) = 0$ ✓. Con $\sigma^2 = 1$, la incertidumbre sobre $y_{100}$ es $\Var(y_{100}) = 100$ (desviación 10), mientras que sobre $y_1$ es solo 1.
+:::guiado Un paseo de 5 pasos
+Con $y_0 = 0$ y choques $\varepsilon = (1,\, -2,\, 0.5,\, 1.5,\, -1)$:
+
+| $t$ | $\varepsilon_t$ | $y_{t-1}$ | $y_t = y_{t-1} + \varepsilon_t$ | $\Var(y_t) = t\sigma^2$ (con $\sigma^2 = 1$) |
+|---|---|---|---|---|
+| 0 | — | — | 0 | 0 |
+| 1 | 1 | 0 | 1 | 1 |
+| 2 | −2 | 1 | −1 | 2 |
+| 3 | 0.5 | −1 | −0.5 | 3 |
+| 4 | 1.5 | −0.5 | 1 | 4 |
+| 5 | −1 | 1 | 0 | 5 |
+---
+= y_1 = 0 + 1 = 1, \qquad y_2 = 1 - 2 = -1
+> Hoy es igual a ayer más el choque de hoy.
+@ usa c4[1] c2[2-3]; da c3[2-3] c4[2-3]
+= y_3 = -1 + 0.5 = -0.5, \quad y_4 = -0.5 + 1.5 = 1, \quad y_5 = 1 - 1 = 0
+> Seguimos acumulando.
+@ usa c4[3-5] c2[4-6]; da c3[4-6] c4[4-6]
+= y_5 = y_0 + \sum_{j=1}^{5}\varepsilon_j = 0 + (1 - 2 + 0.5 + 1.5 - 1) = 0 \;✓
+> Comprobación con la forma cerrada: el valor final es la suma de **todos** los choques [[paseo-demo]].
+@ usa c2[2-6]; da c4[6]
+= \Var(y_t) = t\,\sigma^2 = (0,\; 1,\; 2,\; 3,\; 4,\; 5)
+> La incertidumbre crece con $t$: con $t = 100$ sería 100 (desviación 10).
+@ usa c1[1-6]; da c5[1-6]
 :::
 
 ```python
@@ -390,18 +435,35 @@ $$y_t = b + y_{t-1} + \varepsilon_t$$
 Al revés, si a un paseo con deriva le **restas una recta**, queda $\sum_{j=1}^{t}\varepsilon_j$: otro paseo aleatorio, con varianza $t\sigma^2$. Sigue sin ser estacionario.
 :::
 
-:::ejemplo Mismos choques, dos tendencias
+:::guiado Mismos choques, dos tendencias
 Choques $\varepsilon = (0.5,\, -1,\, 1,\, 0,\, -0.5)$, $a = y_0 = 5$ y $b = 2$.
 
-| $t$ | determinística $5 + 2t + \varepsilon_t$ | estocástica $2 + y_{t-1} + \varepsilon_t$ |
-|---|---|---|
-| 1 | $7 + 0.5 = 7.5$ | $2 + 5 + 0.5 = 7.5$ |
-| 2 | $9 - 1 = 8$ | $2 + 7.5 - 1 = 8.5$ |
-| 3 | $11 + 1 = 12$ | $2 + 8.5 + 1 = 11.5$ |
-| 4 | $13 + 0 = 13$ | $2 + 11.5 + 0 = 13.5$ |
-| 5 | $15 - 0.5 = 14.5$ | $2 + 13.5 - 0.5 = 15$ |
-
-En la determinística, el choque de $t = 2$ ($-1$) solo afecta a $t = 2$. En la estocástica ese $-1$ se queda en todos los periodos siguientes. Diferencias: determinística $\Delta y = (0.5,\, 4,\, 1,\, 1.5)$, que oscila de más (es $2 + \varepsilon_t - \varepsilon_{t-1}$); estocástica $\Delta y = (1,\, 3,\, 2,\, 1.5)$, que es exactamente $2 + \varepsilon_t$.
+| $t$ | $\varepsilon_t$ | $5 + 2t$ | determinística $y_t$ | estocástica $y_{t-1}$ | estocástica $y_t$ | $\Delta$ det. | $\Delta$ estoc. |
+|---|---|---|---|---|---|---|---|
+| 1 | 0.5 | 7 | 7.5 | 5 | 7.5 | — | — |
+| 2 | −1 | 9 | 8 | 7.5 | 8.5 | 0.5 | 1 |
+| 3 | 1 | 11 | 12 | 8.5 | 11.5 | 4 | 3 |
+| 4 | 0 | 13 | 13 | 11.5 | 13.5 | 1 | 2 |
+| 5 | −0.5 | 15 | 14.5 | 13.5 | 15 | 1.5 | 1.5 |
+---
+= 5 + 2t = (7,\; 9,\; 11,\; 13,\; 15)
+> La recta de la tendencia determinística.
+@ usa c1[1-5]; da c3[1-5]
+= y_t^{\text{det}} = 5 + 2t + \varepsilon_t = (7.5,\; 8,\; 12,\; 13,\; 14.5)
+> Cada choque se suma **solo** a su periodo.
+@ usa c2[1-5] c3[1-5]; da c4[1-5]
+= y_t^{\text{est}} = 2 + y_{t-1} + \varepsilon_t:\quad 2 + 5 + 0.5 = 7.5,\;\; 2 + 7.5 - 1 = 8.5
+> La estocástica parte del valor anterior: el choque de $t = 2$ ($-1$) se queda para siempre.
+@ usa c2[1-2]; da c5[1-2] c6[1-2]
+= 2 + 8.5 + 1 = 11.5,\quad 2 + 11.5 + 0 = 13.5,\quad 2 + 13.5 - 0.5 = 15
+> Comprobación: $y_5 = 5 + 2(5) + (0.5 - 1 + 1 + 0 - 0.5) = 15$ ✓.
+@ usa c2[3-5] c6[2-4]; da c5[3-5] c6[3-5]
+= \Delta y^{\text{det}} = (0.5,\; 4,\; 1,\; 1.5) = 2 + \varepsilon_t - \varepsilon_{t-1}
+> Diferenciar la determinística oscila de más: es la sobre-diferenciación [[sobre-diferenciar]].
+@ usa c4[1-5]; da c7[2-5]
+= \Delta y^{\text{est}} = (1,\; 3,\; 2,\; 1.5) = 2 + \varepsilon_t
+> En la estocástica la diferencia es exactamente la deriva más el choque nuevo.
+@ usa c6[1-5] c2[2-5]; da c8[2-5]
 :::
 
 :::interactivo tendencias | ¿Restar la recta o diferenciar?
@@ -440,13 +502,34 @@ $$\Delta y_t = y_t - y_{t-1} = (1 - L)\,y_t \qquad \Delta^2 y_t = \Delta(\Delta 
 **Estacionalidad fija.** Si $S_t = S_{t-s}$ (el patrón se repite), entonces $\Delta_s S_t = S_t - S_{t-s} = 0$: la diferencia estacional la borra.
 :::
 
-:::ejemplo Diferencias a mano
-Con $y = (10,\, 12,\, 15,\, 14,\, 18)$:
+:::guiado Diferencias a mano
+| $t$ | $y_t$ | $\Delta y_t$ | $\Delta^2 y_t$ |
+|---|---|---|---|
+| 1 | 10 | — | — |
+| 2 | 12 | 2 | — |
+| 3 | 15 | 3 | 1 |
+| 4 | 14 | −1 | −4 |
+| 5 | 18 | 4 | 5 |
 
-- $\Delta y = (12 - 10,\; 15 - 12,\; 14 - 15,\; 18 - 14) = (2,\, 3,\, -1,\, 4)$
-- $\Delta^2 y = (3 - 2,\; -1 - 3,\; 4 - (-1)) = (1,\, -4,\, 5)$
+Serie trimestral de [[descomposicion]]:
 
-Con la serie trimestral de [[descomposicion]], $\Delta_4 y = (28 - 24,\; 21 - 18,\; 18 - 14,\; 30 - 26,\; \dots) = (4,\, 3,\, 4,\, 4,\, 3,\, 4,\, 3,\, 4)$: el patrón estacional desapareció y queda casi constante (el crecimiento anual).
+| $t$ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| $y_t$ | 24 | 18 | 14 | 26 | 28 | 21 | 18 | 30 | 31 | 25 | 21 | 34 |
+| $\Delta_4 y_t$ | — | — | — | — | 4 | 3 | 4 | 4 | 3 | 4 | 3 | 4 |
+---
+= \Delta y_t = y_t - y_{t-1} = (12 - 10,\; 15 - 12,\; 14 - 15,\; 18 - 14) = (2,\; 3,\; -1,\; 4)
+> Cada renglón menos el anterior. Se pierde el primer dato.
+@ usa c2[1-5]; da c3[2-5]
+= \Delta^2 y_t = (3 - 2,\; -1 - 3,\; 4 - (-1)) = (1,\; -4,\; 5)
+> La diferencia de la diferencia: ahora se pierden dos datos.
+@ usa c3[2-5]; da c4[3-5]
+= \Delta_4 y_5 = y_5 - y_1 = 28 - 24 = 4
+> **Diferencia estacional**: cada trimestre menos el mismo trimestre del año anterior.
+@ usa t2.c2[1] t2.c6[1]; da t2.c6[2]
+= \Delta_4 y = (4,\; 3,\; 4,\; 4,\; 3,\; 4,\; 3,\; 4)
+> El patrón estacional desapareció y queda casi constante: el crecimiento anual.
+@ usa t2.c*[1]; da t2.c6[2] t2.c7[2] t2.c8[2] t2.c9[2] t2.c10[2] t2.c11[2] t2.c12[2] t2.c13[2]
 :::
 
 ```python

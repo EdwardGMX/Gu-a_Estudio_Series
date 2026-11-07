@@ -294,32 +294,56 @@ Regla: **p-value < 0.05 ⇒ hay dependencia temporal significativa**.
 
 ### Ljung–Box calculada a mano {#lb-mano}
 
-:::ejemplo (a) La serie diminuta, h = 2
-Con $n = 6$, $\hat\rho(1) = 0.1$ y $\hat\rho(2) = -0.6$ [[autocorr]]:
+:::guiado (a) La serie diminuta, h = 2
+Con $n = 6$, $\hat\rho(1) = 0.1$ y $\hat\rho(2) = -0.6$ [[guia-acf]]:
 
-:::pasos
-= Q = 6 \cdot 8\left(\frac{0.1^2}{6 - 1} + \frac{(-0.6)^2}{6 - 2}\right) = 48\left(\frac{0.01}{5} + \frac{0.36}{4}\right)
-> Sustituimos $n = 6$, $n + 2 = 8$ y los dos rezagos.
-= Q = 48\,(0.002 + 0.09) = 48 \times 0.092 = 4.416
-> Casi todo viene del rezago 2.
+| $k$ | $\hat\rho(k)$ | $\hat\rho(k)^2$ | $n - k$ | $\hat\rho(k)^2/(n-k)$ |
+|---|---|---|---|---|
+| 1 | 0.1 | 0.01 | 5 | 0.002 |
+| 2 | −0.6 | 0.36 | 4 | 0.09 |
+| **Suma** | | | | 0.092 |
+---
+= \hat\rho(k)^2 = (0.01,\; 0.36)
+> Al cuadrado, para que la correlación negativa también cuente como evidencia.
+@ usa c2[1-2]; da c3[1-2]
+= n - k = (6 - 1,\; 6 - 2) = (5,\; 4)
+> Cuántas parejas hay en cada rezago.
+@ usa c1[1-2]; da c4[1-2]
+= \frac{0.01}{5} = 0.002, \qquad \frac{0.36}{4} = 0.09, \qquad \text{suma} = 0.092
+> Cada cuadrado entre su número de parejas; casi todo viene del rezago 2.
+@ usa c3[1-2] c4[1-2]; da c5[1-3]
+= Q = n(n+2)\cdot 0.092 = 6 \cdot 8 \cdot 0.092 = 4.416
+> Multiplicamos por $n(n+2) = 48$.
+@ usa c5[3]
 = \text{p-value} = P(\chi^2_2 > 4.416) = e^{-4.416/2} = e^{-2.208} = 0.1099
 > Con 2 grados de libertad la cola de la $\chi^2$ tiene fórmula exacta: $P(\chi^2_2 > q) = e^{-q/2}$.
 = 0.1099 > 0.05 \;\Longrightarrow\; \text{no se rechaza } H_0
 > Con solo 6 datos no hay evidencia suficiente, aunque $\hat\rho(2) = -0.6$ parezca grande. (El valor crítico es $\chi^2_{2;\,0.95} = 5.991$.)
 :::
-:::
 
-:::ejemplo (b) n = 100 y tres autocorrelaciones
-Con $\hat\rho = (0.30,\; 0.10,\; -0.05)$ y $h = 3$:
-
-:::pasos
-= Q = 100 \cdot 102\left(\frac{0.09}{99} + \frac{0.01}{98} + \frac{0.0025}{97}\right)
-> Los cuadrados son 0.09, 0.01 y 0.0025.
-= Q = 10200\,(0.000909 + 0.000102 + 0.000026) = 10200 \times 0.001037 = 10.58
+:::guiado (b) n = 100 y tres autocorrelaciones
+| $k$ | $\hat\rho(k)$ | $\hat\rho(k)^2$ | $n - k$ | $\hat\rho(k)^2/(n-k)$ |
+|---|---|---|---|---|
+| 1 | 0.30 | 0.09 | 99 | 0.000909 |
+| 2 | 0.10 | 0.01 | 98 | 0.000102 |
+| 3 | −0.05 | 0.0025 | 97 | 0.000026 |
+| **Suma** | | | | 0.001037 |
+---
+= \hat\rho(k)^2 = (0.09,\; 0.01,\; 0.0025)
+> Cuadrados de las tres autocorrelaciones.
+@ usa c2[1-3]; da c3[1-3]
+= n - k = (99,\; 98,\; 97)
+> Con $n = 100$ casi no cambian entre rezagos.
+@ usa c1[1-3]; da c4[1-3]
+= 0.000909 + 0.000102 + 0.000026 = 0.001037
 > Sumamos las tres contribuciones.
+@ usa c3[1-3] c4[1-3]; da c5[1-4]
+= Q = 100 \cdot 102 \times 0.001037 = 10.58
+> Multiplicamos por $n(n+2) = 10200$.
+@ usa c5[4]
 = 10.58 > 7.815 = \chi^2_{3;\,0.95} \;\Longrightarrow\; \text{se rechaza } H_0 \;(\text{p-value} = 0.014)
-> Hay autocorrelación significativa (sobre todo por el rezago 1).
-:::
+> Hay autocorrelación significativa, sobre todo por el rezago 1.
+@ usa c5[1]
 :::
 
 ```python

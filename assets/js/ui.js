@@ -269,6 +269,64 @@
   window.addEventListener('load', ajustarPasos);
   ajustarPasos();
 
+  /* ------------- Ejemplos guiados: iluminar los datos de cada paso ------------- */
+  function altoGuiados() { $$('.guiado .g-fijo').forEach(f => f.parentElement.parentElement.classList.toggle('g-alto', f.offsetHeight > window.innerHeight * 0.72)); }
+  window.addEventListener('resize', altoGuiados);
+  window.addEventListener('load', altoGuiados);
+  $$('.guiado').forEach(g => {
+    const pasos = $$('.g-pasos .paso', g);
+    const celdas = new Map($$('[data-celda]', g).map(c => [c.dataset.celda, c]));
+    const ids = p => ({ usa: (p.dataset.usa || '').split(' ').filter(Boolean), da: (p.dataset.da || '').split(' ').filter(Boolean) });
+    const btnIni = $('.g-iniciar', g), btnAnt = $('.g-ant', g), btnSig = $('.g-sig', g), btnTodo = $('.g-todo', g), pos = $('.g-pos', g);
+    let actual = -1;
+    // celdas que se calculan en algún paso (se ocultan hasta su paso en el recorrido)
+    const resultado = new Map();
+    pasos.forEach((p, i) => ids(p).da.forEach(id => { if (!resultado.has(id)) resultado.set(id, i); }));
+    function limpiar() { celdas.forEach(c => c.classList.remove('g-usa', 'g-da')); }
+    function iluminar(p) {
+      limpiar();
+      if (!p) return;
+      const { usa, da } = ids(p);
+      usa.forEach(id => { const c = celdas.get(id); if (c) c.classList.add('g-usa'); });
+      da.forEach(id => { const c = celdas.get(id); if (c) c.classList.add('g-da'); });
+    }
+    function pintar() {
+      const recorrido = actual >= 0;
+      g.classList.toggle('g-recorriendo', recorrido);
+      pasos.forEach((p, i) => {
+        p.classList.toggle('g-actual', i === actual);
+        p.classList.toggle('g-futuro', recorrido && i > actual);
+      });
+      resultado.forEach((i, id) => { const c = celdas.get(id); if (c) c.classList.toggle('g-oculta', recorrido && i > actual && !id.includes('-h')); });
+      iluminar(recorrido ? pasos[actual] : null);
+      btnAnt.disabled = !recorrido || actual === 0;
+      btnSig.disabled = !recorrido || actual === pasos.length - 1;
+      btnTodo.disabled = !recorrido;
+      btnIni.textContent = recorrido ? '↺ Reiniciar' : '▶ Recorrer paso a paso';
+      pos.textContent = recorrido ? `Paso ${actual + 1} de ${pasos.length}` : 'Pasa el cursor por un paso para ver qué datos usa';
+      const espejo = $('.g-espejo', g);
+      if (recorrido) {
+        const p = pasos[actual];
+        espejo.innerHTML = `<div class="p-num">${actual + 1}</div><div class="g-esp-f">${p.querySelector('.p-formula').innerHTML}</div><div class="g-esp-r">${p.querySelector('.p-razon').innerHTML}</div>`;
+        espejo.hidden = false;
+      } else espejo.hidden = true;
+      if (recorrido) {
+        const r = pasos[actual].getBoundingClientRect();
+        if (r.bottom > window.innerHeight - 20 || r.top < 120) pasos[actual].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+    btnIni.addEventListener('click', () => { actual = 0; pintar(); altoGuiados(); });
+    btnSig.addEventListener('click', () => { if (actual < pasos.length - 1) { actual++; pintar(); } });
+    btnAnt.addEventListener('click', () => { if (actual > 0) { actual--; pintar(); } });
+    btnTodo.addEventListener('click', () => { actual = -1; pintar(); });
+    pasos.forEach((p, i) => {
+      p.addEventListener('mouseenter', () => iluminar(p));
+      p.addEventListener('mouseleave', () => iluminar(actual >= 0 ? pasos[actual] : null));
+      p.addEventListener('focus', () => iluminar(p));
+      p.addEventListener('click', e => { if (e.target.closest('a, [data-tip]')) return; actual = i; pintar(); });
+    });
+  });
+
   /* ---------------------- Checklist del formulario ---------------------- */
   const marcas = leer('guia-u1-checklist', {});
   $$('li.check input[type=checkbox]').forEach((c, i) => {

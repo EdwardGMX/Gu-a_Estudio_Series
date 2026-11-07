@@ -9,16 +9,30 @@ En [[esperanza]] y [[covarianza]] definimos media, varianza y covarianza para va
 El **rezago** $\tip{k}{k}$ es la distancia, en periodos, entre dos observaciones. La serie rezagada $k$ periodos es $y_{t-k}$: la misma serie, **desplazada** $k$ lugares hacia el futuro.
 :::
 
-:::ejemplo Desplazar una serie
+:::guiado Desplazar una serie
 Con $y = (2, 4, 6, 5, 3, 4)$:
 
-| $t$ | 1 | 2 | 3 | 4 | 5 | 6 |
-|---|---|---|---|---|---|---|
-| $y_t$ | 2 | 4 | 6 | 5 | 3 | 4 |
-| $y_{t-1}$ | — | 2 | 4 | 6 | 5 | 3 |
-| $y_{t-2}$ | — | — | 2 | 4 | 6 | 5 |
-
-Con rezago $k$ solo hay $n - k$ parejas completas $(y_t, y_{t-k})$: aquí 5 parejas para $k = 1$ y 4 para $k = 2$. Cuanto más grande es $k$, **menos información** tenemos para medir la relación.
+| $t$ | $y_t$ | $y_{t-1}$ | $y_{t-2}$ |
+|---|---|---|---|
+| 1 | 2 | — | — |
+| 2 | 4 | 2 | — |
+| 3 | 6 | 4 | 2 |
+| 4 | 5 | 6 | 4 |
+| 5 | 3 | 5 | 6 |
+| 6 | 4 | 3 | 5 |
+---
+= y_{t-1}:\; \text{la columna } y_t \text{ bajada un renglón}
+> El valor de $t = 1$ pasa al renglón $t = 2$, y así sucesivamente. El último dato ($y_6 = 4$) no tiene a dónde ir.
+@ usa c2[1-5]; da c3[2-6]
+= y_{t-2}:\; \text{bajada dos renglones}
+> Ahora los dos primeros renglones se quedan sin pareja.
+@ usa c2[1-4]; da c4[3-6]
+= k = 1:\; n - k = 6 - 1 = 5 \text{ parejas } (y_t,\, y_{t-1})
+> Solo los renglones 2 a 6 tienen ambos valores.
+@ usa c2[2-6] c3[2-6]
+= k = 2:\; n - k = 6 - 2 = 4 \text{ parejas } (y_t,\, y_{t-2})
+> Cuanto más grande es $k$, **menos información** tenemos para medir la relación.
+@ usa c2[3-6] c4[3-6]
 :::
 
 ```python
@@ -59,17 +73,31 @@ $$\sigma^2_t = \Var(y_t) = \E\big[(y_t - \mu_t)^2\big] \qquad\qquad \hat\gamma(0
 Mide la **dispersión** o **volatilidad**. En series de tiempo se estima dividiendo entre $n$ (no entre $n - 1$) para que sea coherente con la autocovarianza; por eso se escribe $\hat\gamma(0)$: es la autocovarianza en el rezago 0 [[autocov]].
 :::
 
-:::ejemplo Media y varianza de la serie diminuta
+:::guiado Media y varianza de la serie diminuta {#guia-media}
 Con $y = (2, 4, 6, 5, 3, 4)$, $n = 6$:
 
-:::pasos
+| $t$ | $y_t$ | $d_t = y_t - \bar y$ | $d_t^2$ |
+|---|---|---|---|
+| 1 | 2 | −2 | 4 |
+| 2 | 4 | 0 | 0 |
+| 3 | 6 | 2 | 4 |
+| 4 | 5 | 1 | 1 |
+| 5 | 3 | −1 | 1 |
+| 6 | 4 | 0 | 0 |
+| **Suma** | 24 | 0 | 10 |
+---
 = \bar y = \frac{2 + 4 + 6 + 5 + 3 + 4}{6} = \frac{24}{6} = 4
-> Suma de los valores entre $n$.
-= y_t - \bar y = (-2,\; 0,\; 2,\; 1,\; -1,\; 0)
-> Desviaciones respecto a la media. Comprueba que suman 0 [[suma-desv]].
-= \hat\gamma(0) = \frac{(-2)^2 + 0^2 + 2^2 + 1^2 + (-1)^2 + 0^2}{6} = \frac{4 + 0 + 4 + 1 + 1 + 0}{6} = \frac{10}{6} = 1.6667
+> Suma de la columna $y_t$ entre $n = 6$.
+@ usa c2[1-6]; da c2[7]
+= d_t = y_t - 4 = (-2,\; 0,\; 2,\; 1,\; -1,\; 0)
+> Desviaciones respecto a la media; su suma es 0 [[suma-desv]].
+@ usa c2[1-6] c2[7]; da c3[1-7]
+= d_t^2 = (4,\; 0,\; 4,\; 1,\; 1,\; 0)
+> Elevamos cada desviación al cuadrado para que las negativas no se cancelen con las positivas.
+@ usa c3[1-6]; da c4[1-6]
+= \hat\gamma(0) = \frac{4 + 0 + 4 + 1 + 1 + 0}{6} = \frac{10}{6} = 1.6667
 > Promedio de las desviaciones al cuadrado, dividiendo entre $n = 6$.
-:::
+@ usa c4[1-6]; da c4[7]
 :::
 
 ### La autocovarianza {#autocov}
@@ -133,35 +161,40 @@ Es la autocovarianza **normalizada**: dividir entre la varianza le quita las uni
 - Si el proceso es estacionario, $\gamma(0) = \Var(y_t) = \Var(y_{t-k})$, así que $\rho(k)$ es exactamente $\Corr(y_t, y_{t-k})$.
 :::
 
-:::ejemplo ACF a mano con la serie diminuta
-Desviaciones (de [[varianza]]): $d_t = y_t - \bar y = (-2,\, 0,\, 2,\, 1,\, -1,\, 0)$ y $\hat\gamma(0) = 10/6$.
+:::guiado ACF a mano con la serie diminuta {#guia-acf}
+Usamos las desviaciones $d_t$ del ejemplo anterior [[guia-media]] y $\sum d_t^2 = 10$, es decir $\hat\gamma(0) = 10/6$.
 
-**Rezago 1** ($t = 2, \dots, 6$, cinco productos $d_t\,d_{t-1}$):
-
-| $t$ | $d_t$ | $d_{t-1}$ | $d_t\,d_{t-1}$ |
-|---|---|---|---|
-| 2 | 0 | −2 | 0 |
-| 3 | 2 | 0 | 0 |
-| 4 | 1 | 2 | 2 |
-| 5 | −1 | 1 | −1 |
-| 6 | 0 | −1 | 0 |
-| **Suma** | | | **1** |
-
-:::pasos
-= \hat\gamma(1) = \frac{1}{6}\sum_{t=2}^{6} d_t\,d_{t-1} = \frac{1}{6}
-> Sumamos los cinco productos y dividimos entre $n = 6$.
-= \hat\rho(1) = \frac{\hat\gamma(1)}{\hat\gamma(0)} = \frac{1/6}{10/6} = \frac{1}{10} = 0.1
-> Los $1/6$ se cancelan: basta dividir las **sumas** (1 entre 10).
-:::
-
-**Rezago 2** (cuatro productos $d_t\,d_{t-2}$, $t = 3, \dots, 6$): $(2)(-2) + (1)(0) + (-1)(2) + (0)(1) = -4 + 0 - 2 + 0 = -6$.
-
-:::pasos
+| $t$ | $d_t$ | $d_{t-1}$ | $d_t\,d_{t-1}$ | $d_{t-2}$ | $d_t\,d_{t-2}$ |
+|---|---|---|---|---|---|
+| 1 | −2 | — | — | — | — |
+| 2 | 0 | −2 | 0 | — | — |
+| 3 | 2 | 0 | 0 | −2 | −4 |
+| 4 | 1 | 2 | 2 | 0 | 0 |
+| 5 | −1 | 1 | −1 | 2 | −2 |
+| 6 | 0 | −1 | 0 | 1 | 0 |
+| **Suma** | 0 | | 1 | | −6 |
+---
+= d_{t-1}:\; \text{las desviaciones bajadas un renglón}
+> **Rezago 1.** Emparejamos cada desviación con la del periodo anterior.
+@ usa c2[1-5]; da c3[2-6]
+= d_t\,d_{t-1} = (0,\; 0,\; 2,\; -1,\; 0)
+> Cinco productos ($t = 2, \dots, 6$). Son positivos cuando ambos están del mismo lado de la media.
+@ usa c2[2-6] c3[2-6]; da c4[2-6]
+= \hat\gamma(1) = \frac{1}{6}\sum_{t=2}^{6} d_t\,d_{t-1} = \frac{1}{6}, \qquad \hat\rho(1) = \frac{1/6}{10/6} = \frac{1}{10} = 0.1
+> Sumamos y dividimos entre $n = 6$. Al dividir entre $\hat\gamma(0)$ los $1/6$ se cancelan: basta dividir las sumas (1 entre 10).
+@ usa c4[2-6]; da c4[7]
+= d_{t-2}:\; \text{bajadas dos renglones}
+> **Rezago 2.** Ahora solo los renglones 3 a 6 tienen pareja.
+@ usa c2[1-4]; da c5[3-6]
+= d_t\,d_{t-2} = (-4,\; 0,\; -2,\; 0)
+> Productos del rezago 2: $(2)(-2)$, $(1)(0)$, $(-1)(2)$, $(0)(1)$.
+@ usa c2[3-6] c5[3-6]; da c6[3-6]
 = \hat\gamma(2) = \frac{-6}{6} = -1, \qquad \hat\rho(2) = \frac{-6}{10} = -0.6
 > Correlación negativa fuerte: los valores separados 2 periodos tienden a estar en lados opuestos de la media.
-:::
-
-**Rezago 3** (tres productos, $t = 4, 5, 6$): $(1)(-2) + (-1)(0) + (0)(2) = -2$, así que $\hat\rho(3) = -2/10 = -0.2$.
+@ usa c6[3-6]; da c6[7]
+= \hat\rho(3) = \frac{d_4 d_1 + d_5 d_2 + d_6 d_3}{10} = \frac{(1)(-2) + (-1)(0) + (0)(2)}{10} = -0.2
+> **Rezago 3**, con tres parejas, directamente desde la columna $d_t$.
+@ usa c2[1-6]
 :::
 
 ```python
