@@ -27,6 +27,10 @@ $$\text{(1)}\;\; \E[\tip{yt}{y_t}] = \tip{mu}{\mu} \qquad \text{(2)}\;\; \Var(y_
 
 Cuando en esta guía (y en el examen) se dice «estacionaria» sin más, se refiere a la **débil**. Relación entre ambas: estricta con varianza finita ⇒ débil; y para procesos gaussianos (normales), débil ⇒ estricta, porque la normal queda determinada por medias y covarianzas.
 
+:::duda ¿Cuántos datos necesito para decir si una serie es estacionaria?
+Los suficientes para ver **varias veces** el comportamiento que te interesa: al menos unas 50 observaciones para pruebas sin estacionalidad, y al menos 4 o 5 periodos completos (48–60 meses) para datos mensuales con estacionalidad. Con muy pocos datos un AR persistente y un paseo aleatorio son casi imposibles de distinguir [[potencia]].
+:::
+
 ### Estacionalidad ≠ estacionariedad {#estacionalidad-vs}
 
 :::duda Explica estacionalidad y estacionariedad
@@ -100,6 +104,10 @@ i.i.d. (independientes e idénticamente distribuidos) es **más fuerte** que rui
 
 :::interactivo ruido | Ruido blanco: serie, histograma y correlograma
 Cambia $\sigma$ y la semilla. La serie siempre oscila alrededor de 0 con la misma intensidad; el histograma tiene forma de campana; y las autocorrelaciones quedan, casi todas, dentro de las bandas.
+@@@
+- **Arriba**: la serie con las líneas $\pm 2\sigma$; alrededor del 95% de los puntos debe quedar entre ellas.
+- **Histograma**: las barras son la frecuencia relativa de los valores (densidad) y la curva rosa es la normal teórica $N(0, \sigma^2)$.
+- **ACF**: casi todas las barras deben quedar dentro de la banda; las naranjas son las que salen por azar.
 :::
 
 ### El modelo AR(1) {#ar1}
@@ -202,6 +210,15 @@ print("ACF rezagos 1-3:  ", np.round(acf(y, nlags=3)[1:], 3), "| teoría φ^k ="
 
 :::interactivo ar1 | Laboratorio del AR(1)
 Mueve $\phi$ y observa: la serie, su media y banda teórica $\mu \pm 2\sigma_y$, y la ACF muestral contra la teórica $\phi^k$. Lleva $\phi$ a 1: la varianza teórica «explota» (división entre cero) y la serie deja de regresar a su media.
+@@@
+- **Izquierda**: la serie (lila), su media teórica $\mu$ (menta discontinua) y la franja $\mu \pm 2\sigma_y$, donde $\sigma_y = \sqrt{\gamma(0)}$.
+- **Derecha**: las barras son la ACF **muestral** (naranja si es significativa) y los rombos rosas unidos son la ACF **teórica** $\phi^k$.
+- **Lectura**: los valores teóricos con tus parámetros, la vida media de un choque y la media y la varianza muestrales para comparar.
+- **Qué buscar**: con $\phi$ cerca de 1 la serie pasa mucho tiempo lejos de $\mu$ y la ACF decae lento; con $\phi < 0$ zigzaguea y las barras alternan de signo.
+:::
+
+:::duda ¿Qué pasa si φ es negativo?
+Con $-1 < \phi < 0$ el proceso sigue siendo estacionario (la raíz $1/\phi$ está fuera del círculo), pero cada valor «rebota» al lado contrario del anterior: la serie zigzaguea y la ACF $\phi^k$ alterna de signo ($-0.6,\; 0.36,\; -0.216, \dots$). Aparece, por ejemplo, en inventarios que se sobrecorrigen cada periodo.
 :::
 
 ### El paseo aleatorio {#paseo}
@@ -244,6 +261,10 @@ for t in [1, 25, 100]:
 
 :::interactivo abanico | El abanico: la varianza del paseo crece con t
 200 realizaciones a la vez. En el AR(1) estacionario la nube se queda en una **franja de ancho fijo**; en el paseo aleatorio se abre como abanico, siguiendo $\pm 2\sigma\sqrt{t}$.
+@@@
+- **Cada línea tenue** es una de las 200 trayectorias. **Líneas rosas**: ±2 desviaciones teóricas en cada $t$.
+- **Paseo aleatorio**: las rosas siguen $\pm 2\sigma\sqrt t$, una curva que se abre. **AR(1)**: son horizontales.
+- **Lectura**: la desviación medida entre trayectorias en $t = 10$ y $t = 100$, contra la teórica.
 :::
 
 ### La raíz unitaria {#raiz-unitaria}
@@ -303,6 +324,13 @@ Con $\phi = 1$ el choque es **permanente**.
 
 :::interactivo choque | Respuesta a un choque y ubicación de la raíz
 Elige $\phi$ y el tamaño del choque. A la izquierda, cómo se disipa (o no) el impulso; a la derecha, la raíz $z = 1/\phi$ y el círculo unitario.
+@@@
+- **Izquierda**: en x los periodos después del choque; en y el efecto que queda ($\text{tamaño} \times \phi^h$). Azul: $\phi = 0.5$ (referencia); gris discontinua: $\phi = 1$; rosa: tu $\phi$.
+- **Derecha**: el plano complejo. El círculo lila es $|z| = 1$ y el punto es la raíz $z = 1/\phi$: verde si está **fuera** (estacionario), amarillo si está **sobre** el círculo (raíz unitaria), rosa si está **dentro** (explosivo).
+:::
+
+:::duda ¿Una serie puede tener raíz unitaria y además estacionalidad?
+Sí, y es muy común en datos mensuales reales. Puede haber raíz unitaria **regular** (se elimina con $\Delta$) y raíz unitaria **estacional**, $y_t = y_{t-12} + \varepsilon_t$ (se elimina con $\Delta_{12}$). AirPassengers necesita ambas [[caso]]. La ADF estándar solo prueba la raíz regular.
 :::
 
 ### Tendencia determinística vs. tendencia estocástica {#tendencias}
@@ -378,6 +406,10 @@ En la determinística, el choque de $t = 2$ ($-1$) solo afecta a $t = 2$. En la 
 
 :::interactivo tendencias | ¿Restar la recta o diferenciar?
 Las dos series usan los **mismos choques**. Aplica cada tratamiento a cada serie y mira el resultado y su $\hat\rho(1)$. Solo una combinación por serie deja ruido estacionario y bien portado.
+@@@
+- **Panel izquierdo (azul)**: tendencia determinística. **Panel derecho (rosa)**: tendencia estocástica. Usan los **mismos choques** $\varepsilon_t$.
+- **Botones**: muestran la serie original, el residuo después de restar una recta ajustada por mínimos cuadrados o la serie diferenciada.
+- **Lectura**: el $\hat\rho(1)$ del resultado y si el tratamiento fue el correcto.
 :::
 
 ### La diferenciación {#diferenciacion}
@@ -427,12 +459,42 @@ print("Δ₄y :", trimestral.diff(4).dropna().astype(int).tolist())
 
 :::interactivo diferencias | Qué diferencia necesita cada serie
 Elige una serie y aplica $\Delta$, $\Delta^2$ o $\Delta_s$. Busca la transformación **mínima** que deja algo estable: diferenciar de más también es un error [[sobre-diferenciar]].
+@@@
+- **Izquierda**: la serie transformada; se pinta de verde cuando es la transformación **mínima** correcta. **Derecha**: su ACF hasta 36 rezagos, para ver también los rezagos estacionales.
+- **Lectura**: diagnóstico, $\hat\rho(1)$, $\hat\rho(12)$ y los p-values de ADF y KPSS (especificación `"c"`).
 :::
+
+:::interactivo py-transformar | Simulador: encadenar `np.log`, `.diff()` y `.diff(12)` {#sim-transformar}
+Activa y desactiva cada transformación. El código se arma solo, y la salida muestra $n$, los p-values de ADF y KPSS y las autocorrelaciones clave, como lo imprimirías en Python.
+@@@
+- **Código**: la cadena de pandas que corresponde a lo que activaste.
+- **Salida**: primeras filas, cuántos datos quedan (cada `.diff(12)` quita 12 y cada `.diff()` quita 1), p-values y $\hat\rho(1)$, $\hat\rho(12)$.
+- **Gráficas**: la serie transformada (verde cuando ya es la transformación mínima) y su ACF hasta 36 rezagos.
+:::
+
+:::duda ¿Importa el orden de `diff()` y `diff(12)`? ¿Y el logaritmo?
+El orden de las diferencias **no** importa: $\Delta\Delta_{12}y_t = \Delta_{12}\Delta y_t = y_t - y_{t-1} - y_{t-12} + y_{t-13}$. El logaritmo sí debe ir **primero**: se aplica a la serie original (que es positiva); después de diferenciar habría valores negativos y $\ln$ no existiría.
+:::
+
+:::duda ¿Cuántas diferencias como máximo?
+En la práctica casi nunca más de **una regular y una estacional** ($d \le 2$, $D \le 1$). Si después de eso la serie no parece estacionaria, el problema suele ser otro: varianza no estabilizada (falta $\ln$), una ruptura estructural o atípicos. Diferenciar de más deja la huella $\hat\rho(1) \approx -0.5$ [[sobre-diferenciar]].
+:::
+
+```python
+y = np.log(serie).diff(12).diff()
+print("NaN generados:", y.isna().sum(), "(12 de la diferencia estacional + 1 de la regular)")
+y = y.dropna()
+print("¿Igual en el otro orden?", np.allclose(y, np.log(serie).diff().diff(12).dropna()))
+print("Datos que quedan:", len(y), "de", len(serie))
+```
 
 ### Galería: ¿estacionaria o no? {#galeria}
 
 :::interactivo galeria | Ocho procesos, tres condiciones
 Para cada proceso verás la serie, su media móvil y su banda de ±2 desviaciones móviles, y el diagnóstico de qué condición falla.
+@@@
+- **Serie** (lila), **media móvil** (rosa) y **±2 desviaciones móviles** (franja menta), con la ventana que elijas.
+- **Lectura**: el veredicto **teórico** (✓/✗ y qué condición falla) y los p-values de ADF y KPSS **en esta muestra**. Las pruebas pueden equivocarse en una muestra concreta: cambia la semilla y lo verás.
 :::
 
 | Proceso | (1) media constante | (2) varianza constante | (3) γ depende solo de $k$ | ¿Estacionario? |

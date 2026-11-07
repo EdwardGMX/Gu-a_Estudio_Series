@@ -48,6 +48,10 @@ Cómo se lee cada renglón:
 - **Δ₁₂ log**: se fue la estacionalidad, pero $\hat\rho(1) = 0.71$: todavía es muy persistente y la ADF no rechaza al 5%.
 - **ΔΔ₁₂ log**: ADF rechaza con p ≈ 0.0002 y KPSS no rechaza ⇒ **estacionaria**. Sin embargo Ljung–Box rechaza: **todavía hay autocorrelación** (estacionaria ≠ ruido blanco [[lb-h]]).
 
+:::duda ¿Por qué en las series diferenciadas se usa `"c"` y no `"ct"`?
+Porque al diferenciar, una tendencia lineal se convierte en una **constante** [[dif-demo]]. Incluir tendencia en una serie que ya no la tiene agrega un parámetro inútil y le quita potencia a la prueba. Regla práctica: `"ct"` en niveles con tendencia, `"c"` después de diferenciar.
+:::
+
 ### Paso 4 · Leer la ACF y la PACF de la serie estacionaria {#caso-acf}
 
 ```python
@@ -57,10 +61,14 @@ print("PACF rezagos 1-13:", np.round(pacf(final, nlags=13, method="ywm")[1:], 2)
 print("banda ±1.96/√n =", round(1.96 / np.sqrt(len(final)), 3))
 ```
 
-La ACF tiene picos negativos significativos **solo** en el rezago 1 (−0.34) y en el 12 (−0.39), y casi nada en medio: **se corta** [[patrones]]. Eso sugiere un componente MA(1) regular y un MA(1) estacional: es el famoso «modelo de aerolínea» $\text{SARIMA}(0,1,1)(0,1,1)_{12}$ que se estudia en la Unidad II.
+La ACF tiene picos negativos claros en el rezago 1 (−0.34) y en el 12 (−0.39); el rezago 3 (−0.20) apenas sale de la banda y el resto queda dentro: **se corta** [[patrones]]. Eso sugiere un componente MA(1) regular y un MA(1) estacional: es el famoso «modelo de aerolínea» $\text{SARIMA}(0,1,1)(0,1,1)_{12}$ que se estudia en la Unidad II.
 
 :::interactivo caso | Recorre las transformaciones de AirPassengers
 Elige la transformación y la especificación. Verás la serie, su ACF y los resultados de ADF, KPSS y Ljung–Box calculados en vivo.
+@@@
+- **Izquierda**: la serie transformada (verde = la transformación final). **Derecha**: su ACF hasta 36 rezagos.
+- **Tarjetas**: ADF, KPSS y Ljung–Box (h = 24); rosa = rechaza $H_0$.
+- **Lectura**: la conclusión conjunta y una nota sobre qué falta.
 :::
 
 ### Paso 5 · La conclusión (así se redacta en un examen) {#caso-conclusion}

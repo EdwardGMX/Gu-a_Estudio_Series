@@ -177,6 +177,15 @@ print("statsmodels acf:  ", np.round(acf(y, nlags=3), 4))
 
 :::interactivo calculadora | Calculadora de autocorrelación paso a paso
 Escribe tus propios números (separados por comas) y elige el rezago $k$. La tabla muestra cada desviación, cada producto y la suma, exactamente como en el ejemplo a mano. Úsala para comprobar tus ejercicios.
+@@@
+- **Tarjetas**: $n$, la media, $\hat\gamma(0)$ y el $\hat\rho(k)$ del rezago elegido.
+- **Tabla**: un renglón por periodo con $y_t$, su desviación $d_t$, la desviación $k$ periodos antes y su **producto** (amarillo). Los primeros $k$ renglones no tienen pareja. La última fila es la suma de productos.
+- **Fórmulas**: cómo esa suma se convierte en $\hat\gamma(k)$ (÷ n) y en $\hat\rho(k)$ (÷ $\hat\gamma(0)$).
+- **Gráfica**: la ACF de tus datos. Con pocos datos la banda $\pm 1.96/\sqrt n$ es muy ancha.
+:::
+
+:::duda ¿Cuándo una autocorrelación es «grande»?
+No hay un número fijo: depende de $n$. Se compara con la banda $\pm 1.96/\sqrt n$ [[bartlett]]. Con $n = 25$, un $\hat\rho(1) = 0.3$ **no** es significativo (banda ±0.39); con $n = 400$, un $\hat\rho(1) = 0.12$ **sí** lo es (banda ±0.098).
 :::
 
 ### Autocorrelación positiva, nula y negativa {#signos}

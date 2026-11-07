@@ -272,17 +272,24 @@
       }
       return { filas, dep };
     };
-    let usado = maxlag;
+    let usado = maxlag, candidatos = [];
     if (autolag) {
       const { filas, dep } = armar(maxlag);
       const completo = filas.map((f, i) => columnasTendencia(regression, i).concat(f));
-      const inicio = ntr + 1;
-      let mejor = null;
+      const inicio = ntr + 1, metodo = String(autolag).toLowerCase();
       for (let c = inicio; c <= inicio + maxlag; c++) {
         const r = TS.ols(completo.map(f => f.slice(0, c)), dep);
-        if (mejor === null || r.aic < mejor.aic) mejor = { aic: r.aic, c };
+        candidatos.push({ lag: c - inicio, aic: r.aic, bic: -2 * r.llf + Math.log(r.n) * r.k, tUltimo: r.t[r.t.length - 1], nobs: r.n });
       }
-      usado = mejor.c - inicio;
+      if (metodo === 't-stat') {
+        usado = 0;
+        for (let j = candidatos.length - 1; j >= 0; j--) { usado = candidatos[j].lag; if (Math.abs(candidatos[j].tUltimo) >= 1.6448536269514722) break; }
+      } else {
+        const clave = metodo === 'bic' ? 'bic' : 'aic';
+        let mejor = candidatos[0];
+        for (const c of candidatos) if (c[clave] < mejor[clave]) mejor = c;
+        usado = mejor.lag;
+      }
     }
     const { filas, dep } = armar(usado);
     const X = filas.map((f, i) => columnasTendencia(regression, i).concat(f));
@@ -290,7 +297,8 @@
     const stat = r.t[ntr];
     return {
       stat, p: TS.mackinnonp(stat, regression), lags: usado, nobs: r.n,
-      crit: TS.mackinnoncrit(regression, r.n), delta: r.beta[ntr], se: r.se[ntr], reg: r
+      crit: TS.mackinnoncrit(regression, r.n), delta: r.beta[ntr], se: r.se[ntr], reg: r, candidatos, maxlag,
+      nombres: (regression === 'n' ? [] : regression === 'c' ? ['const'] : ['const', 'tendencia']).concat(['y(t-1)'], TS.rango(usado, 1).map(j => 'Δy(t-' + j + ')'))
     };
   };
 
@@ -338,7 +346,7 @@
     if (stat <= crit[0]) p = 0.10;
     else if (stat >= crit[3]) p = 0.01;
     else for (let j = 0; j < 3; j++) if (stat <= crit[j + 1]) { p = pv[j] + (pv[j + 1] - pv[j]) * (stat - crit[j]) / (crit[j + 1] - crit[j]); break; }
-    return { stat, p, lags: L, eta, s2: s, crit: { '10%': crit[0], '5%': crit[1], '2.5%': crit[2], '1%': crit[3] }, fueraDeTabla: stat <= crit[0] ? 'mayor' : stat >= crit[3] ? 'menor' : null };
+    return { res, S: TS.cumsum(res), stat, p, lags: L, eta, s2: s, crit: { '10%': crit[0], '5%': crit[1], '2.5%': crit[2], '1%': crit[3] }, fueraDeTabla: stat <= crit[0] ? 'mayor' : stat >= crit[3] ? 'menor' : null };
   };
 
   /* --------------- Medias móviles y descomposición ----------------- */
@@ -370,6 +378,104 @@
     const S = x.map((_, i) => idx[i % periodo]);
     const R = x.map((v, i) => T[i] === null ? null : (mult ? v / (T[i] * S[i]) : v - T[i] - S[i]));
     return { T, S, R, indices: idx, promedios: prom, sinTendencia: det };
+  };
+
+  /* ------------ Opciones extra de statsmodels / pandas (prácticas) ------------ */
+  // Cuantil de la normal estándar (algoritmo de Acklam)
+  TS.normppf = p => {
+    const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716, 2.506628277459239];
+    const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+    const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+    const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+    const pl = 0.02425;
+    if (p < pl) { const q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    if (p > 1 - pl) return -TS.normppf(1 - p);
+    const q = p - 0.5, r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  };
+  // Semiancho de la banda que dibuja plot_acf (Bartlett) o la de ruido blanco
+  TS.acfBandas = (x, nlags, alpha = 0.05, bartlett = true) => {
+    const n = x.length, r = TS.acf(x, nlags), z = TS.normppf(1 - alpha / 2), out = [0];
+    let acum = 0;
+    for (let k = 1; k <= nlags; k++) {
+      out.push(z * Math.sqrt((bartlett ? 1 + 2 * acum : 1) / n));
+      acum += r[k] * r[k];
+    }
+    return out;
+  };
+  // PACF con los métodos de statsmodels: 'ywm' (defecto de plot_pacf), 'yw' (ajustado) y 'ols'
+  TS.pacfMetodo = (x, nlags, metodo = 'ywm') => {
+    const n = x.length;
+    if (metodo === 'ols') {
+      const out = [1];
+      for (let k = 1; k <= nlags; k++) {
+        const X = [], y = [];
+        for (let t = k; t < n; t++) { const f = [1]; for (let j = 1; j <= k; j++) f.push(x[t - j]); X.push(f); y.push(x[t]); }
+        const r = TS.ols(X, y);
+        out.push(r.beta[k]);
+      }
+      return out;
+    }
+    if (metodo === 'yw') {
+      const m = TS.media(x), g = [];
+      for (let k = 0; k <= nlags; k++) { let s = 0; for (let t = k; t < n; t++) s += (x[t] - m) * (x[t - k] - m); g.push(s / (n - k)); }
+      return TS.pacfDesdeAcf(g.map(v => v / g[0]), nlags);
+    }
+    return TS.pacf(x, nlags);
+  };
+  // acorr_ljungbox(x, lags, boxpierce, model_df)
+  TS.ljungBoxTabla = (x, lags, { boxpierce = false, model_df = 0 } = {}) => {
+    const n = x.length, h = Math.max(...lags), r = TS.acf(x, h);
+    let lb = 0, bp = 0;
+    const acum = [null];
+    for (let k = 1; k <= h; k++) { lb += r[k] * r[k] / (n - k); bp += r[k] * r[k]; acum.push({ lb: n * (n + 2) * lb, bp: n * bp }); }
+    return lags.map(k => {
+      const g = k - model_df, f = { lag: k, lb_stat: acum[k].lb, lb_pvalue: g > 0 ? TS.chi2sf(acum[k].lb, g) : NaN };
+      if (boxpierce) { f.bp_stat = acum[k].bp; f.bp_pvalue = g > 0 ? TS.chi2sf(acum[k].bp, g) : NaN; }
+      return f;
+    });
+  };
+  // pandas: serie.rolling(w, center, min_periods).mean() / .std()
+  TS.rolling = (x, w, { center = false, min_periods = null, fn = 'mean' } = {}) => {
+    const mp = min_periods === null ? w : min_periods, n = x.length;
+    return x.map((_, i) => {
+      const ini = center ? i - Math.floor(w / 2) : i - w + 1, fin = ini + w - 1;
+      const v = x.slice(Math.max(0, ini), Math.min(n - 1, fin) + 1);
+      if (v.length < mp || v.length === 0) return null;
+      if (fn === 'std') return v.length < 2 ? null : TS.desv(v, 1);
+      return TS.media(v);
+    });
+  };
+  // seasonal_decompose con two_sided y extrapolate_trend
+  function extrapolar(T, np) {
+    const n = T.length;
+    let front = T.findIndex(v => v !== null), back = n - 1;
+    while (T[back] === null) back--;
+    const recta = (i0, i1) => {
+      const xs = TS.rango(i1 - i0, i0), ys = xs.map(i => T[i]);
+      const r = TS.ols(xs.map(v => [v, 1]), ys);
+      return r.beta;
+    };
+    const fl = Math.min(front + np, back), bf = Math.max(front, back - np);
+    const [k1, c1] = recta(front, fl), [k2, c2] = recta(bf, back), out = T.slice();
+    for (let i = 0; i < front; i++) out[i] = k1 * i + c1;
+    for (let i = back + 1; i < n; i++) out[i] = k2 * i + c2;
+    return out;
+  }
+  TS.descomponerOpc = (x, periodo, { modelo = 'aditivo', twoSided = true, extrapolate = 0 } = {}) => {
+    const mult = modelo === 'multiplicativo', w = TS.pesosMM(periodo), L = w.length, n = x.length;
+    let T;
+    if (twoSided) T = TS.mediaMovilCentrada(x, periodo);
+    else T = x.map((_, t) => { if (t < L - 1) return null; let s = 0; for (let j = 0; j < L; j++) s += w[j] * x[t - j]; return s; });
+    const ext = extrapolate === 'period' ? periodo - 1 : Number(extrapolate) || 0;
+    if (ext > 0) T = extrapolar(T, ext + 1);
+    const det = x.map((v, i) => T[i] === null ? null : (mult ? v / T[i] : v - T[i]));
+    const prom = [];
+    for (let s = 0; s < periodo; s++) { let sum = 0, c = 0; for (let i = s; i < n; i += periodo) if (det[i] !== null) { sum += det[i]; c++; } prom.push(sum / c); }
+    const mp = TS.media(prom), idx = prom.map(v => mult ? v / mp : v - mp);
+    const S = x.map((_, i) => idx[i % periodo]);
+    const R = x.map((v, i) => T[i] === null ? null : (mult ? v / (T[i] * S[i]) : v - T[i] - S[i]));
+    return { T, S, R, indices: idx };
   };
 
   /* ------------------------------ Datos ----------------------------- */

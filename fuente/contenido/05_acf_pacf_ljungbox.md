@@ -19,6 +19,67 @@ print("Primeras autocorrelaciones:", np.round(acf(serie, nlags=4), 3))
 
 Una ACF que empieza en casi 1 y **baja muy despacio** (0.95, 0.92, 0.88…) es la firma de una serie con tendencia o raíz unitaria [[paseo-demo]]: hay que diferenciar antes de interpretar nada más.
 
+:::interactivo py-plotacf | Simulador: `plot_acf` y `plot_pacf` con todos sus parámetros {#sim-plotacf}
+Elige la serie y mueve cada parámetro. La gráfica reproduce el estilo de statsmodels (tallos con punto y banda sombreada) y el código cambia con tus valores. Prueba especialmente `zero`, `bartlett_confint` y `alpha`.
+@@@
+- **Tallos con punto**: cada uno es el valor de la ACF (o PACF) en ese rezago; el rezago 0 aparece solo con `zero=True` y siempre vale 1.
+- **Banda sombreada**: el intervalo de confianza **alrededor de 0**. Una barra que sale de la banda es significativa al nivel `alpha`.
+  - En `plot_acf` con `bartlett_confint=True` la banda **se ensancha** con el rezago: en $k$ usa $\pm z\sqrt{(1 + 2\sum_{j<k}\hat\rho_j^2)/n}$.
+  - Con `bartlett_confint=False`, y siempre en `plot_pacf`, la banda es **fija**: $\pm z/\sqrt n$.
+  - $z$ depende de `alpha`: 2.576 (0.01), 1.960 (0.05), 1.645 (0.10).
+- **Salida y lectura**: la lista de rezagos fuera de la banda y consejos según tus parámetros.
+- **Tabla de parámetros**: qué hace cada uno y qué valor conviene.
+:::
+
+| Tipo de serie | `lags` | `zero` | `alpha` | `bartlett_confint` (ACF) | `method` (PACF) |
+|---|---|---|---|---|---|
+| Mensual (periodo 12) | 36–48 | False | 0.05 | True | `"ywm"` |
+| Trimestral (periodo 4) | 16–20 | False | 0.05 | True | `"ywm"` |
+| Diaria con patrón semanal | 21–35 | False | 0.05 | True | `"ywm"` |
+| Sin estacionalidad | 20–30 | False | 0.05 | True | `"ywm"` |
+| Pocos datos ($n < 60$) | como máximo $n/4$ | False | 0.05 | True | `"ols"` o `"ywm"` |
+| Residuos de un modelo | 24–36 | False | 0.05 | False (comparar con ruido blanco) | `"ywm"` |
+
+:::duda ¿Por qué `plot_acf` dibuja una barra de altura 1 en el rezago 0?
+Porque $\rho(0) = \gamma(0)/\gamma(0) = 1$ siempre [[autocorr]]: es la correlación de cada dato consigo mismo. No aporta información y, como es tan alta, **aplasta la escala** de las demás barras. Por eso se recomienda `zero=False`.
+:::
+
+:::duda ¿Por qué la banda de `plot_acf` se ensancha y la de `plot_pacf` no?
+La banda de Bartlett de la ACF responde: «suponiendo que las autocorrelaciones **anteriores** pueden ser distintas de 0, ¿la de este rezago también lo es?». Cada autocorrelación grande en rezagos previos aumenta la incertidumbre de las siguientes [[bartlett]]. En la PACF, bajo un AR de orden menor, los coeficientes parciales de rezagos mayores tienen varianza aproximada $1/n$, así que la banda es fija.
+:::
+
+:::duda ¿Qué diferencia hay entre `acf()` y `plot_acf()`?
+`acf()` (en `statsmodels.tsa.stattools`) **devuelve números**: los valores, y si pides `alpha=` y `qstat=True`, también los intervalos y los estadísticos de Ljung–Box. `plot_acf()` (en `statsmodels.graphics.tsaplots`) **dibuja** esos números. Para un reporte o un examen usa `acf()` para citar valores exactos y `plot_acf()` para mostrar el patrón.
+:::
+
+:::duda ¿Qué método de PACF uso?
+`"ywm"` (Yule–Walker con la autocovarianza dividida entre $n$, el predeterminado de `plot_pacf`) siempre da valores entre −1 y 1. `"ols"` estima cada regresión por mínimos cuadrados [[pacf]] y es muy usado con muestras medianas. Evita `"yw"` (dividido entre $n - k$) con pocos datos: puede dar valores mayores que 1 en rezagos altos.
+:::
+
+:::interactivo py-acftabla | Simulador: la tabla numérica de `acf(..., alpha, qstat=True)` {#sim-acftabla}
+Lo que se ve en la gráfica, ahora en números: para cada rezago, la autocorrelación, su intervalo de confianza y la prueba de Ljung–Box acumulada.
+@@@
+- **Columnas de la salida**: `acf` = $\hat\rho(k)$; `inferior`/`superior` = $\hat\rho(k) \mp z\cdot\text{EE}_k$ (Bartlett); `Q` y `p-value` = Ljung–Box con $h = k$.
+- Una autocorrelación es significativa si su intervalo **no contiene al 0**. Ojo: en la gráfica la banda se dibuja centrada en 0, pero el criterio es el mismo.
+- **Gráfica**: el p-value de Ljung–Box para cada $h$; si cae bajo la línea gris hay autocorrelación conjunta hasta ese rezago.
+:::
+
+```python
+final = np.log(serie).diff(12).diff().dropna()
+valores, confint = acf(final, nlags=12, alpha=0.05)
+tabla = pd.DataFrame({"acf": valores, "inferior": confint[:, 0], "superior": confint[:, 1]})
+tabla["¿significativa?"] = (tabla["inferior"] > 0) | (tabla["superior"] < 0)
+print(tabla.iloc[1:].round(3))
+```
+
+```python
+fig, ejes = plt.subplots(2, 1, figsize=(10, 6))
+plot_acf(final, lags=36, zero=False, ax=ejes[0], title="ACF de ΔΔ₁₂ ln(pasajeros)")
+plot_pacf(final, lags=36, zero=False, method="ywm", ax=ejes[1], title="PACF de ΔΔ₁₂ ln(pasajeros)")
+plt.tight_layout()
+plt.show()
+```
+
 ### Bandas de confianza (Bartlett) {#bartlett}
 
 :::definicion Banda para ruido blanco
@@ -58,6 +119,10 @@ Con bandas al 95%, aunque la serie sea ruido blanco, **1 de cada 20 barras** sal
 
 :::interactivo bartlett | Ruido blanco y bandas de confianza
 Mueve $n$ y genera nuevas muestras. La banda se angosta como $1/\sqrt n$ y, en promedio, alrededor del 5% de las barras cae fuera (marcadas en rosa).
+@@@
+- **Barras**: la ACF de una muestra de ruido blanco (naranjas = fuera de la banda).
+- **Franja**: $\pm 1.96/\sqrt n$; se angosta al aumentar $n$.
+- **Lectura**: cuántas barras salen; en promedio debe rondar el 5%.
 :::
 
 ### Efectos directos e indirectos {#indirectos}
@@ -122,6 +187,10 @@ y = np.array([2, 4, 6, 5, 3, 4], dtype=float)
 print("PACF (método 'ywm', Yule-Walker con la ACF de la sección 4):", np.round(pacf(y, nlags=2, method="ywm"), 4))
 ```
 
+:::duda ¿La PACF puede salir mayor que 1?
+Teóricamente no, pero con el método `"yw"` (autocovarianzas divididas entre $n - k$) y pocos datos, sí puede pasar en rezagos altos. Por eso `plot_pacf` usa `"ywm"` por defecto, que siempre queda entre −1 y 1. Compruébalo en el simulador [[sim-plotacf]].
+:::
+
 ### Patrones para identificar modelos {#patrones}
 
 Para completar el cuadro necesitamos un proceso cuya ACF **se corte**: el MA(1).
@@ -162,6 +231,10 @@ Modelo: $y_t = \varepsilon_t + \theta\,\varepsilon_{t-1}$, con $\varepsilon_t \s
 
 :::interactivo correlograma | Galería de correlogramas
 Elige un proceso y su parámetro. Verás la serie, la ACF y la PACF con sus bandas. Compara lo que ves con la tabla de arriba: con $n$ pequeño los patrones son más ruidosos; súbelo para verlos con claridad.
+@@@
+- **Arriba** la serie; **abajo** la ACF y la PACF (barras) con su banda $\pm 1.96/\sqrt n$. Los **rombos rosas** son los valores teóricos.
+- **Barras naranjas** = fuera de la banda.
+- Esta galería usa la banda fija de ruido blanco en ambas funciones. `plot_acf` de statsmodels usa por defecto la de Bartlett, que se ensancha: compáralas en el simulador [[sim-plotacf]].
 :::
 
 :::definicion Cómo leer ACF y PACF en la práctica
@@ -286,7 +359,34 @@ print("AR(1) con φ = 0.5 (estacionario):"); print(acorr_ljungbox(ar, lags=[5, 1
 
 :::interactivo ljungbox | Ljung–Box paso a paso
 Las barras muestran cuánto aporta cada rezago a $Q$; la línea, cómo se acumula $Q$ hasta el rezago $h$, comparada con el valor crítico de la $\chi^2_h$. Cambia $\phi$ (0 = ruido blanco) y $h$.
+@@@
+- **Barras azules**: lo que aporta cada rezago, $n(n+2)\hat\rho(k)^2/(n-k)$.
+- **Línea rosa**: $Q$ acumulado hasta el rezago $k$. **Línea gris discontinua**: el crítico $\chi^2_k$ al 95%.
+- **Qué buscar**: si en $k = h$ la línea rosa está **arriba** de la gris, se rechaza $H_0$.
 :::
+
+:::interactivo py-ljungbox | Simulador: `acorr_ljungbox` con sus parámetros {#sim-ljungbox}
+Prueba `lags` como entero o como lista, agrega Box–Pierce y cambia `model_df` (lo que usarás con los residuos de un modelo en la Unidad II).
+@@@
+- **Salida**: el `DataFrame` que devuelve statsmodels: una fila por cada $h$ con `lb_stat` (Q) y `lb_pvalue`; con `boxpierce=True` agrega `bp_stat` y `bp_pvalue`.
+- **Gráfica**: p-value para cada $h$; la línea gris es 0.05. Con `model_df` > 0, los primeros $h \le$ `model_df` no tienen p-value (grados de libertad ≤ 0).
+:::
+
+| Situación | `lags` | `boxpierce` | `model_df` |
+|---|---|---|---|
+| Serie no estacional | 10 | False | 0 |
+| Serie mensual | `[12, 24]` o 24 | False | 0 |
+| Residuos de un ARMA(p, q) | 10 (o 24 si es mensual) | False | p + q |
+| Comparar con un libro antiguo | el que use el libro | True | según el caso |
+
+:::duda ¿Por qué el p-value cambia tanto con h?
+Porque $Q$ suma las autocorrelaciones **hasta** $h$. Si la autocorrelación está en el rezago 1, con $h$ pequeño se detecta fácil; con $h$ muy grande se «diluye» entre muchos rezagos sin señal y el p-value sube. Si está en el rezago 12, con $h < 12$ la prueba ni siquiera la ve. Por eso se eligen valores de $h$ que cubran los rezagos donde esperas estructura.
+:::
+
+```python
+res = acorr_ljungbox(final, lags=[12, 24], boxpierce=True)
+print(res.round(4))
+```
 
 :::resumen Lo esencial de las secciones 7 y 8
 - ACF: correlación total; PACF: correlación directa ($\phi_{kk}$ = último coeficiente de la regresión de orden $k$).

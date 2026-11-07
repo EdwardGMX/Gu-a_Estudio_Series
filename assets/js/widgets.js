@@ -934,6 +934,398 @@
     graf(g2, trazasACF(TS.pacf(x, 20), n, { nombre: 'PACF' }), layoutACF('PACF', { height: 240 }));
   };
 
+  /* ===================== Simuladores de Python ===================== */
+  // Resaltado mínimo de Python (mismas clases que Pygments)
+  const PYKW = new Set(['import', 'from', 'as', 'for', 'in', 'def', 'return', 'if', 'else', 'with', 'print', 'lambda']);
+  const PYKC = new Set(['True', 'False', 'None']);
+  function resaltar(linea) {
+    const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    let html = '', i = 0;
+    const re = /(#.*$)|("[^"]*"|'[^']*')|(\b\d+(?:\.\d+)?\b)|(\b[A-Za-z_]\w*\b)(?=\s*\()|(\b[A-Za-z_]\w*\b)|(@@\d+@@)/g;
+    let m;
+    while ((m = re.exec(linea))) {
+      html += esc(linea.slice(i, m.index));
+      const t = m[0];
+      if (m[1]) html += `<span class="c1">${esc(t)}</span>`;
+      else if (m[2]) html += `<span class="s1">${esc(t)}</span>`;
+      else if (m[3]) html += `<span class="mi">${t}</span>`;
+      else if (m[4]) html += PYKW.has(t) ? `<span class="k">${t}</span>` : `<span class="nf">${t}</span>`;
+      else if (m[5]) html += PYKW.has(t) ? `<span class="k">${t}</span>` : PYKC.has(t) ? `<span class="kc">${t}</span>` : esc(t);
+      else html += t;
+      i = m.index + t.length;
+    }
+    return html + esc(linea.slice(i));
+  }
+  // plantilla: texto con {nombre}; args: {nombre: valorPython}
+  function codigoPython(plantilla, args, cambiado) {
+    const vals = [];
+    const txt = plantilla.replace(/\{(\w+)\}/g, (m0, k) => { if (!(k in args)) return m0; vals.push(k); return '@@' + (vals.length - 1) + '@@'; });
+    return txt.split('\n').map(resaltar).join('\n').replace(/@@(\d+)@@/g, (_, j) => {
+      const k = vals[+j];
+      return `<span class="arg${k === cambiado ? ' arg-nuevo' : ''}" title="parámetro: ${k}">${resaltar(String(args[k]))}</span>`;
+    });
+  }
+  const pyv = v => v === null || v === undefined ? 'None' : typeof v === 'boolean' ? (v ? 'True' : 'False') : typeof v === 'string' && !/^[\[\d-]/.test(v) && v !== 'None' ? `"${v}"` : String(v);
+  function panelCodigo(c) {
+    const caja = el('div', { class: 'codigo sim-codigo' });
+    const cab = el('div', { class: 'c-cab' }, el('span', { class: 'c-lang' }, '🐍 Python · el código cambia con tus parámetros'));
+    const copiar = el('button', { type: 'button', class: 'c-copiar' }, 'Copiar');
+    cab.append(copiar);
+    const pre = el('pre', { class: 'c-fuente' }), code = el('code');
+    pre.append(code);
+    const sal = el('div', { class: 'c-salida' }, el('div', { class: 'c-salida-cab' }, 'Salida (calculada en tu navegador con las mismas fórmulas de statsmodels)'));
+    const spre = el('pre');
+    sal.append(spre);
+    caja.append(cab, pre, sal);
+    c.append(caja);
+    copiar.addEventListener('click', () => {
+      const t = code.innerText;
+      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(() => {});
+      copiar.textContent = '¡Copiado!'; setTimeout(() => { copiar.textContent = 'Copiar'; }, 1500);
+    });
+    return { codigo: h => { code.innerHTML = h; }, salida: t => { spre.textContent = t; sal.style.display = t ? '' : 'none'; } };
+  }
+  // Tabla de texto al estilo pandas
+  function tablaTexto(cols, filas, indice) {
+    const fmtc = v => v === null || v === undefined || (typeof v === 'number' && isNaN(v)) ? 'NaN' : typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toFixed(4)) : String(v);
+    const datos = filas.map(f => f.map(fmtc)), idx = (indice || filas.map((_, i) => String(i))).map(String);
+    const wi = Math.max(...idx.map(s => s.length), 1);
+    const w = cols.map((cname, j) => Math.max(cname.length, ...datos.map(f => f[j].length)));
+    const lin = [' '.repeat(wi) + '  ' + cols.map((cn, j) => cn.padStart(w[j])).join('  ')];
+    datos.forEach((f, i) => lin.push(idx[i].padEnd(wi) + '  ' + f.map((v, j) => v.padStart(w[j])).join('  ')));
+    return lin.join('\n');
+  }
+  function panelParametros(c, filas) {
+    const d = el('div', { class: 'w-tabla sim-params' });
+    c.append(d);
+    return (valores, activo) => {
+      d.innerHTML = '<table><thead><tr><th>Parámetro</th><th>Valor actual</th><th>Qué hace</th><th>Recomendado</th></tr></thead><tbody>' +
+        filas.map(f => `<tr class="${f.nombre === activo ? 'activo' : ''}"><td><code>${f.nombre}</code></td><td><code>${valores[f.nombre] === undefined ? '—' : valores[f.nombre]}</code></td><td>${f.que}</td><td>${f.rec}</td></tr>`).join('') + '</tbody></table>';
+    };
+  }
+  const fechasAP = TS.datos.fechasMensuales(1949, 144);
+  const LOGAP = TS.datos.airpassengers.map(Math.log);
+  const SERIES_SIM = {
+    serie: { nombre: 'AirPassengers (serie)', x: () => TS.datos.airpassengers.slice(), fechas: () => fechasAP, estacional: true, def: 'serie' },
+    log: { nombre: 'np.log(serie)', x: () => LOGAP.slice(), fechas: () => fechasAP, estacional: true, def: 'np.log(serie)' },
+    dlog: { nombre: 'np.log(serie).diff()', x: () => TS.diff(LOGAP), fechas: () => fechasAP.slice(1), estacional: true, def: 'np.log(serie).diff().dropna()' },
+    dd: { nombre: 'np.log(serie).diff(12).diff()', x: () => TS.diff(TS.diff(LOGAP, 12)), fechas: () => fechasAP.slice(13), estacional: true, def: 'np.log(serie).diff(12).diff().dropna()' },
+    ar: { nombre: 'AR(1) simulado, φ = 0.7', x: () => TS.sim.ar1(200, 0.7, { semilla: 9 }), def: 'ar1   # AR(1) con φ = 0.7, n = 200 (muestra simulada en tu navegador)' },
+    ma: { nombre: 'MA(1) simulado, θ = 0.8', x: () => TS.sim.ma1(200, 0.8, { semilla: 9 }), def: 'ma1   # MA(1) con θ = 0.8, n = 200 (muestra simulada en tu navegador)' },
+    rb: { nombre: 'Ruido blanco', x: () => TS.sim.ruido(200, { semilla: 3 }), def: 'rb    # ruido blanco, n = 200 (muestra simulada en tu navegador)' },
+    paseo: { nombre: 'Paseo aleatorio', x: () => TS.sim.paseo(200, { semilla: 2 }), def: 'paseo # paseo aleatorio, n = 200 (muestra simulada en tu navegador)' },
+    tend: { nombre: 'Tendencia + ruido', x: () => TS.sim.tendencia(200, { a: 10, b: 0.05, semilla: 7 }), def: 'tend  # 10 + 0.05·t + ruido, n = 200 (muestra simulada en tu navegador)' }
+  };
+  const opcionesSeries = claves => claves.map(k => [k, SERIES_SIM[k].nombre]);
+  const tallos = (ks, vs, color) => {
+    const xs = [], ys = [];
+    ks.forEach((k, i) => { xs.push(k, k, null); ys.push(0, vs[i], null); });
+    return [
+      { x: xs, y: ys, mode: 'lines', line: { color, width: 2 }, hoverinfo: 'skip', showlegend: false },
+      { x: ks, y: vs, mode: 'markers', marker: { color, size: 7, line: { color: '#fff', width: 1 } }, hovertemplate: 'rezago %{x}<br>valor %{y:.3f}<extra></extra>', showlegend: false }
+    ];
+  };
+
+  // --- plot_acf / plot_pacf con todos sus parámetros
+  W['py-plotacf'] = c => {
+    const ctr = lienzo(c);
+    let activo = 'lags';
+    const s = seleccion(ctr, { etiqueta: 'Serie (x)', valor: 'serie', opciones: opcionesSeries(['serie', 'dlog', 'dd', 'ar', 'ma', 'rb', 'paseo']) }, () => { activo = 'x'; dibujar(); });
+    const fn = segmentado(ctr, { etiqueta: 'Función', valor: 'acf', opciones: [['acf', 'plot_acf'], ['pacf', 'plot_pacf']] }, () => { activo = 'fn'; dibujar(); });
+    const lg = slider(ctr, { etiqueta: 'lags', min: 5, max: 60, paso: 1, valor: 36 }, () => { activo = 'lags'; dibujar(); });
+    const lgNone = casilla(ctr, 'lags=None (por defecto)', false, () => { activo = 'lags'; dibujar(); });
+    const al = segmentado(ctr, { etiqueta: 'alpha', valor: '0.05', opciones: [['0.01', '0.01'], ['0.05', '0.05'], ['0.1', '0.10'], ['None', 'None']] }, () => { activo = 'alpha'; dibujar(); });
+    const ze = casilla(ctr, 'zero=True (dibujar rezago 0)', true, () => { activo = 'zero'; dibujar(); });
+    const bc = casilla(ctr, 'bartlett_confint=True', true, () => { activo = 'bartlett_confint'; dibujar(); });
+    const me = seleccion(ctr, { etiqueta: 'method (solo PACF)', valor: 'ywm', opciones: [['ywm', '"ywm" (por defecto)'], ['yw', '"yw" (ajustado)'], ['ols', '"ols"']] }, () => { activo = 'method'; dibujar(); });
+    const pc = panelCodigo(c), g = lamina(c), lec = lectura(c);
+    const params = panelParametros(c, [
+      { nombre: 'x', que: 'La serie (ya transformada si hace falta).', rec: 'Una serie <b>estacionaria</b>; si no, la ACF solo mostrará decaimiento lento.' },
+      { nombre: 'lags', que: 'Hasta qué rezago dibujar. <code>None</code> usa ⌈10·log₁₀ n⌉ (máximo n/2).', rec: 'No estacional: 20–40. Mensual: <b>36–48</b> (ver 12, 24, 36). Diaria con semana: 21–28. PACF: menos de n/2.' },
+      { nombre: 'alpha', que: 'Nivel de la banda: 0.05 = banda al 95%. <code>None</code> quita la banda.', rec: '<b>0.05</b>. Usa 0.01 para ser más exigente con muchas barras.' },
+      { nombre: 'zero', que: 'Si se dibuja el rezago 0 (que siempre vale 1).', rec: '<b>False</b>: así la escala se ajusta a los rezagos que importan.' },
+      { nombre: 'bartlett_confint', que: 'Solo plot_acf. True: banda que se ensancha (Bartlett). False: banda fija ±z/√n.', rec: '<b>True</b> para identificar un MA(q); False para comparar contra ruido blanco.' },
+      { nombre: 'method', que: 'Solo plot_pacf. Cómo se estima la PACF.', rec: '<b>"ywm"</b> (por defecto, nunca sale de [−1, 1]) u <b>"ols"</b>. Evita "yw" con pocos datos.' }
+    ]);
+    function dibujar() {
+      const S = SERIES_SIM[s.get()], x = S.x(), n = x.length, esA = fn.get() === 'acf';
+      const lim = Math.min(Math.ceil(10 * Math.log10(n)), Math.floor(n / 2));
+      let L = lgNone.get() ? lim : lg.get();
+      if (!esA && L >= Math.floor(n / 2)) L = Math.floor(n / 2) - 1;
+      const alpha = al.get() === 'None' ? null : Number(al.get()), zero = ze.get(), metodo = me.get();
+      const vals = esA ? TS.acf(x, L) : TS.pacfMetodo(x, L, metodo);
+      let bandas = null;
+      if (alpha !== null) bandas = esA ? TS.acfBandas(x, L, alpha, bc.get()) : [0].concat(TS.rango(L).map(() => TS.normppf(1 - alpha / 2) / Math.sqrt(n)));
+      const ks = TS.rango(L + 1).filter(k => zero || k > 0), tr = [];
+      if (bandas) {
+        const kb = TS.rango(L, 1);
+        tr.push({ x: kb, y: kb.map(k => bandas[k]), mode: 'lines', line: { width: 0, shape: 'linear' }, hoverinfo: 'skip', showlegend: false });
+        tr.push({ x: kb, y: kb.map(k => -bandas[k]), mode: 'lines', line: { width: 0 }, fill: 'tonexty', fillcolor: 'rgba(124,105,214,.18)', hoverinfo: 'skip', showlegend: false });
+      }
+      tr.push(...tallos(ks, ks.map(k => vals[k]), esA ? PAL.lav : PAL.cel));
+      const titulo = esA ? 'Autocorrelation' : 'Partial Autocorrelation';
+      graf(g, tr, { height: 320, title: { text: `${titulo}  ·  ${S.nombre}` }, xaxis: { title: { text: 'rezago' } }, yaxis: zero ? { range: [-1.1, 1.1] } : {}, showlegend: false,
+        shapes: [{ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 0, y1: 0, line: { color: '#b9b5cf', width: 1 } }] });
+      const args = { x: S.def.split(' ')[0], lags: lgNone.get() ? 'None' : L, alpha: alpha === null ? 'None' : alpha, zero: pyv(zero), bartlett_confint: pyv(bc.get()), method: `"${metodo}"` };
+      const cab = esA ? 'from statsmodels.graphics.tsaplots import plot_acf' : 'from statsmodels.graphics.tsaplots import plot_pacf';
+      const linea = esA ? 'plot_acf(x, lags={lags}, alpha={alpha}, zero={zero}, bartlett_confint={bartlett_confint}, ax=ax)' : 'plot_pacf(x, lags={lags}, alpha={alpha}, method={method}, zero={zero}, ax=ax)';
+      pc.codigo(codigoPython(`${cab}\nimport matplotlib.pyplot as plt\n\nx = ${S.def}\nfig, ax = plt.subplots(figsize=(9, 3.5))\n${linea}\nplt.show()`, args, activo === 'fn' ? null : activo));
+      const fuera = bandas ? TS.rango(L, 1).filter(k => Math.abs(vals[k]) > bandas[k]) : [];
+      pc.salida(bandas ? `# Rezagos cuya barra sale de la banda (no es salida de Python, es la lectura):\n${fuera.length ? fuera.join(', ') : 'ninguno'}` : '# alpha=None: no se dibuja banda, no se puede juzgar significancia.');
+      params({ x: args.x, lags: args.lags, alpha: args.alpha, zero: args.zero, bartlett_confint: esA ? args.bartlett_confint : '(no aplica)', method: esA ? '(no aplica)' : args.method }, activo === 'fn' ? null : activo);
+      const consejos = [];
+      if (S.estacional && L < 36) consejos.push('Con datos mensuales usa al menos 36 rezagos para ver los picos de 12, 24 y 36.');
+      if (zero) consejos.push('Con <code>zero=True</code> la barra del rezago 0 (=1) aplasta la escala; prueba <code>zero=False</code>.');
+      if (!esA && metodo === 'yw' && vals.some((v, k) => k > 0 && Math.abs(v) > 1)) consejos.push('⚠️ El método "yw" dio valores fuera de [−1, 1]: por eso statsmodels recomienda "ywm".');
+      if (s.get() === 'serie' || s.get() === 'paseo') consejos.push('Esta serie no es estacionaria: la ACF decae muy lento y no sirve para identificar el modelo. Diferénciala primero.');
+      lec.innerHTML = `<b>Barras fuera de la banda:</b> ${fuera.length ? fuera.slice(0, 12).join(', ') + (fuera.length > 12 ? '…' : '') : 'ninguna'}.` + (consejos.length ? '<br>💡 ' + consejos.join('<br>💡 ') : '');
+    }
+    dibujar();
+  };
+
+  // --- acf(..., alpha, qstat=True): la tabla numérica
+  W['py-acftabla'] = c => {
+    const ctr = lienzo(c);
+    let activo = 'nlags';
+    const s = seleccion(ctr, { etiqueta: 'Serie (x)', valor: 'dd', opciones: opcionesSeries(['dd', 'ar', 'ma', 'rb', 'serie']) }, () => { activo = 'x'; dibujar(); });
+    const nl = slider(ctr, { etiqueta: 'nlags', min: 1, max: 24, paso: 1, valor: 12 }, () => { activo = 'nlags'; dibujar(); });
+    const al = segmentado(ctr, { etiqueta: 'alpha', valor: '0.05', opciones: [['0.01', '0.01'], ['0.05', '0.05'], ['0.1', '0.10']] }, () => { activo = 'alpha'; dibujar(); });
+    const pc = panelCodigo(c), g = lamina(c), lec = lectura(c);
+    function dibujar() {
+      const S = SERIES_SIM[s.get()], x = S.x(), n = x.length, L = nl.get(), alpha = Number(al.get());
+      const r = TS.acf(x, L), b = TS.acfBandas(x, L, alpha, true), lb = TS.ljungBox(x, L);
+      pc.codigo(codigoPython(`from statsmodels.tsa.stattools import acf\n\nx = ${S.def}\nvalores, confint, qstat, pvalores = acf(x, nlags={nlags}, alpha={alpha}, qstat=True)\ntabla = pd.DataFrame({"acf": valores[1:], "inferior": confint[1:, 0], "superior": confint[1:, 1],\n                      "Q": qstat, "p-value": pvalores}, index=range(1, {nlags} + 1))\nprint(tabla.round(4))`, { nlags: L, alpha }, activo));
+      const filas = TS.rango(L, 1).map(k => [r[k], r[k] - b[k], r[k] + b[k], lb.filas[k - 1].Q, lb.filas[k - 1].p]);
+      pc.salida(tablaTexto(['acf', 'inferior', 'superior', 'Q', 'p-value'], filas, TS.rango(L, 1)));
+      graf(g, [
+        { x: TS.rango(L, 1), y: lb.filas.map(f => f.p), mode: 'lines+markers', line: { color: PAL.rosa, width: 2.5 }, marker: { size: 6 }, name: 'p-value de Q(k)' },
+        { x: [0.5, L + 0.5], y: [alpha, alpha], mode: 'lines', line: { color: PAL.gris, dash: 'dash' }, name: `α = ${alpha}` }
+      ], { height: 260, title: { text: 'p-value de Ljung–Box acumulado hasta cada rezago (columna p-value)' }, yaxis: { range: [0, 1.02] }, xaxis: { title: { text: 'k' }, dtick: L > 12 ? 2 : 1 } });
+      const cero = TS.rango(L, 1).filter(k => r[k] - b[k] > 0 || r[k] + b[k] < 0);
+      lec.innerHTML = `Cada fila es un rezago. <b>inferior/superior</b> = intervalo de ${(100 * (1 - alpha)).toFixed(0)}% alrededor de la ACF (Bartlett): si <b>no contiene al 0</b>, esa autocorrelación es significativa → rezagos ${cero.length ? cero.join(', ') : 'ninguno'}. <b>Q</b> y <b>p-value</b> son Ljung–Box con h = k (todas las autocorrelaciones de 1 a k juntas).`;
+    }
+    dibujar();
+  };
+
+  // --- pandas rolling
+  W['py-rolling'] = c => {
+    const ctr = lienzo(c);
+    let activo = 'window';
+    const s = seleccion(ctr, { etiqueta: 'Serie', valor: 'serie', opciones: opcionesSeries(['serie', 'tend', 'rb', 'paseo']) }, () => { activo = 'x'; dibujar(); });
+    const w = slider(ctr, { etiqueta: 'window', min: 2, max: 36, paso: 1, valor: 12 }, () => { activo = 'window'; if (mp.get() > w.get()) mp.set(w.get()); dibujar(); });
+    const ce = casilla(ctr, 'center=True', false, () => { activo = 'center'; dibujar(); });
+    const mpN = casilla(ctr, 'min_periods=None', true, () => { activo = 'min_periods'; dibujar(); });
+    const mp = slider(ctr, { etiqueta: 'min_periods (si no es None)', min: 1, max: 36, paso: 1, valor: 1 }, () => { activo = 'min_periods'; dibujar(); });
+    const es = segmentado(ctr, { etiqueta: 'Estadístico', valor: 'mean', opciones: [['mean', '.mean()'], ['std', '.std()']] }, () => { activo = 'fn'; dibujar(); });
+    const pc = panelCodigo(c), g = lamina(c), lec = lectura(c);
+    const params = panelParametros(c, [
+      { nombre: 'window', que: 'Cuántos datos entran en cada ventana.', rec: 'Igual al <b>periodo estacional</b> (12 en mensuales, 7 en diarios) para que la estacionalidad no contamine la media.' },
+      { nombre: 'center', que: 'False: ventana hacia atrás (termina en t). True: ventana centrada en t.', rec: '<b>False</b> para monitorear en tiempo real; <b>True</b> para describir la tendencia (no se desfasa).' },
+      { nombre: 'min_periods', que: 'Mínimo de datos para calcular; si hay menos, da NaN.', rec: '<b>None</b> (= window) para no mezclar ventanas incompletas.' }
+    ]);
+    function dibujar() {
+      const S = SERIES_SIM[s.get()], x = S.x(), W0 = w.get(), cen = ce.get(), m = mpN.get() ? null : Math.min(mp.get(), W0), f = es.get();
+      const y = TS.rolling(x, W0, { center: cen, min_periods: m, fn: f }), fechas = S.fechas ? S.fechas() : TS.rango(x.length, 1);
+      const ser = S.def.split(' ')[0] === 'serie' ? 'serie' : 'x';
+      pc.codigo(codigoPython(`${ser === 'x' ? 'x = pd.Series(' + S.def.split(' ')[0] + ')\n' : ''}movil = ${ser}.rolling(window={window}, center={center}, min_periods={min_periods}).${f}()\nprint(movil.head(8))\nprint("NaN:", movil.isna().sum())`, { window: W0, center: pyv(cen), min_periods: m === null ? 'None' : m }, activo));
+      const nan = y.filter(v => v === null).length;
+      pc.salida(tablaTexto([f === 'mean' ? 'media' : 'desv'], y.slice(0, 8).map(v => [v === null ? NaN : v]), fechas.slice(0, 8)) + `\nNaN: ${nan}`);
+      graf(g, [
+        { x: fechas, y: x, mode: 'lines', line: { color: 'rgba(124,105,214,.55)', width: 1.3 }, name: 'serie', yaxis: 'y' },
+        { x: fechas, y, mode: 'lines', line: { color: PAL.rosa, width: 3 }, name: `rolling(${W0}).${f}()`, yaxis: f === 'std' ? 'y2' : 'y' }
+      ], { height: 320, title: { text: 'Serie y estadístico móvil' }, yaxis2: { overlaying: 'y', side: 'right', showgrid: false, title: { text: 'desv. móvil' } } });
+      params({ window: W0, center: pyv(cen), min_periods: m === null ? 'None' : m }, activo);
+      lec.innerHTML = `Hay <b>${nan}</b> valores NaN ${cen ? '(repartidos al inicio y al final, porque la ventana centrada necesita datos de ambos lados)' : '(todos al inicio: las primeras ventanas están incompletas)'}.` +
+        (S.estacional && W0 % 12 !== 0 && f === 'mean' ? ' 💡 La ventana no es múltiplo de 12: la media móvil conserva ondas estacionales.' : '') +
+        (!cen && f === 'mean' ? ' 💡 Con <code>center=False</code> la media móvil va <b>retrasada</b> respecto a la serie (mira cómo la curva rosa llega tarde a los cambios).' : '');
+    }
+    dibujar();
+  };
+
+  // --- seasonal_decompose con sus parámetros
+  W['py-decompose'] = c => {
+    const ctr = lienzo(c);
+    let activo = 'model';
+    const mo = segmentado(ctr, { etiqueta: 'model', valor: 'multiplicative', opciones: [['additive', '"additive"'], ['multiplicative', '"multiplicative"']] }, () => { activo = 'model'; dibujar(); });
+    const pe = segmentado(ctr, { etiqueta: 'period', valor: 12, opciones: [[6, '6'], [12, '12'], [24, '24']] }, () => { activo = 'period'; dibujar(); });
+    const ts = casilla(ctr, 'two_sided=True', true, () => { activo = 'two_sided'; dibujar(); });
+    const ex = segmentado(ctr, { etiqueta: 'extrapolate_trend', valor: '0', opciones: [['0', '0'], ['11', '11 (= period − 1)']] }, () => { activo = 'extrapolate_trend'; dibujar(); });
+    const pc = panelCodigo(c), g = lamina(c), lec = lectura(c);
+    const params = panelParametros(c, [
+      { nombre: 'model', que: '"additive": y = T + S + R. "multiplicative": y = T × S × R.', rec: 'Amplitud constante → additive. Amplitud que crece con el nivel → <b>multiplicative</b> (AirPassengers).' },
+      { nombre: 'period', que: 'Longitud del ciclo estacional. Si el índice tiene frecuencia, se deduce solo.', rec: '<b>El periodo real</b>: 12 mensual, 4 trimestral, 7 diario-semanal, 24 por hora.' },
+      { nombre: 'two_sided', que: 'True: media móvil centrada. False: solo usa datos pasados.', rec: '<b>True</b> para analizar; False solo si necesitas una tendencia «en tiempo real».' },
+      { nombre: 'extrapolate_trend', que: '0: deja NaN en los extremos. Un entero k: los rellena con una recta ajustada a los k + 1 datos más cercanos. <code>"period"</code> (statsmodels ≥ 0.15) o <code>"freq"</code> (versiones anteriores) equivalen a period − 1.', rec: '<b>0</b> para estudiar; <b>period − 1</b> si necesitas la tendencia completa (para graficarla o desestacionalizar toda la serie).' }
+    ]);
+    function dibujar() {
+      const modelo = mo.get(), P = Number(pe.get()), dos = ts.get(), e = ex.get(), mult = modelo === 'multiplicative';
+      const d = TS.descomponerOpc(TS.datos.airpassengers, P, { modelo: mult ? 'multiplicativo' : 'aditivo', twoSided: dos, extrapolate: Number(e) });
+      pc.codigo(codigoPython(`from statsmodels.tsa.seasonal import seasonal_decompose\n\ndec = seasonal_decompose(serie, model={model}, period={period}, two_sided={two_sided}, extrapolate_trend={extrapolate_trend})\nresumen = pd.DataFrame({"observada": dec.observed, "tendencia": dec.trend, "estacional": dec.seasonal, "residuo": dec.resid})\nprint(resumen.head(8))\ndec.plot()`, { model: `"${modelo}"`, period: P, two_sided: pyv(dos), extrapolate_trend: Number(e) }, activo));
+      pc.salida(tablaTexto(['observada', 'tendencia', 'estacional', 'residuo'], TS.rango(8).map(i => [TS.datos.airpassengers[i], d.T[i] === null ? NaN : d.T[i], d.S[i], d.R[i] === null ? NaN : d.R[i]]), fechasAP.slice(0, 8)));
+      const { tr, L } = apilado([
+        { x: fechasAP, y: TS.datos.airpassengers, nombre: 'Observed', color: PAL.lav },
+        { x: fechasAP, y: d.T, nombre: 'Trend', color: PAL.rosa },
+        { x: fechasAP, y: d.S, nombre: 'Seasonal', color: PAL.cel },
+        { x: fechasAP, y: d.R, nombre: 'Resid', color: PAL.dur, modo: 'markers' }
+      ], 500, { title: { text: 'dec.plot()' }, margin: { t: 36 } });
+      L.shapes = [{ type: 'line', xref: 'paper', x0: 0, x1: 1, yref: 'y4', y0: mult ? 1 : 0, y1: mult ? 1 : 0, line: { color: PAL.gris, dash: 'dot' } }];
+      graf(g, tr, L);
+      params({ model: `"${modelo}"`, period: P, two_sided: pyv(dos), extrapolate_trend: Number(e) }, activo);
+      const nan = d.T.filter(v => v === null).length, R = d.R.filter(v => v !== null);
+      const ac12 = TS.acf(R, 12)[12];
+      const msj = [];
+      msj.push(`La tendencia tiene <b>${nan}</b> NaN ${nan ? (dos ? `(${nan / 2} al inicio y ${nan / 2} al final: la media móvil centrada de orden ${P} los necesita)` : '(todos al inicio)') : '(se extrapolaron con una recta)'}.`);
+      if (P === 6) msj.push(`⚠️ Con period = 6 el patrón no coincide con el ciclo real de 12 meses: el residuo conserva la estacionalidad (ρ̂(12) del residuo = ${fmt(ac12)}).`);
+      if (P === 24) msj.push('⚠️ period = 24 abarca dos ciclos de 12: el patrón se parece al correcto, pero estima 24 índices con la mitad de datos cada uno y pierde 12 meses de tendencia en cada extremo. Usa el periodo real (12).');
+      if (!mult) msj.push('El residuo aditivo forma un embudo: el modelo correcto es el multiplicativo.');
+      if (P === 12 && mult) msj.push(Math.abs(ac12) < 0.2 ? `Residuo sin patrón estacional claro (ρ̂(12) = ${fmt(ac12)}): buena descomposición.` : `El residuo es pequeño y sin embudo, aunque conserva algo de estructura (ρ̂(12) = ${fmt(ac12)}): es normal en la descomposición clásica, que supone el mismo patrón estacional todos los años.`);
+      lec.innerHTML = msj.join(' ');
+    }
+    dibujar();
+  };
+
+  // --- adfuller con sus parámetros
+  W['py-adfuller'] = c => {
+    const ctr = lienzo(c);
+    let activo = 'regression';
+    const s = seleccion(ctr, { etiqueta: 'Serie (x)', valor: 'log', opciones: opcionesSeries(['serie', 'log', 'dlog', 'dd', 'paseo', 'ar', 'tend', 'rb']) }, () => { activo = 'x'; dibujar(); });
+    const rg = segmentado(ctr, { etiqueta: 'regression', valor: 'ct', opciones: [['n', '"n"'], ['c', '"c"'], ['ct', '"ct"']] }, () => { activo = 'regression'; dibujar(); });
+    const au = segmentado(ctr, { etiqueta: 'autolag', valor: 'AIC', opciones: [['AIC', '"AIC"'], ['BIC', '"BIC"'], ['t-stat', '"t-stat"'], ['None', 'None']] }, () => { activo = 'autolag'; dibujar(); });
+    const mlN = casilla(ctr, 'maxlag=None (12·(n/100)^¼)', true, () => { activo = 'maxlag'; dibujar(); });
+    const ml = slider(ctr, { etiqueta: 'maxlag (si no es None)', min: 0, max: 20, paso: 1, valor: 4 }, () => { activo = 'maxlag'; dibujar(); });
+    const pc = panelCodigo(c), g = lamina(c), dec = el('div', { class: 'w-decision' }), t1 = el('div', { class: 'w-tabla' }), t2 = el('div', { class: 'w-tabla' });
+    c.append(dec, t1, t2);
+    const lec = lectura(c);
+    const params = panelParametros(c, [
+      { nombre: 'x', que: 'Serie sin NaN (usa <code>.dropna()</code> después de diferenciar).', rec: 'La serie en la escala que vas a modelar (log si la varianza crece).' },
+      { nombre: 'regression', que: 'Términos deterministas: "n" ninguno, "c" constante, "ct" constante + tendencia.', rec: 'Oscila en 0 → "n". Nivel ≠ 0 sin tendencia → <b>"c"</b>. Crece o decrece → <b>"ct"</b>.' },
+      { nombre: 'autolag', que: 'Cómo elegir p (rezagos de Δy). None = usar exactamente maxlag.', rec: '<b>"AIC"</b> (por defecto). "BIC" elige menos rezagos; "t-stat" quita rezagos hasta que el último es significativo.' },
+      { nombre: 'maxlag', que: 'Máximo de rezagos que se prueban. None = ⌈12·(n/100)^¼⌉.', rec: '<b>None</b>. Súbelo si la serie es estacional y AIC se queda corto (por ejemplo, 13–15 en mensuales).' }
+    ]);
+    function dibujar() {
+      const S = SERIES_SIM[s.get()], x = S.x(), reg = rg.get(), auto = au.get() === 'None' ? null : au.get();
+      const N = x.length, ntr = reg === 'n' ? 0 : reg.length, maxDef = Math.min(Math.floor(N / 2) - ntr - 1, Math.ceil(12 * Math.pow(N / 100, 0.25)));
+      const mxl = mlN.get() ? null : ml.get();
+      const r = TS.adf(x, { regression: reg, autolag: auto, maxlag: mxl });
+      pc.codigo(codigoPython(`from statsmodels.tsa.stattools import adfuller\n\nx = ${S.def}\nestad, pval, rezagos, nobs, criticos${auto ? ', mejor_ic' : ''} = adfuller(x, maxlag={maxlag}, regression={regression}, autolag={autolag})\nprint(f"Estadístico ADF : {estad:.4f}")\nprint(f"p-value         : {pval:.4f}")\nprint(f"Rezagos usados  : {rezagos}   (de un máximo de ${mxl === null ? maxDef : mxl})")\nprint(f"Observaciones   : {nobs}")\nfor nivel, valor in criticos.items():\n    print(f"Crítico {nivel:>4}    : {valor:.4f}")`.replace(/\{(estad|pval|rezagos|nobs|nivel|valor)([^}]*)\}/g, '｛$1$2｝'),
+        { maxlag: mxl === null ? 'None' : mxl, regression: `"${reg}"`, autolag: auto ? `"${auto}"` : 'None' }, activo).replace(/｛/g, '{').replace(/｝/g, '}'));
+      pc.salida(`Estadístico ADF : ${r.stat.toFixed(4)}\np-value         : ${r.p.toFixed(4)}\nRezagos usados  : ${r.lags}   (de un máximo de ${mxl === null ? maxDef : mxl})\nObservaciones   : ${r.nobs}\n` + ['1%', '5%', '10%'].map(k => `Crítico ${k.padStart(4)}    : ${r.crit[k].toFixed(4)}`).join('\n'));
+      graf(g, [{ x: S.fechas ? S.fechas() : TS.rango(N, 1), y: x, mode: 'lines', line: { color: PAL.lav, width: 1.5 } }], { height: 230, title: { text: S.nombre }, showlegend: false, margin: { t: 34, b: 30 } });
+      const rech = r.p < 0.05;
+      dec.innerHTML = `<div class="w-prueba ${rech ? 'rechaza' : 'no-rechaza'}"><h5>Decisión al 5%</h5>τ = <b>${fmt(r.stat)}</b> ${rech ? '&lt;' : '≥'} crítico ${fmt(r.crit['5%'])} → <b>${rech ? 'se rechaza H₀: no hay raíz unitaria' : 'no se rechaza H₀: posible raíz unitaria'}</b></div>`;
+      if (auto) {
+        const clave = auto === 'BIC' ? 'bic' : auto === 'AIC' ? 'aic' : null;
+        t1.innerHTML = `<table><thead><tr><th colspan="4" style="text-align:left">Búsqueda de rezagos (autolag="${auto}"; misma muestra de ${r.candidatos[0].nobs} obs.)</th></tr><tr><th>p</th><th>AIC</th><th>BIC</th><th>t del último regresor</th></tr></thead><tbody>` +
+          r.candidatos.map(k => `<tr class="${k.lag === r.lags ? 'suma' : ''}"><td>${k.lag}${k.lag === r.lags ? ' ✓' : ''}</td><td>${k.aic.toFixed(2)}</td><td>${k.bic.toFixed(2)}</td><td>${k.tUltimo.toFixed(2)}</td></tr>`).join('') + '</tbody></table>';
+      } else t1.innerHTML = `<p style="margin:6px 0;font-size:.9rem">autolag=None: no hay búsqueda; se usan exactamente <b>${r.lags}</b> rezagos.</p>`;
+      const reg2 = r.reg;
+      t2.innerHTML = `<table><thead><tr><th colspan="4" style="text-align:left">Regresión final: Δy(t) sobre…</th></tr><tr><th>regresor</th><th>coef.</th><th>EE</th><th>t</th></tr></thead><tbody>` +
+        r.nombres.map((nm, j) => `<tr class="${nm === 'y(t-1)' ? 'suma' : ''}"><td>${nm}${nm === 'y(t-1)' ? ' (δ)' : ''}</td><td>${reg2.beta[j].toFixed(4)}</td><td>${reg2.se[j].toFixed(4)}</td><td>${reg2.t[j].toFixed(3)}</td></tr>`).join('') + '</tbody></table>';
+      params({ x: S.def.split(' ')[0], regression: `"${reg}"`, autolag: auto ? `"${auto}"` : 'None', maxlag: mxl === null ? `None (= ${maxDef})` : mxl }, activo);
+      const msj = [`El estadístico τ es la <b>t del coeficiente de y(t−1)</b> (renglón amarillo de la segunda tabla): ${fmt(r.delta, 4)} / ${fmt(r.se, 4)} = ${fmt(r.stat)}.`];
+      if ((s.get() === 'serie' || s.get() === 'log' || s.get() === 'tend') && reg !== 'ct') msj.push('⚠️ Esta serie tiene tendencia: la especificación adecuada es "ct".');
+      if (s.get() === 'tend' && reg === 'ct') msj.push('Con "ct" la ADF distingue la tendencia determinística y rechaza la raíz unitaria.');
+      if (auto === 'BIC' || auto === 't-stat') msj.push(`Compara con "AIC": cada criterio puede elegir un p distinto y cambiar el p-value.`);
+      lec.innerHTML = msj.join(' ');
+    }
+    dibujar();
+  };
+
+  // --- kpss con sus parámetros
+  W['py-kpss'] = c => {
+    const ctr = lienzo(c);
+    let activo = 'regression';
+    const s = seleccion(ctr, { etiqueta: 'Serie (x)', valor: 'paseo', opciones: opcionesSeries(['paseo', 'rb', 'ar', 'tend', 'log', 'dd']) }, () => { activo = 'x'; dibujar(); });
+    const rg = segmentado(ctr, { etiqueta: 'regression', valor: 'c', opciones: [['c', '"c"'], ['ct', '"ct"']] }, () => { activo = 'regression'; dibujar(); });
+    const nl = seleccion(ctr, { etiqueta: 'nlags', valor: 'auto', opciones: [['auto', '"auto" (por defecto)'], ['legacy', '"legacy"'], ['0', '0'], ['4', '4'], ['8', '8'], ['16', '16']] }, () => { activo = 'nlags'; dibujar(); });
+    const pc = panelCodigo(c), f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const params = panelParametros(c, [
+      { nombre: 'regression', que: '"c": H₀ = estacionaria alrededor de una constante. "ct": alrededor de una tendencia.', rec: 'Sin tendencia → <b>"c"</b>. Con tendencia → <b>"ct"</b> (usa la misma que en ADF).' },
+      { nombre: 'nlags', que: 'Rezagos L de Newey–West para la varianza de largo plazo.', rec: '<b>"auto"</b> (Hobijn et al.). Con L muy pequeño la KPSS rechaza de más si hay autocorrelación; con L muy grande pierde potencia.' }
+    ]);
+    function dibujar() {
+      const S = SERIES_SIM[s.get()], x = S.x(), reg = rg.get(), L = ['auto', 'legacy'].includes(nl.get()) ? nl.get() : Number(nl.get());
+      const k = TS.kpss(x, { regression: reg, nlags: L });
+      pc.codigo(codigoPython(`from statsmodels.tsa.stattools import kpss\n\nx = ${S.def}\nestad, pval, rezagos, criticos = kpss(x, regression={regression}, nlags={nlags})\nprint(f"Estadístico KPSS: ${'{'}estad:.4f${'}'}   p-value: ${'{'}pval:.4f${'}'}   rezagos: ${'{'}rezagos${'}'}")\nprint("Críticos:", criticos)`, { regression: `"${reg}"`, nlags: typeof L === 'string' ? `"${L}"` : L }, activo));
+      const pv = k.fueraDeTabla === 'mayor' ? '0.1000' : k.fueraDeTabla === 'menor' ? '0.0100' : k.p.toFixed(4);
+      pc.salida(`Estadístico KPSS: ${k.stat.toFixed(4)}   p-value: ${pv}   rezagos: ${k.lags}\nCríticos: {'10%': ${k.crit['10%']}, '5%': ${k.crit['5%']}, '2.5%': ${k.crit['2.5%']}, '1%': ${k.crit['1%']}}` + (k.fueraDeTabla ? `\n⚠ InterpolationWarning: The actual p-value is ${k.fueraDeTabla === 'mayor' ? 'greater' : 'smaller'} than the p-value returned.` : ''));
+      const t = TS.rango(x.length, 1);
+      graf(g1, [{ x: t, y: k.res, mode: 'lines', line: { color: PAL.lav, width: 1.2 } }], { height: 260, title: { text: `Residuos ê(t) (serie − ${reg === 'c' ? 'media' : 'recta'})` }, showlegend: false });
+      graf(g2, [{ x: t, y: k.S, mode: 'lines', line: { color: PAL.rosa, width: 2.4 }, fill: 'tozeroy', fillcolor: 'rgba(224,112,159,.12)' }], { height: 260, title: { text: 'Sumas acumuladas S(t): el corazón de KPSS' }, showlegend: false });
+      params({ regression: `"${reg}"`, nlags: typeof L === 'string' ? `"${L}" (= ${k.lags})` : L }, activo);
+      const rech = k.p < 0.05;
+      lec.className = 'w-lectura ' + (rech ? 'mal' : 'ok');
+      lec.innerHTML = `η = (ΣS²/n²) / σ̂²∞ = ${fmt(k.eta, 4)} / ${fmt(k.s2, 4)} = <b>${fmt(k.stat, 4)}</b> ${rech ? '>' : '≤'} ${k.crit['5%']} → <b>${rech ? 'se rechaza la estacionariedad' : 'no se rechaza la estacionariedad'}</b>. ` +
+        'Si S(t) hace grandes excursiones lejos de 0, el numerador crece. Cambia <code>nlags</code> y observa que solo cambia el denominador σ̂²∞.';
+    }
+    dibujar();
+  };
+
+  // --- acorr_ljungbox con sus parámetros
+  W['py-ljungbox'] = c => {
+    const ctr = lienzo(c);
+    let activo = 'lags';
+    const s = seleccion(ctr, { etiqueta: 'Serie (x)', valor: 'dd', opciones: opcionesSeries(['dd', 'rb', 'ar', 'ma']) }, () => { activo = 'x'; dibujar(); });
+    const h = slider(ctr, { etiqueta: 'lags (h máximo)', min: 1, max: 36, paso: 1, valor: 24 }, () => { activo = 'lags'; dibujar(); });
+    const lista = casilla(ctr, 'Pasar una lista: lags=[6, 12, 24]', false, () => { activo = 'lags'; dibujar(); });
+    const bp = casilla(ctr, 'boxpierce=True', false, () => { activo = 'boxpierce'; dibujar(); });
+    const md = slider(ctr, { etiqueta: 'model_df', min: 0, max: 4, paso: 1, valor: 0 }, () => { activo = 'model_df'; dibujar(); });
+    const pc = panelCodigo(c), g = lamina(c), lec = lectura(c);
+    const params = panelParametros(c, [
+      { nombre: 'lags', que: 'Entero h → prueba h = 1, 2, …, h (una fila por cada uno). Lista → solo esos h.', rec: 'No estacional: <b>10</b>. Mensual: <b>24</b> (2 periodos). Lista útil: <code>[12, 24]</code>.' },
+      { nombre: 'boxpierce', que: 'Agrega también el estadístico de Box–Pierce (Q = nΣρ̂²).', rec: '<b>False</b>: Ljung–Box es mejor con muestras pequeñas.' },
+      { nombre: 'model_df', que: 'Parámetros estimados del modelo (p + q); se restan de los grados de libertad.', rec: '<b>0</b> para una serie; <b>p + q</b> para residuos de un ARMA(p, q).' }
+    ]);
+    function dibujar() {
+      const S = SERIES_SIM[s.get()], x = S.x(), H = h.get(), lags = lista.get() ? [6, 12, 24] : TS.rango(H, 1), m = md.get();
+      const tab = TS.ljungBoxTabla(x, lags, { boxpierce: bp.get(), model_df: m });
+      pc.codigo(codigoPython(`from statsmodels.stats.diagnostic import acorr_ljungbox\n\nx = ${S.def}\nres = acorr_ljungbox(x, lags={lags}, boxpierce={boxpierce}, model_df={model_df})\nprint(res${lista.get() ? '' : '.tail(6)'})`, { lags: lista.get() ? '[6, 12, 24]' : H, boxpierce: pyv(bp.get()), model_df: m }, activo));
+      const vis = lista.get() ? tab : tab.slice(-6);
+      const cols = bp.get() ? ['lb_stat', 'lb_pvalue', 'bp_stat', 'bp_pvalue'] : ['lb_stat', 'lb_pvalue'];
+      pc.salida(tablaTexto(cols, vis.map(f => cols.map(k => f[k])), vis.map(f => f.lag)));
+      const trs = [{ x: tab.map(f => f.lag), y: tab.map(f => isNaN(f.lb_pvalue) ? null : f.lb_pvalue), mode: 'lines+markers', line: { color: PAL.rosa, width: 2.5 }, name: 'lb_pvalue' }];
+      if (bp.get()) trs.push({ x: tab.map(f => f.lag), y: tab.map(f => isNaN(f.bp_pvalue) ? null : f.bp_pvalue), mode: 'lines+markers', line: { color: PAL.cel, width: 2, dash: 'dot' }, name: 'bp_pvalue' });
+      trs.push({ x: [0.5, Math.max(...lags) + 0.5], y: [0.05, 0.05], mode: 'lines', line: { color: PAL.gris, dash: 'dash' }, name: '0.05' });
+      graf(g, trs, { height: 280, title: { text: 'p-value para cada h' }, yaxis: { range: [0, 1.02] }, xaxis: { title: { text: 'h' } } });
+      params({ lags: lista.get() ? '[6, 12, 24]' : H, boxpierce: pyv(bp.get()), model_df: m }, activo);
+      const ult = tab[tab.length - 1];
+      lec.innerHTML = `Con h = ${ult.lag}: Q = ${fmt(ult.lb_stat)} con ${ult.lag - m} grados de libertad, p = ${isNaN(ult.lb_pvalue) ? 'NaN' : fp(ult.lb_pvalue)} → ${ult.lb_pvalue < 0.05 ? '<b>hay autocorrelación</b>' : '<b>no hay evidencia de autocorrelación</b>'}.` +
+        (m > 0 ? ` Con model_df = ${m}, los h ≤ ${m} dan p-value NaN (grados de libertad ≤ 0).` : '') +
+        (s.get() === 'dd' ? ' 💡 Para esta serie mensual mira sobre todo h = 12 y h = 24.' : '');
+    }
+    dibujar();
+  };
+
+  // --- Transformaciones encadenadas en pandas
+  W['py-transformar'] = c => {
+    const ctr = lienzo(c);
+    let activo = 'log';
+    const lg = casilla(ctr, 'np.log(...)', true, () => { activo = 'log'; dibujar(); });
+    const d1 = casilla(ctr, '.diff()  (regular)', false, () => { activo = 'd1'; dibujar(); });
+    const d12 = casilla(ctr, '.diff(12)  (estacional)', false, () => { activo = 'd12'; dibujar(); });
+    const pc = panelCodigo(c), f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    function dibujar() {
+      let x = TS.datos.airpassengers.slice(), cad = 'serie', pasos = [];
+      if (lg.get()) { x = x.map(Math.log); cad = 'np.log(serie)'; pasos.push('log'); }
+      if (d12.get()) { x = TS.diff(x, 12); cad += '.diff(12)'; pasos.push('Δ₁₂'); }
+      if (d1.get()) { x = TS.diff(x); cad += '.diff()'; pasos.push('Δ'); }
+      const n = x.length, fechas = fechasAP.slice(144 - n), r = TS.acf(x, 36);
+      const reg = d1.get() || d12.get() ? 'c' : 'ct', a = TS.adf(x, { regression: reg }), k = TS.kpss(x, { regression: reg }), lb = TS.ljungBox(x, 24);
+      pc.codigo(codigoPython(`y = {cadena}\nprint(y.head(4))\nprint("n =", len(y))\nprint("ADF p :", round(adfuller(y, regression="${reg}")[1], 4))\nprint("KPSS p:", round(kpss(y, regression="${reg}", nlags="auto")[1], 4))\nprint("ρ(1), ρ(12):", np.round(acf(y, nlags=12)[[1, 12]], 3))`, { cadena: cad + (d1.get() || d12.get() ? '.dropna()' : '') }, 'cadena'));
+      const pk = k.fueraDeTabla === 'mayor' ? 0.1 : k.fueraDeTabla === 'menor' ? 0.01 : k.p;
+      pc.salida(tablaTexto(['y'], x.slice(0, 4).map(v => [v]), fechas.slice(0, 4)) + `\nn = ${n}\nADF p : ${a.p.toFixed(4)}\nKPSS p: ${pk.toFixed(4)}\nρ(1), ρ(12): [${r[1].toFixed(3)} ${r[12].toFixed(3)}]`);
+      graf(g1, [{ x: fechas, y: x, mode: 'lines', line: { color: d1.get() && d12.get() ? PAL.menta : PAL.lav, width: 1.5 } }], { height: 270, title: { text: pasos.length ? pasos.join(' → ') : 'serie original' }, showlegend: false });
+      graf(g2, trazasACF(r, n), layoutACF('ACF de y', { height: 270 }));
+      const est = a.p < 0.05 && pk >= 0.05;
+      lec.className = 'w-lectura ' + (est && Math.abs(r[12]) < 0.5 ? 'ok' : '');
+      lec.innerHTML = `ADF (${reg}) ${a.p < 0.05 ? 'rechaza' : 'no rechaza'} la raíz unitaria; KPSS ${pk < 0.05 ? 'rechaza' : 'no rechaza'} la estacionariedad; Ljung–Box(24) p = ${fp(lb.p)}. ` +
+        (!lg.get() ? '💡 Sin log, la amplitud estacional crece con el nivel. ' : '') + (Math.abs(r[12]) > 0.5 ? '💡 ρ̂(12) alto: falta la diferencia estacional. ' : '') + (Math.abs(r[1]) > 0.6 ? '💡 ρ̂(1) alto: falta la diferencia regular. ' : '') +
+        (lg.get() && d1.get() && d12.get() ? '✓ Esta es la transformación mínima que deja la serie estacionaria.' : '') +
+        ' <i>El orden de .diff() y .diff(12) no cambia el resultado (las diferencias conmutan).</i>';
+    }
+    dibujar();
+  };
+
   /* --------------------------- Carga diferida --------------------------- */
   function iniciar(contenedor) {
     if (contenedor.dataset.listo) return;

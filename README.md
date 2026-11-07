@@ -7,7 +7,8 @@ Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. P
 - **12 secciones**: herramientas matemáticas, qué es una serie de tiempo, visualización, componentes y descomposición clásica, estadísticos básicos, estacionariedad (ruido blanco, AR(1), paseo aleatorio, raíz unitaria, tendencia determinística vs. estocástica, diferenciación), pruebas ADF y KPSS, ACF y PACF, Ljung–Box, caso integrador con AirPassengers y formulario.
 - **Demostraciones paso a paso** (cada paso con su justificación) y **ejemplos resueltos a mano**.
 - **Código Python** con su salida real (se ejecuta al generar la página).
-- **26 gráficas interactivas**, calculadas en el navegador con las mismas fórmulas que `statsmodels`.
+- **34 gráficas interactivas**, calculadas en el navegador con las mismas fórmulas que `statsmodels`, cada una con su sección «Cómo leer esta gráfica».
+- **8 simuladores de Python** (`rolling`, `seasonal_decompose`, transformaciones, `adfuller`, `kpss`, `plot_acf`/`plot_pacf`, `acf`, `acorr_ljungbox`): el código se reescribe con los parámetros que eliges y muestra su salida, con una tabla de valores recomendados.
 - **Explicación de cada símbolo** al pasar el cursor por las fórmulas, y enlaces ↩ para regresar a temas anteriores (con botón «Volver a donde estabas»).
 - **43 ejercicios** con botón de respuesta y explicación.
 

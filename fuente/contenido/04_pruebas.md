@@ -39,6 +39,10 @@ from scipy.stats import binom
 print("p-value = P(X ≥ 9) =", round(binom.sf(8, 10, 0.5), 4))    # sf(8) = P(X > 8)
 ```
 
+:::duda ¿Por qué se usa 0.05?
+Es una **convención** (propuesta por Fisher), no una ley: significa aceptar un 5% de riesgo de rechazar $H_0$ siendo verdadera. Si equivocarse es muy costoso se usa 0.01; en análisis exploratorios a veces 0.10. Lo importante es fijar $\alpha$ **antes** de ver los resultados y reportar el p-value completo, no solo «significativo / no significativo».
+:::
+
 | | $H_0$ es verdadera | $H_0$ es falsa |
 |---|---|---|
 | **Rechazo $H_0$** | ❌ Error tipo I (probabilidad $\alpha$) | ✅ Decisión correcta (**potencia**) |
@@ -98,6 +102,10 @@ Bajo $H_0$ el regresor $y_{t-1}$ es un **paseo aleatorio**, cuya varianza crece 
 
 :::interactivo distdf | ¿Por qué hacen falta tablas especiales? {#distdf}
 Simulamos muchos paseos aleatorios (donde $H_0$ es cierta) y calculamos $\tau$ en cada uno. El histograma rosa es la distribución real de $\tau$; la curva es la normal. Si usaras $-1.645$, rechazarías $H_0$ verdadera mucho más del 5% de las veces.
+@@@
+- **Histograma rosa**: los 2000 valores de $\tau$ obtenidos en paseos aleatorios, donde $H_0$ es cierta.
+- **Curva lila**: la normal estándar, que sería la distribución si $\tau$ fuera una $t$ común.
+- **Líneas discontinuas**: el crítico de la normal ($-1.645$) y el de Dickey–Fuller. El área del histograma a la izquierda de cada línea es la proporción de rechazos.
 :::
 
 ### Dickey–Fuller calculada a mano {#df-mano}
@@ -227,6 +235,47 @@ for nombre, valor in zip(nombres, resultado):
 | `[4]` | críticos 1%, 5%, 10% | ajustados por tamaño de muestra |
 | `[5]` | AIC del mejor modelo | solo informativo |
 
+:::interactivo py-adfuller | Simulador: `adfuller` con todos sus parámetros {#sim-adfuller}
+Elige la serie y los parámetros. Además de la salida que imprimirías, verás **la búsqueda de rezagos** que hace `autolag` (con el AIC, el BIC y la $t$ de cada candidato) y **la regresión final** de la que sale $\tau$.
+@@@
+- **Código y salida**: lo que escribirías e imprimirías en Python.
+- **Tarjeta de decisión**: compara $\tau$ con el crítico al 5%.
+- **Tabla «Búsqueda de rezagos»**: cada renglón es un modelo con $p$ diferencias rezagadas, todos estimados con la **misma** muestra. AIC elige el menor AIC, BIC el menor BIC y «t-stat» empieza en el máximo y quita rezagos hasta que el último tiene $|t| \ge 1.645$. El renglón amarillo (✓) es el elegido.
+- **Tabla «Regresión final»**: los coeficientes de $\Delta y_t = \dots + \delta\,y_{t-1} + \sum\gamma_i\Delta y_{t-i}$. El renglón amarillo es $\delta$: su $t$ **es** el estadístico ADF.
+:::
+
+| Situación | `regression` | `autolag` | `maxlag` |
+|---|---|---|---|
+| Serie en niveles con tendencia (o su log) | `"ct"` | `"AIC"` | `None` |
+| Serie que oscila alrededor de un nivel ≠ 0 | `"c"` | `"AIC"` | `None` |
+| Serie ya diferenciada | `"c"` (o `"n"` si la media es ≈ 0) | `"AIC"` | `None` |
+| Residuos o rendimientos (media 0) | `"n"` | `"AIC"` | `None` |
+| Mensual con estacionalidad fuerte | según la gráfica | `"AIC"` | al menos 13 para cubrir el rezago 12 |
+| Quieres el modelo más pequeño posible | según la gráfica | `"BIC"` | `None` |
+
+:::duda ¿AIC, BIC o t-stat?
+Los tres buscan cuántos rezagos $p$ hacen falta para que el error sea ruido blanco. **AIC** (el predeterminado) tiende a elegir más rezagos; **BIC** castiga más los parámetros y elige menos; **t-stat** quita rezagos desde el máximo hasta que el último sea significativo. Si los tres llevan a la misma conclusión, tu resultado es robusto; si no, reporta el de AIC y menciona la diferencia.
+:::
+
+:::duda ¿Por qué cambia el resultado si cambio `maxlag`?
+Porque cambia el conjunto de modelos candidatos **y** la muestra con la que se comparan (todos se estiman con las observaciones disponibles para el modelo más grande). Más rezagos ⇒ errores más limpios, pero menos potencia. Por eso conviene usar el valor por defecto y, como chequeo, probar uno o dos valores más.
+:::
+
+:::duda ¿La ADF necesita que los datos sean normales? ¿Y si tengo NaN?
+No necesita normalidad: los valores críticos son asintóticos. Lo que sí necesita es que **no haya NaN** (después de `.diff()` usa `.dropna()`) y que la serie tenga suficientes datos: con menos de unos 30–50 la prueba tiene muy poca potencia [[potencia]].
+:::
+
+```python
+x = np.log(serie)
+for criterio in ["AIC", "BIC", "t-stat"]:
+    estad, pval, rezagos, nobs, *_ = adfuller(x, regression="ct", autolag=criterio)
+    print(f"autolag={criterio:7s} → rezagos = {rezagos:2d}   τ = {estad:7.3f}   p-value = {pval:.4f}")
+estad, pval, rezagos, *_ = adfuller(x, regression="ct", maxlag=2, autolag=None)
+print(f"autolag=None, maxlag=2 → rezagos = {rezagos:2d}   τ = {estad:7.3f}   p-value = {pval:.4f}")
+```
+
+Aquí los tres criterios eligen 13 rezagos: los necesitan para absorber la estacionalidad de 12 meses. En cambio, forzar `maxlag=2` deja esa autocorrelación estacional en el error y la prueba **rechaza falsamente** la raíz unitaria (p ≈ 0). Por eso no conviene recortar `maxlag` en series mensuales.
+
 En AirPassengers (en niveles), aun con tendencia incluida, el p-value es alto: **no se rechaza la raíz unitaria**. Lo retomaremos en el caso integrador [[caso]].
 
 :::nota Si ves un FutureWarning
@@ -302,6 +351,35 @@ for nombre, x in [("A (tendencia)", [5, 7, 6, 8, 7, 9, 8, 10]), ("B (estable)", 
 La tabla de KPSS solo va del 1% al 10%. Si el estadístico cae fuera (como en la serie B), `statsmodels` devuelve el extremo de la tabla (0.10 o 0.01) y avisa que el p-value real es **mayor** (o **menor**). No es un error: «p-value > 0.10» simplemente significa «no se rechaza» con holgura.
 :::
 
+:::interactivo py-kpss | Simulador: `kpss` y sus sumas acumuladas {#sim-kpss}
+Elige la serie, la especificación y `nlags`. La gráfica de la derecha muestra las **sumas acumuladas** $S_t$ de los residuos: son las que forman el numerador del estadístico.
+@@@
+- **Código y salida**: lo que escribirías e imprimirías, incluido el aviso de interpolación cuando aparece.
+- **Izquierda**: los residuos $\hat e_t$ (la serie menos su media, o menos su recta con `"ct"`).
+- **Derecha**: $S_t = \hat e_1 + \dots + \hat e_t$. Si se aleja mucho de 0 por mucho tiempo, $\eta$ crece y se rechaza la estacionariedad. Siempre termina en 0.
+- **Lectura**: el cálculo $\eta = (\sum S_t^2/n^2)/\hat\sigma^2_\infty$ con tus números. `nlags` solo cambia el denominador.
+:::
+
+:::duda ¿Qué `nlags` uso en KPSS?
+Usa `"auto"` (el predeterminado, método de Hobijn et al.). Con `nlags=0` la prueba supone que los residuos no tienen autocorrelación y, si la tienen, **rechaza de más**. Con un valor muy grande corrige demasiado y pierde potencia. `"legacy"` es la regla antigua $\lceil 12(n/100)^{1/4}\rceil$.
+:::
+
+:::duda ¿Por qué a veces ADF y KPSS se contradicen?
+Porque responden preguntas distintas con hipótesis nulas opuestas, y ambas tienen errores. Las contradicciones son frecuentes con series **muy persistentes pero estacionarias** ($\phi \approx 0.95$), con **rupturas estructurales** o con la especificación equivocada. La tabla de lectura conjunta [[conjunta]] te dice qué revisar en cada caso.
+:::
+
+```python
+import warnings
+paseo = np.random.default_rng(2).normal(size=200).cumsum()
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    for nl in ["auto", "legacy", 0, 4, 16]:
+        estad, pval, rezagos, _ = kpss(paseo, regression="c", nlags=nl)
+        print(f"nlags={str(nl):7s} → rezagos usados = {rezagos:2d}   η = {estad:6.3f}   p-value = {pval:.3f}")
+```
+
+En un paseo aleatorio $H_0$ es falsa, así que la prueba **debería rechazar**. Con 0 o 4 rezagos rechaza con fuerza y con `"auto"` también, pero con 15 o 16 el denominador $\lrvar$ crece tanto que ya no rechaza: demasiados rezagos le quitan potencia.
+
 | Especificación KPSS | $H_0$ | Crítico 5% |
 |---|---|---|
 | `regression="c"` | estacionaria alrededor de una **constante** | 0.463 |
@@ -351,6 +429,10 @@ Elige el proceso, su parámetro, el tamaño de muestra y las especificaciones. L
 1. AR(1) con $\phi = 0.95$ y $n = 60$: ¿la ADF logra rechazar? (poca **potencia** cerca de la raíz unitaria).
 2. Tendencia determinística con ADF `"c"` y luego `"ct"`.
 3. Ruptura estructural: mira qué dice cada prueba.
+@@@
+- **Gráfica**: la serie simulada.
+- **Tarjetas**: rosa = rechaza $H_0$, azul = no rechaza. ADF muestra $\tau$, p-value, crítico ajustado a $n$, rezagos elegidos por AIC y observaciones usadas. KPSS muestra $\eta$, p-value (con «>» o «<» si cae fuera de la tabla) y rezagos de Newey–West.
+- **Tabla 2×2**: la celda amarilla es la lectura conjunta.
 :::
 
 ### Cuidado con las rupturas estructurales {#rupturas}

@@ -388,3 +388,20 @@ li.check input { margin-top: .45em; width: 18px; height: 18px; accent-color: var
 li.check input:checked + * , li.check label:has(input:checked) { color: var(--texto-suave); }
 .w-matriz td, .w-matriz th { text-align: center !important; font-family: var(--fuente) !important; font-size: .9rem; }
 .w-matriz th:first-child { text-align: right !important; }
+
+/* Simuladores de Python */
+.sim-codigo { margin-top: 4px; }
+.sim-codigo .c-fuente { white-space: pre; }
+.arg { background: #fff4c2; border-radius: 5px; padding: 0 3px; box-shadow: 0 0 0 1px #f3dd8a inset; }
+.arg-nuevo { background: #ffe08a; animation: argpulso 1.2s ease; }
+@keyframes argpulso { 0% { box-shadow: 0 0 0 4px rgba(255, 200, 80, .7); } 100% { box-shadow: 0 0 0 1px #f3dd8a inset; } }
+.sim-params { margin-top: 10px; }
+.sim-params td, .sim-params th { text-align: left !important; font-family: var(--fuente) !important; font-size: .85rem; vertical-align: top; }
+.sim-params td code { white-space: nowrap; }
+.sim-params tr.activo td { background: #fff7d6 !important; }
+.w-tabla tr.suma td { background: var(--mantequilla-f); }
+/* Cómo leer esta gráfica */
+.w-leer { margin-top: 12px; padding: 4px 18px 8px; border-radius: 14px; background: #fff; border: 1px dashed var(--rosa); }
+.w-leer-cab { font-family: var(--fuente-titulo); font-weight: 600; color: var(--rosa-o); margin-top: 10px; }
+.w-leer ul { margin: .4em 0; } .w-leer li { margin: .25em 0; font-size: .95rem; }
+.w-leer p { margin: .5em 0; font-size: .95rem; }

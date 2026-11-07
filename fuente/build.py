@@ -459,8 +459,14 @@ class Documento:
             nombre, _, titulo = cab.partition("|")
             nombre = nombre.strip()
             titulo = titulo.strip()
+            leer = ""
+            if "@@@" in [l.strip() for l in hijos]:
+                k = [l.strip() for l in hijos].index("@@@")
+                hijos, resto = hijos[:k], hijos[k + 1:]
+                leer = (f'<div class="w-leer"><div class="w-leer-cab">📖 Cómo leer esta gráfica</div>'
+                        f'{self.render(self.parsear(resto))}</div>')
             cuerpo = self.render(self.parsear(hijos))
-            w = self.render_widget(nombre.split()[0], " ".join(nombre.split()[1:]))
+            w = self.render_widget(nombre.split()[0], " ".join(nombre.split()[1:])) + leer
             if id_:
                 self.ancla(id_, self.num_actual(), titulo or "Gráfica interactiva", "bloque")
             idattr = f' id="{id_}"' if id_ else ""

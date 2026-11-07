@@ -18,6 +18,16 @@ Imagina una máquina que, cada mes, saca un número al azar, pero **recordando**
 
 :::interactivo realizaciones | Muchas historias posibles, una sola observada
 Cada línea tenue es una realización distinta del **mismo** proceso; la línea fuerte es «la que observamos». Cambia de proceso y genera otra historia. Activa la media del conjunto para ver el promedio de 200 historias en cada instante $t$ (eso es lo que mide $\E[y_t]$).
+@@@
+- **Eje horizontal**: el tiempo $t$ (1 a 100). **Eje vertical**: el valor $y_t$.
+- **Líneas lilas tenues**: otras 7 historias del **mismo** proceso (mismas reglas, choques distintos).
+- **Línea rosa**: la historia «observada», la única que tendrías en la práctica.
+- Con **«Mostrar media del conjunto»**: la línea menta es el promedio de 200 historias en cada $t$ (una estimación de $\E[y_t]$) y la franja menta es ±2 desviaciones entre historias (refleja $\Var(y_t)$).
+- **Qué buscar**: si la línea menta es horizontal y la franja tiene **ancho constante**, el proceso es estacionario. En el paseo aleatorio la franja se abre con $t$.
+:::
+
+:::duda Si solo tengo una realización, ¿cómo puedo estimar μ?
+Promediando **en el tiempo** en lugar de entre realizaciones. Eso funciona cuando el proceso es estacionario y su memoria se desvanece (se dice que es **ergódico**): una sola historia larga recorre todos los valores típicos del proceso y $\bar y$ se acerca a $\mu$. Si el proceso no es estacionario (por ejemplo, un paseo aleatorio), el promedio temporal no converge a nada fijo.
 :::
 
 ### Los 5 elementos mínimos {#elementos}
@@ -46,6 +56,10 @@ Hay dependencia temporal cuando $\Cov(y_t, y_{t-k}) \ne 0$ para algún rezago $k
 
 :::interactivo barajar | ¿Qué pasa si barajamos los datos?
 Barajar conserva **los mismos números** (misma media, misma varianza), pero destruye el orden. Observa cómo la autocorrelación del rezago 1 se desploma hacia 0: la estructura temporal desaparece.
+@@@
+- **Izquierda**: la serie en su orden (lila) o barajada (durazno). **Derecha**: su ACF hasta el rezago 24.
+- En la ACF, la **franja lila** es la banda $\pm 1.96/\sqrt n$; las barras **naranjas** salen de la banda (significativas) y las **lilas** quedan dentro.
+- **Qué buscar**: la lectura de abajo muestra que media y varianza no cambian al barajar, pero la ACF pasa de barras grandes a barras dentro de la banda: el **orden** era la información.
 :::
 
 :::cuidado Consecuencia práctica
@@ -158,6 +172,11 @@ plt.show()
 
 :::interactivo estacional | Gráfica estacional de AirPassengers
 Alterna entre «una línea por año» y «boxplot por mes». Prueba también con logaritmos: verás que las líneas se vuelven casi paralelas, señal de que el patrón es **multiplicativo** [[log]].
+@@@
+- **Vista «una línea por año»**: eje x = mes; cada línea es un año, de lila (1949) a rosa (1960). Pasa el cursor para ver el valor exacto.
+- **Vista «boxplot por mes»**: cada caja resume los 12 valores de ese mes. La línea central es la **mediana**, la caja va del primer al tercer **cuartil** (el 50% central), los bigotes llegan a los valores no atípicos y cada punto es un año.
+- **Qué buscar**: forma común entre líneas ⇒ **estacionalidad**; líneas cada vez más arriba ⇒ **tendencia**; distancia pico–valle que crece ⇒ **multiplicativo**.
+- En Python: `pivote.plot()` para las líneas y `sns.boxplot(x=mes, y=valor)` o `tabla.boxplot(column="y", by="mes")` para las cajas.
 :::
 
 ### Gráfica de rezagos (lag plot) {#lagplot}
@@ -170,6 +189,16 @@ Un **lag plot** pone $y_{t-k}$ en el eje horizontal y $y_t$ en el vertical. Cada
 
 :::interactivo rezagos | Explorador de rezagos
 Mueve $k$ y observa cómo cambia la nube y su correlación. La barra resaltada en el correlograma de la derecha es el mismo número: el correlograma no es más que **todas estas correlaciones juntas** [[correlograma]].
+@@@
+- **Izquierda**: cada punto es una pareja $(y_{t-k},\, y_t)$: en x el valor de hace $k$ periodos, en y el valor actual. El título muestra $\hat\rho(k)$.
+- **Derecha**: el correlograma; la barra **rosa** es el $k$ elegido, las **naranjas** son significativas y la franja es la banda.
+- Nube alineada hacia arriba ⇒ $\rho > 0$; hacia abajo ⇒ $\rho < 0$; redonda ⇒ $\rho \approx 0$.
+- Prueba AirPassengers con $k = 12$: la nube vuelve a alinearse por la estacionalidad.
+- En Python: `pd.plotting.lag_plot(serie, lag=k)`.
+:::
+
+:::duda ¿Por qué la correlación de la nube no coincide exactamente con ρ̂(k)?
+La correlación de Pearson de la nube usa la media y la desviación de **cada** columna de parejas por separado y divide entre $n - k$. $\hat\rho(k)$ usa la media de **toda** la serie y divide entre $n$ [[autocov]]. Con muchos datos son casi iguales; con pocos datos y rezagos grandes, $\hat\rho(k)$ sale más cerca de 0.
 :::
 
 ### Media móvil y desviación estándar móvil {#moviles}
@@ -206,7 +235,43 @@ print(movil)
 
 :::interactivo moviles | Media y desviación móviles en distintas series
 Si la línea de la media móvil se mueve, la media no es constante. Si la banda (±2 desviaciones móviles) se ensancha, la varianza no es constante. Ambas cosas violan la estacionariedad [[debil]].
+@@@
+- **Línea lila**: la serie. **Línea rosa**: la media móvil de los últimos $m$ datos (cada punto promedia una ventana que **termina** en $t$). **Franja menta**: media móvil ± 2 desviaciones móviles.
+- Los primeros $m - 1$ puntos no tienen línea: la ventana está incompleta (en pandas son `NaN`).
+- **Qué buscar**: rosa horizontal ⇒ media constante; franja de ancho constante ⇒ varianza constante. La lectura de abajo compara el inicio con el final.
 :::
+
+:::nota Sobre los simuladores de Python
+A partir de aquí encontrarás **simuladores**: bloques donde el código de Python se reescribe con los parámetros que elijas y debajo aparece la salida que obtendrías. Los cálculos se hacen en tu navegador con las mismas fórmulas que pandas y statsmodels (verificadas contra ellos). Con **AirPassengers** los números coinciden exactamente con Python; las series **simuladas** (AR, MA, ruido, paseo) se generan en el navegador, así que en tu computadora obtendrás otra muestra del mismo proceso, con números parecidos pero no idénticos.
+:::
+
+:::interactivo py-rolling | Simulador: `rolling()` de pandas con sus parámetros {#sim-rolling}
+Cambia `window`, `center` y `min_periods`. El código de arriba se reescribe con tus valores (resaltados en amarillo) y la salida muestra lo que imprimiría `print(movil.head(8))`.
+@@@
+- **Código**: los valores resaltados son los parámetros que cambiaste; el último que moviste parpadea.
+- **Salida**: las primeras 8 filas de la serie móvil; `NaN` = no hay datos suficientes en la ventana.
+- **Gráfica**: la serie (lila) y el estadístico móvil (rosa). Si eliges `.std()`, la rosa se mide en el eje derecho.
+- **Tabla de parámetros**: qué hace cada uno y qué valor conviene; se resalta el último que cambiaste.
+:::
+
+:::duda ¿Ventana centrada o hacia atrás?
+Depende de para qué la quieras. **Hacia atrás** (`center=False`, el valor por defecto) solo usa el pasado: es la que tendrías en tiempo real, pero va **retrasada** unos $m/2$ periodos respecto a la serie. **Centrada** (`center=True`) usa datos de ambos lados: no se retrasa y describe mejor la tendencia, pero no existe en los últimos periodos. La descomposición clásica usa la centrada [[mm-centrada]].
+:::
+
+:::duda ¿Por qué aparecen NaN al inicio?
+Con `window=12` y `min_periods=None`, pandas necesita 12 datos para calcular; los primeros 11 periodos no los tienen y quedan como `NaN`. Si pones `min_periods=1`, calcula con lo que haya, pero entonces los primeros valores promedian muy pocos datos y no son comparables con el resto.
+:::
+
+```python
+s = pd.Series([4, 6, 5, 7, 9, 8, 10])
+comparacion = pd.DataFrame({
+    "y": s,
+    "atrás (3)": s.rolling(3).mean(),
+    "centrada (3)": s.rolling(3, center=True).mean(),
+    "atrás, min_periods=1": s.rolling(3, min_periods=1).mean(),
+})
+print(comparacion.round(3))
+```
 
 ## 🧩 Componentes de una serie de tiempo {#componentes}
 @mapa Tendencia, estacionalidad, ciclo, ruido y rupturas; modelos aditivo y multiplicativo; descomposición clásica.
@@ -227,6 +292,11 @@ $$y_t = T_t + S_t + C_t + \varepsilon_t \qquad\text{o, si la amplitud crece con 
 
 :::interactivo constructor | Construye tu propia serie
 Mueve cada componente y mira cómo se arma la serie final (arriba). Prueba: pon todo en cero excepto el ruido; luego agrega solo tendencia; luego solo estacionalidad. Cambia a **multiplicativo** con tendencia fuerte y verás que la estacionalidad **crece** junto con el nivel.
+@@@
+- **Panel superior**: la serie final, la que observarías en la práctica.
+- **Paneles inferiores**: cada componente por separado con el mismo eje de tiempo: tendencia (con la ruptura), estacional, ciclo y ruido.
+- En **multiplicativo**, la estacionalidad, el ciclo y el ruido se expresan en %: cada uno es un factor $1 + \%/100$ que multiplica a la tendencia.
+- **Qué buscar**: compara el rango del primer y del último ciclo estacional (abajo). Si crece, la amplitud depende del nivel.
 :::
 
 ### Estacionalidad vs. ciclo {#est-vs-ciclo}
@@ -322,6 +392,13 @@ Con el primer trimestre del ejemplo anterior, $y_1 = 111.2616$:
 
 :::interactivo logaritmo | AirPassengers: escala original vs. logarítmica
 A la izquierda la serie y a la derecha el rango anual (mes máximo − mes mínimo de cada año). En la escala original el rango crece año con año; en logaritmos se mantiene casi constante.
+@@@
+- **Izquierda**: la serie en la escala elegida. **Derecha**: cada barra es el **rango del año** (mes máximo − mes mínimo), una medida de la amplitud estacional.
+- **Qué buscar**: en la escala original las barras crecen año con año; en logaritmos son casi iguales. Ese es el efecto de $\ln$ sobre un modelo multiplicativo.
+:::
+
+:::duda ¿Logaritmo o Box–Cox?
+El logaritmo es un caso particular de la transformación de **Box–Cox**, $y^{(\lambda)} = (y^\lambda - 1)/\lambda$ (con $\lambda = 0$ es $\ln y$). Box–Cox busca el $\lambda$ que mejor estabiliza la varianza; si el $\lambda$ óptimo sale cerca de 0, usa $\ln$, que es más fácil de interpretar (porcentajes). Ambas exigen datos **positivos**. Se estudia con más detalle en la Unidad II.
 :::
 
 :::duda ¿Para qué sirve convertir lo multiplicativo en aditivo?
@@ -408,6 +485,10 @@ Si $\varepsilon_t$ son independientes con varianza $\sigma^2$, una media simple 
 
 :::interactivo mediamovil | ¿Qué ventana elimina la estacionalidad?
 Serie trimestral con tendencia, estacionalidad y ruido. Prueba ventanas de 3, 4 (2×4), 5 y 8 (2×8): solo las que abarcan periodos completos dejan una tendencia **lisa**. Abajo verás los pesos de la ventana elegida.
+@@@
+- **Puntos lilas**: la serie trimestral. **Línea menta discontinua**: la tendencia verdadera ($50 + 0.8t$), que conocemos porque la serie es simulada. **Línea rosa**: la tendencia estimada con la media móvil centrada.
+- **Gráfica de abajo**: los pesos que recibe cada dato de la ventana ($t-2, \dots, t+2$); siempre suman 1.
+- **Qué buscar**: con 4 u 8 la rosa casi coincide con la menta; con 3 o 5 ondula. La «distancia típica» es la raíz del promedio de los errores al cuadrado.
 :::
 
 ### Descomposición clásica paso a paso {#descomposicion}
@@ -487,7 +568,55 @@ Julio tiene un factor de 1.227: está **22.7% arriba** de la tendencia; noviembr
 
 :::interactivo descomposicion | Descomposición clásica de AirPassengers
 Compara el modelo aditivo con el multiplicativo. Fíjate en el **residuo**: con el aditivo conserva un patrón en forma de embudo (pequeño al inicio, grande al final), señal de que el modelo no es el adecuado. Con el multiplicativo el residuo se ve como ruido alrededor de 1.
+@@@
+- **Cuatro paneles con el mismo eje de tiempo** (igual que `dec.plot()` en Python):
+  1. **Observada** (`dec.observed`): la serie original.
+  2. **Tendencia** (`dec.trend`): la media móvil 2×12; le faltan 6 meses en cada extremo.
+  3. **Estacional** (`dec.seasonal`): el mismo patrón de 12 meses repetido.
+  4. **Residuo** (`dec.resid`): lo que sobra; la línea punteada es 0 (aditivo) o 1 (multiplicativo).
+- **Tabla**: el índice (aditivo, en pasajeros) o el factor (multiplicativo) de cada mes y su porcentaje respecto a la tendencia.
+- **Qué buscar**: un residuo sin patrón y con dispersión parecida en toda la muestra.
 :::
+
+:::interactivo py-decompose | Simulador: `seasonal_decompose` con todos sus parámetros {#sim-decompose}
+Cambia el modelo, el periodo, `two_sided` y `extrapolate_trend`. Observa en la salida dónde aparecen los `NaN` y en la gráfica qué le pasa al residuo cuando el periodo es incorrecto.
+@@@
+- **Código**: la llamada exacta con tus parámetros.
+- **Salida**: las 8 primeras filas de observada, tendencia, estacional y residuo. Con `extrapolate_trend=0` la tendencia empieza con 6 `NaN` (la mitad de la ventana 2×12).
+- **Gráfica**: lo que dibuja `dec.plot()`; el residuo va con puntos y la línea punteada marca 0 o 1.
+- **Lectura**: cuántos `NaN` hay, y si el residuo conserva estructura estacional ($\hat\rho(12)$ del residuo).
+:::
+
+| Caso | `model` | `period` | `two_sided` | `extrapolate_trend` |
+|---|---|---|---|---|
+| Mensual con amplitud constante | `"additive"` | 12 | True | 0 |
+| Mensual con amplitud creciente (AirPassengers) | `"multiplicative"` | 12 | True | 0 |
+| Trimestral | según la amplitud | 4 | True | 0 |
+| Diaria con patrón semanal | según la amplitud | 7 | True | 0 |
+| Necesitas tendencia en todas las fechas | el que corresponda | el real | True | `period - 1` |
+| Tendencia «en tiempo real» (solo pasado) | el que corresponda | el real | False | 0 |
+
+:::duda ¿Qué pasa si no pongo `period`?
+Si la serie tiene un índice de fechas **con frecuencia** (por ejemplo, la que creamos con `asfreq("MS")` en [[pandas]]), `seasonal_decompose` deduce el periodo: 12 para mensual, 4 para trimestral, 7 para diaria. Si el índice no tiene frecuencia (o es un arreglo de NumPy), da un error y te pide `period`.
+:::
+
+:::duda ¿Por qué la tendencia tiene NaN y qué hace `extrapolate_trend`?
+La media móvil centrada 2×12 necesita 6 datos de cada lado, así que en los 6 primeros y 6 últimos meses no existe [[mm-centrada]]. Con `extrapolate_trend=k` statsmodels ajusta una recta por mínimos cuadrados a los $k + 1$ valores de tendencia más cercanos a cada extremo y la prolonga. En statsmodels 0.15 se puede escribir `"period"` (en versiones anteriores `"freq"`), que equivale a `period - 1`; un entero funciona en todas las versiones.
+:::
+
+:::duda ¿Qué significa que el residuo tenga patrón?
+Que la descomposición dejó estructura sin explicar: un **embudo** indica que el modelo debía ser multiplicativo; ondas cada 12 meses indican un periodo equivocado; rachas largas indican que la tendencia no se estimó bien. Un buen residuo se parece a ruido.
+:::
+
+```python
+dec_auto = seasonal_decompose(serie, model="multiplicative")                 # sin period: lo deduce de "MS"
+dec_12 = seasonal_decompose(serie, model="multiplicative", period=12)
+print("¿Mismo resultado sin period?", np.allclose(dec_auto.seasonal, dec_12.seasonal))
+print("NaN en la tendencia:", dec_12.trend.isna().sum())
+dec_ext = seasonal_decompose(serie, model="multiplicative", period=12, extrapolate_trend=11)   # = period - 1
+print("NaN con extrapolate_trend=11:", dec_ext.trend.isna().sum())
+print(pd.DataFrame({"sin extrapolar": dec_12.trend, "extrapolada": dec_ext.trend}).head(7).round(2))
+```
 
 :::cuidado Limitaciones de la descomposición clásica
 - Pierde $s/2$ observaciones en cada extremo (la tendencia no existe ahí).
