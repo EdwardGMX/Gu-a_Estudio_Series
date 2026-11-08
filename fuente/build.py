@@ -245,6 +245,33 @@ def slug(texto):
     return re.sub(r"\s+", "-", t).strip("-")[:60]
 
 
+GRIEGAS = {"omega": "ω", "sigma": "σ", "phi": "φ", "varphi": "φ", "theta": "θ", "gamma": "γ", "lambda": "λ",
+           "pi": "π", "rho": "ρ", "alpha": "α", "beta": "β", "Delta": "Δ", "nabla": "∇", "varepsilon": "ε",
+           "epsilon": "ε", "mu": "μ", "tau": "τ", "chi": "χ", "Phi": "Φ", "Theta": "Θ", "eta": "η"}
+SUPER = {"2": "²", "3": "³", "0": "⁰", "1": "¹", "n": "ⁿ"}
+
+
+def formula_texto(tex):
+    """Fórmula sencilla de un título → HTML legible sin KaTeX (para el índice y las referencias)."""
+    t = re.sub(r"\\lvert\s*|\\lVert\s*|\\left\|\s*", "|", tex)
+    t = re.sub(r"\s*\\rvert|\s*\\rVert|\s*\\right\|", "|", t)
+    t = re.sub(r"\\hat\{\\?(\w+)\}", lambda m: GRIEGAS.get(m.group(1), m.group(1)) + "\u0302", t)
+    t = re.sub(r"\\([A-Za-z]+)", lambda m: GRIEGAS.get(m.group(1), "" if m.group(1) in ("left", "right") else m.group(1)), t)
+    t = re.sub(r"\\[,;:! ]", " ", t)
+    t = html.escape(t.replace("-", "−"))
+    t = re.sub(r"\^\{([0-9n])\}|\^([0-9n])", lambda m: SUPER[m.group(1) or m.group(2)], t)
+    t = re.sub(r"\^\{([^}]*)\}|\^(\w)", lambda m: f"<sup>{m.group(1) or m.group(2)}</sup>", t)
+    t = re.sub(r"_\{([^}]*)\}|_(\w)", lambda m: f"<sub>{m.group(1) or m.group(2)}</sub>", t)
+    return t.replace("{", "").replace("}", "")
+
+
+def titulo_html(texto):
+    """Texto de un título con $…$ y `…` → HTML para enlaces, índice y botones."""
+    partes = re.split(r"(\$[^$]+\$)", texto.replace("`", ""))
+    return "".join(formula_texto(p[1:-1]) if p.startswith("$") and p.endswith("$") and len(p) > 1
+                   else html.escape(p) for p in partes)
+
+
 md = MarkdownIt("commonmark", {"html": True, "typographer": False}).enable("table").enable("strikethrough")
 FORMATO = HtmlFormatter(nowrap=True)
 
@@ -457,7 +484,7 @@ class Documento:
         s = self.toc[-1]
         self.abierta = False
         return (f'<div class="fin-seccion"><button class="btn-estudiada" data-seccion="{s["id"]}">'
-                f'<span class="ico">☐</span> Marcar «{html.escape(re.sub(r"[$`]", "", s["titulo"]))}» como estudiada</button></div></section>')
+                f'<span class="ico">☐</span> Marcar «{titulo_html(s["titulo"])}» como estudiada</button></div></section>')
 
     def ejecutar(self, codigo, esperar_error=False):
         buf = io.StringIO()
@@ -809,10 +836,9 @@ def construir(clave, externos):
                 return f"[[{id_}]]"
             a = externos[pref]["anclas"][rid]
             titulo = re.sub(r"^[^\w$¿¡(]+\s*", "", a["titulo"])
-            titulo = re.sub(r"\$([^$]+)\$", r"\1", titulo).replace("`", "")
             etiqueta = texto or (f'{externos[pref]["nombre"]} · {a["num"]} {titulo}' if a["num"] else f'{externos[pref]["nombre"]} · {titulo}')
             return (f'<a class="ref ref-unidad" href="{externos[pref]["archivo"]}#{rid}" title="Abre la {externos[pref]["nombre"]}">'
-                    f'<span class="ref-flecha">⇠</span> {html.escape(etiqueta)}</a>')
+                    f'<span class="ref-flecha">⇠</span> {titulo_html(etiqueta)}</a>')
         if id_ not in doc.anclas:
             if os.environ.get("GUIA_BORRADOR"):          # mientras se escribe la unidad
                 print(f"  (pendiente: [[{id_}]])")
@@ -825,11 +851,9 @@ def construir(clave, externos):
             etiqueta = texto
         else:
             titulo = re.sub(r"^[^\w$¿¡(]+\s*", "", a["titulo"])
-            titulo = re.sub(r"\$([^$]+)\$", r"\1", titulo)
-            titulo = titulo.replace("`", "")
             etiqueta = f'{a["num"]} {titulo}' if a["num"] else titulo
         clase = "ref ref-atras" if flecha == "↩" else "ref ref-adelante"
-        return f'<a class="{clase}" href="#{id_}"><span class="ref-flecha">{flecha}</span> {html.escape(etiqueta)}</a>'
+        return f'<a class="{clase}" href="#{id_}"><span class="ref-flecha">{flecha}</span> {titulo_html(etiqueta)}</a>'
 
     html_cuerpo = re.sub(r"@@R(\d+)@@", sust_r, html_cuerpo)
     html_cuerpo = html_cuerpo.replace("<li>[ ] ", '<li class="check"><label><input type="checkbox"> ')
@@ -840,13 +864,13 @@ def construir(clave, externos):
     toc = []
     for s in doc.toc:
         subs = "".join(f'<li><a href="#{x["id"]}" data-id="{x["id"]}"><span class="t-num">{x["num"]}</span>'
-                       f'{html.escape(re.sub(r"[$`]", "", x["titulo"]))}</a></li>' for x in s["subs"])
+                       f'{titulo_html(x["titulo"])}</a></li>' for x in s["subs"])
         toc.append(f'<li class="t-sec" data-seccion="{s["id"]}"><a href="#{s["id"]}" data-id="{s["id"]}">'
-                   f'<span class="t-num">{s["num"]}</span>{html.escape(re.sub(r"[$`]", "", s["titulo"]))}'
+                   f'<span class="t-num">{s["num"]}</span>{titulo_html(s["titulo"])}'
                    f'<span class="t-check" aria-hidden="true"></span></a><ul>{subs}</ul></li>')
     mapa = "".join(
         f'<a class="mapa-tarjeta" href="#{m["id"]}"><span class="mapa-num">{m["num"]}</span>'
-        f'<span class="mapa-titulo">{html.escape(m["titulo"])}</span><span class="mapa-texto">{html.escape(m["texto"])}</span></a>'
+        f'<span class="mapa-titulo">{titulo_html(m["titulo"])}</span><span class="mapa-texto">{html.escape(m["texto"])}</span></a>'
         for m in doc.mapa)
     html_cuerpo = html_cuerpo.replace("@@MAPA@@", mapa)
 

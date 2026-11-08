@@ -1,11 +1,12 @@
 # Guía de estudio · Análisis de Series de Tiempo
 
-Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. Tiene dos unidades, cada una en su propia página y con un menú arriba para cambiar de una a otra:
+Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. Tiene tres unidades, cada una en su propia página y con un menú arriba para cambiar de una a otra:
 
 | Página | Unidad |
 |---|---|
 | `index.html` | **Unidad I · Características de series de tiempo** |
 | `unidad2.html` | **Unidad II · Procesos lineales en tiempo discreto: AR, MA, ARMA, ARIMA, SARIMA y SARIMAX** |
+| `unidad3.html` | **Unidad III · Análisis espectral y filtrado** |
 
 ## Qué incluye
 
@@ -28,7 +29,16 @@ Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. T
 - **61 ejercicios** en 10 bloques (básicos, intermedios y retos), con respuesta explicada y enlace al tema.
 - Enlaces **⇠ Unidad I** a lo que ya se estudió (ruido blanco, estacionariedad, ACF, Ljung–Box…).
 
-### En las dos unidades
+### Unidad III
+
+- **16 secciones**: herramientas (oscilación, amplitud y fase, Euler, ortogonalidad, Nyquist y alias, tres convenciones de frecuencia), periodicidad contra ciclo (manchas solares), dominio del tiempo y dominio de la frecuencia, densidad espectral (ruido blanco, MA(1), AR(1), pico del AR(2), ARMA, varianza por bandas), transformada de Fourier y periodograma (Parseval, distribución ji-cuadrada, fuga y ventanas), estimación no paramétrica (Daniell, ancho de banda, intervalos, afilado, Welch), estimación paramétrica (AR por Yule–Walker y orden por AIC), AirPassengers en frecuencia y armónicos, espectro cruzado (magnitud, fase, retardo, coherencia y su umbral), filtros lineales (respuesta al impulso, función de transferencia, ganancia y fase, $f_y = \lvert A\rvert^2 f_x$), tipos de filtros (pasa bajos, pasa altos, pasa banda, rechaza banda, corte y orden, filtro ideal y Gibbs, FIR e IIR, Butterworth, fase cero), filtros de Hodrick–Prescott y Baxter–King, cómo proponer un filtro, caso integrador con El Niño, formulario y checklist.
+- **Cada proceso explicado de varias formas**: 24 demostraciones paso a paso, 17 ejemplos a mano guiados con la tabla iluminada, 12 dudas frecuentes, 12 recuadros de «Cuidado» y 9 preguntas tipo examen con respuesta modelo.
+- **20 bloques de código Python** con su salida real (numpy, scipy.signal, statsmodels) sobre manchas solares, El Niño, CO₂ de Mauna Loa, datos macroeconómicos de EE. UU. y AirPassengers.
+- **29 gráficas interactivas** (calculadas en el navegador con `assets/js/ts3.js`, verificado contra scipy y statsmodels: periodograma, Welch, espectro cruzado, coherencia, Butterworth, `filtfilt`, `firwin`, Hodrick–Prescott, Baxter–King…), todas con «Cómo leer esta gráfica» y vista extra, y **4 simuladores de Python** (`periodogram`, `welch`, `coherence` y `butter` + `filtfilt`).
+- **63 ejercicios** en 8 bloques (básicos, intermedios y retos), con respuesta explicada y enlace al tema.
+- Enlaces **⇠ Unidad I** y **⇠ Unidad II** a lo que ya se estudió (autocovarianza, ruido blanco, AR(2) con raíces complejas, sobrediferenciación…).
+
+### En las tres unidades
 
 - **Explicación de cada símbolo** al pasar el cursor (o tocar) las fórmulas.
 - Enlaces ↩ / ↪ entre temas con botón «Volver a donde estabas».
@@ -37,24 +47,30 @@ Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. T
 
 ## Cómo verla
 
-- **GitHub Pages**: *Settings → Pages → Build and deployment → Deploy from a branch*, elige la rama (`unidad-2` mientras se revisa, `main` después) y la carpeta `/ (root)`. La Unidad I queda en la dirección principal del sitio y la Unidad II en `.../unidad2.html`.
-- **En tu computadora**: abre `index.html` o `unidad2.html` en el navegador. Necesita internet para cargar KaTeX y Plotly desde el CDN.
+- **GitHub Pages**: *Settings → Pages → Build and deployment → Deploy from a branch*, elige la rama `main` y la carpeta `/ (root)`. La Unidad I queda en la dirección principal del sitio, la Unidad II en `.../unidad2.html` y la Unidad III en `.../unidad3.html`.
+- **En tu computadora**: abre `index.html`, `unidad2.html` o `unidad3.html` en el navegador. Necesita internet para cargar KaTeX y Plotly desde el CDN.
 
 ## Estructura
 
 ```
 index.html               Unidad I (generada, no editar a mano)
 unidad2.html             Unidad II (generada, no editar a mano)
+unidad3.html             Unidad III (generada, no editar a mano)
 assets/css/estilos.css   diseño
 assets/js/ts.js          cálculos de la Unidad I (ACF, PACF, ADF, KPSS, Ljung–Box…)
 assets/js/ts2.js         cálculos de la Unidad II (polinomios y raíces, ACF/PACF teóricas, simulación
                          ARMA/SARIMA/ARCH, pronóstico con pesos ψ, verosimilitud, Box–Cox, Jarque–Bera,
                          ARCH-LM, métricas…)
+assets/js/ts3.js         cálculos de la Unidad III (FFT, periodograma, Daniell, Welch, espectro cruzado y
+                         coherencia, espectros ARMA y AR por Yule–Walker, respuesta de filtros, lfilter,
+                         filtfilt, Butterworth, firwin, muesca, Hodrick–Prescott, Baxter–King…)
 assets/js/ui.js          explicación de símbolos, enlaces, índice, ejemplos guiados y ejercicios
 assets/js/widgets.js     gráficas de la Unidad I y utilidades comunes
 assets/js/widgets2.js    gráficas y simuladores de la Unidad II
+assets/js/widgets3.js    gráficas y simuladores de la Unidad III
 fuente/unidad1/*.md      texto de la Unidad I (Markdown + fórmulas)
 fuente/unidad2/*.md      texto de la Unidad II
+fuente/unidad3/*.md      texto de la Unidad III
 fuente/glosario.json     explicación de cada símbolo (compartido)
 fuente/plantilla.html    plantilla de las páginas
 fuente/cache/            resultados guardados de los cálculos de Python más lentos
@@ -66,8 +82,10 @@ fuente/build.py          genera las páginas
 ```bash
 pip install markdown-it-py pygments numpy pandas scipy statsmodels scikit-learn matplotlib
 cd fuente && npm install && cd ..
-python3 fuente/build.py          # las dos unidades
-python3 fuente/build.py u2       # solo la Unidad II
+python3 fuente/build.py          # las tres unidades
+python3 fuente/build.py u3       # solo la Unidad III (u1, u2 o u3)
 ```
 
-Los bloques de Python marcados con `cache` (rejillas de modelos, validación con origen móvil, el caso de usuarios) se ejecutan una vez y su resultado se guarda en `fuente/cache/`; si cambias su código se vuelven a ejecutar. Los enlaces ⇠ Unidad I usan `fuente/cache/anclas_u1.json`, que se actualiza cada vez que se genera la Unidad I.
+Los bloques de Python marcados con `cache` (rejillas de modelos, validación con origen móvil, el caso de usuarios) se ejecutan una vez y su resultado se guarda en `fuente/cache/`; si cambias su código se vuelven a ejecutar. Los enlaces entre unidades (⇠ Unidad I, ⇠ Unidad II) usan `fuente/cache/anclas_u1.json`, `anclas_u2.json` y `anclas_u3.json`, que se actualizan cada vez que se genera la unidad correspondiente.
+
+Los datos de la Unidad III vienen de `statsmodels.datasets` (manchas solares, El Niño, CO₂ y macrodata), así que no hace falta internet para generarla.
