@@ -1,0 +1,8 @@
+{
+  "name": "guia-series-de-tiempo-fuente",
+  "private": true,
+  "description": "Dependencia para pre-renderizar las fórmulas al generar index.html",
+  "dependencies": {
+    "katex": "0.16.11"
+  }
+}
