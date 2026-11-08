@@ -94,12 +94,57 @@ Ventas trimestrales de dos años: $x = (5, 9, 6, 2, 6, 10, 7, 3)$. Con $n = 8$ l
 
 La segunda interpretación, la de regresión, sale de los mismos números: en $\omega = 1/4$, $\beta_1 = \frac{2}{8}(-14) = -3.5$ y $\beta_2 = \frac{2}{8}(-2) = -0.5$, así que la oscilación anual tiene amplitud $\sqrt{3.5^2 + 0.5^2} = 3.54$ y $P(1/4) = \beta_1^2 + \beta_2^2 = 12.5 = \frac{4}{8}\cdot 25$.
 
+Repitamos el proceso por el camino de la regresión con otra serie, ahora con frecuencias en las que el coseno y el seno no valen solo 0 o ±1. Seis datos, $x = (1, 2, 4, 1, 1, 3)$, cuyas frecuencias de Fourier son $1/6$, $1/3$ y $1/2$ (periodos 6, 3 y 2).
+
+:::guiado El periodograma por regresión: seis datos y periodo 3 {#guia-periodograma-regresion}
+| $t$ | $x_t$ | $x_t - \bar x$ | $\cos(2\pi t/3)$ | $\sin(2\pi t/3)$ | $(x_t - \bar x)\cos$ | $(x_t - \bar x)\sin$ |
+|---|---|---|---|---|---|---|
+| 1 | 1 | −1 | −0.5 | 0.866 | 0.5 | −0.866 |
+| 2 | 2 | 0 | −0.5 | −0.866 | 0 | 0 |
+| 3 | 4 | 2 | 1 | 0 | 2 | 0 |
+| 4 | 1 | −1 | −0.5 | 0.866 | 0.5 | −0.866 |
+| 5 | 1 | −1 | −0.5 | −0.866 | 0.5 | 0.866 |
+| 6 | 3 | 1 | 1 | 0 | 1 | 0 |
+| Suma | 12 | 0 | | | 4.5 | −0.866 |
+---
+= \bar x = 12/6 = 2, \qquad \sum(x_t - \bar x)^2 = 1 + 0 + 4 + 1 + 1 + 1 = 8
+> Centramos la serie y calculamos la suma de cuadrados que vamos a repartir.
+@ usa c2[1-7]; da c3[1-6]
+= \sum(x_t - \bar x)\cos(2\pi t/3) = 4.5, \qquad \sum(x_t - \bar x)\sin(2\pi t/3) = -0.866
+> Multiplicamos renglón por renglón por el coseno y el seno de $\omega = 1/3$ y sumamos.
+@ usa c3[1-6] c4[1-6] c5[1-6]; da c6[1-7] c7[1-7]
+= \beta_1 = \frac{2}{n}\sum(x_t - \bar x)\cos = \frac{2}{6}(4.5) = 1.5, \qquad \beta_2 = \frac{2}{6}(-0.866) = -0.289
+> Los coeficientes de la regresión sobre $\cos(2\pi t/3)$ y $\sin(2\pi t/3)$. Por la ortogonalidad, cada uno se calcula por separado, como una covarianza [[demo-ortogonalidad]].
+@ usa c6[7] c7[7]
+= P(1/3) = \beta_1^2 + \beta_2^2 = 2.25 + 0.083 = 2.333, \qquad A = \sqrt{2.333} = 1.53
+> El periodograma escalado es el cuadrado de la amplitud de la oscilación ajustada.
+= I(1/3) = \frac{n}{4}P(1/3) = \frac{6}{4}(2.333) = 3.5 \qquad\Big(= \tfrac{4.5^2 + 0.866^2}{6} = \tfrac{21}{6}\Big)
+> Los dos caminos dan lo mismo: la regresión y la fórmula $\frac1n[(\sum x\cos)^2 + (\sum x\sin)^2]$.
+@ usa c6[7] c7[7]
+= I(1/6) = 0.5, \quad I(1/2) = 0 \;\Rightarrow\; 2\big[I(\tfrac16) + I(\tfrac13)\big] + I(\tfrac12) = 2(0.5 + 3.5) + 0 = 8
+> Parseval cierra la cuenta: la oscilación de periodo 3 explica $2(3.5)/8 = 87.5\%$ de la suma de cuadrados.
+@ usa c3[1-6]
+:::
+
 ### Parseval: el análisis de varianza por frecuencias {#parseval}
 
 :::definicion Identidad de Parseval
 $$\sum_{t=1}^{n}(x_t - \bar x)^2 = \sum_{j=1}^{n-1}I(\omega_j) = 2\sum_{j=1}^{\lfloor (n-1)/2\rfloor}I(\omega_j) \;\big[+\, I(1/2)\ \text{si } n \text{ es par}\big]$$
 
 Es una **tabla de análisis de varianza**: la suma de cuadrados total se descompone en aportes de cada frecuencia, cada uno con 2 grados de libertad (el coseno y el seno). Sale de la ortogonalidad: la DFT es una rotación de coordenadas, y las rotaciones conservan las longitudes.
+:::
+
+:::demo Parseval sale de la ortogonalidad {#demo-parseval}
+:::pasos
+= x_t - \bar x = \frac{1}{\sqrt n}\sum_{j=1}^{n-1}d(\omega_j)\,e^{2\pi i\omega_j t}
+> La DFT inversa: la serie centrada es la suma de sus oscilaciones de Fourier. El término $j = 0$ no aparece porque $d(0) = \sqrt n\,\bar x$ y ya restamos la media.
+= \sum_{t=1}^{n}(x_t - \bar x)^2 = \frac1n\sum_{j}\sum_{l}d(\omega_j)\,\overline{d(\omega_l)}\sum_{t=1}^{n}e^{2\pi i(\omega_j - \omega_l)t}
+> Como la serie es real, es igual a su conjugado: multiplicamos la suma por la conjugada de la suma.
+= \sum_{t=1}^{n}e^{2\pi i(j - l)t/n} = \begin{cases}n & j = l\\ 0 & j \ne l\end{cases}
+> Ortogonalidad de las exponenciales de Fourier [[demo-ortogonalidad]]: si $j \ne l$, es una suma geométrica que da vueltas completas y se cancela.
+= \sum_{t=1}^{n}(x_t - \bar x)^2 = \frac1n\sum_{j=1}^{n-1}n\,\lvert d(\omega_j)\rvert^2 = \sum_{j=1}^{n-1}I(\omega_j)
+> Solo sobreviven los términos con $j = l$. Como $I(\omega_{n-j}) = I(\omega_j)$, cada frecuencia entre 0 y 1/2 aparece dos veces; la de Nyquist, una.
+:::
 :::
 
 | Fuente | Grados de libertad | Suma de cuadrados | En el ejemplo |
@@ -109,6 +154,23 @@ Es una **tabla de análisis de varianza**: la suma de cuadrados total se descomp
 | $\omega_3 = 3/8$ | 2 | $2I(\omega_3)$ | 0.29 |
 | $\omega_4 = 1/2$ | 1 | $I(\omega_4)$ | 0 |
 | Total | $n - 1 = 7$ | $\sum(x_t - \bar x)^2$ | 52 |
+
+:::ejemplo La tabla de Parseval de las manchas solares
+Con $n = 309$ años, las seis ordenadas más grandes del periodograma son:
+
+| $j$ | $\omega_j = j/309$ | Periodo (años) | % de $\sum(x_t - \bar x)^2$ |
+|---|---|---|---|
+| 28 | 0.0906 | 11.04 | 26.8 |
+| 31 | 0.1003 | 9.97 | 14.3 |
+| 29 | 0.0939 | 10.66 | 9.1 |
+| 3 | 0.0097 | 103 | 8.7 |
+| 26 | 0.0841 | 11.88 | 6.5 |
+| 6 | 0.0194 | 51.5 | 3.9 |
+
+- Cuatro de las seis están entre 10 y 12 años y juntas suman el **57%** de la variabilidad. El ciclo solar no ocupa **una** frecuencia sino varias vecinas: es la joroba de un ciclo [[periodo-vs-ciclo]].
+- Las de 103 y 51.5 años son variaciones lentas de la altura de los máximos: hay siglos con ciclos más intensos que otros.
+- No leas cada ordenada por separado: una sola es muy ruidosa, como veremos enseguida. Que la mayor esté en 11.04 y no en 10.66 no es una conclusión firme; que la potencia esté entre 10 y 12 años, sí.
+:::
 
 :::interactivo w3-regresion-fourier | El periodograma es una regresión en cada frecuencia {#w-regresion-fourier}
 Elige una serie y una frecuencia de Fourier $\omega_j$. La gráfica ajusta la mejor oscilación de esa frecuencia y la barra correspondiente del periodograma se ilumina.
@@ -239,6 +301,10 @@ Si comparas con un libro, divide entre 2 los valores de scipy.
 
 :::duda ¿Por qué no se calcula el periodograma en cualquier frecuencia, no solo en las de Fourier?
 Se puede (con relleno de ceros o evaluando la fórmula), y sirve para dibujar curvas más finas. Pero solo en las frecuencias de Fourier las ordenadas son aproximadamente independientes y se cumple Parseval. Rellenar con ceros **no** agrega información: interpola entre las frecuencias de Fourier.
+:::
+
+:::duda ¿Qué mide la ordenada en $\omega = 0$?
+Solo la media: $d(0) = n^{-1/2}\sum x_t = \sqrt n\,\bar x$, así que $I(0) = n\bar x^2$. No dice nada de las oscilaciones, y con una media grande es enorme: en las manchas solares, $I(0) = 764\,859$ contra 67 506 de la mayor ordenada del ciclo. Por eso se centra la serie (o `scipy` usa `detrend="constant"`), y por eso Parseval empieza en $j = 1$. Las frecuencias **cercanas** a cero sí importan: ahí viven la tendencia y los movimientos lentos.
 :::
 
 :::examen Así te lo pueden preguntar: «Explique el papel de la transformada de Fourier en el análisis espectral»

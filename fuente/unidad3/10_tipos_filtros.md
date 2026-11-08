@@ -28,6 +28,10 @@ La guía oficial define dos conceptos para describir un filtro real:
 - **Orden** del filtro: controla qué tan **abrupta** es la transición entre la banda de paso y la de rechazo. Más orden = transición más corta, pero más coeficientes, más efectos de borde y más riesgo numérico.
 :::
 
+:::intuicion Dónde empieza la bajada y qué tan empinada es
+Imagina la ganancia como un camino que baja de una meseta (la banda de paso, ganancia 1) a un valle (la banda de rechazo, ganancia 0). La **frecuencia de corte** dice **dónde** está la bajada; el **orden** dice qué tan **empinada** es. Con un orden bajo la bajada es suave: se pierde algo de lo que querías conservar y se cuela algo de lo que querías quitar. Con un orden alto es casi un escalón, pero, como un escalón de verdad, cuesta más construirlo: más coeficientes y más efectos en los bordes de la serie.
+:::
+
 El filtro **Butterworth** es el más usado porque su ganancia es lo más plana posible en la banda de paso. Su versión digital pasa bajos de orden $N$ tiene
 
 $$\lvert A(\omega)\rvert = \frac{1}{\sqrt{1 + \left(\dfrac{\tan(\pi\omega)}{\tan(\pi\omega_c)}\right)^{2N}}}$$
@@ -85,6 +89,38 @@ En `scipy` se pasa la frecuencia con `fs`: `signal.butter(4, 1/6, btype="low", f
 
 En la práctica se **trunca** la respuesta al impulso a $2M + 1$ pesos. El corte brusco produce ondulaciones en la ganancia (el **fenómeno de Gibbs**: unos 9% de sobrepaso cerca del corte, sin importar $M$). Multiplicar los pesos por una **ventana** suave (Hamming, Hann) elimina casi todas las ondulaciones a cambio de una transición más ancha. Así se diseñan los filtros **FIR** (de respuesta finita), como `signal.firwin` y el filtro de Baxter–King.
 
+:::guiado Diseñar a mano un FIR de 7 pesos {#guia-pesos-ideal}
+| $j$ | $a_j = \sin(2\pi\omega_c j)/(\pi j)$ | Ventana de Hamming $w_j$ | $a_j\,w_j$ | Normalizado (= `firwin`) |
+|---|---|---|---|---|
+| 0 | 0.5 | 1 | 0.5 | 0.5138 |
+| ±1 | 0.3183 | 0.77 | 0.2451 | 0.2518 |
+| ±2 | 0 | 0.31 | 0 | 0 |
+| ±3 | −0.1061 | 0.08 | −0.0085 | −0.0087 |
+| Suma ($A(0)$) | 0.9244 | | 0.9732 | 1 |
+---
+= \omega_c = \tfrac14:\quad a_0 = 2\omega_c = 0.5, \qquad a_{\pm1} = \frac{\sin(\pi/2)}{\pi} = 0.3183
+> Los pesos del pasa bajos ideal con corte en $1/4$ (periodo 4) [[demo-filtro-ideal]].
+@ usa c1[1-2]; da c2[1-2]
+= a_{\pm2} = \frac{\sin\pi}{2\pi} = 0, \qquad a_{\pm3} = \frac{\sin(3\pi/2)}{3\pi} = -0.1061
+> Truncamos en $M = 3$: siete pesos en total. El de $j = \pm3$ es negativo.
+@ usa c1[3-4]; da c2[3-4]
+= A(0) = 0.5 + 2(0.3183 + 0 - 0.1061) = 0.924, \qquad A(0.1) = 1.081, \qquad A(0.4) = -0.081
+> Al truncar, la ganancia ya no es el rectángulo: no llega a 1 en $\omega = 0$, se pasa de 1 en $\omega = 0.1$ y se vuelve negativa en $\omega = 0.4$. Son las ondulaciones de Gibbs.
+@ usa c2[1-4]; da c2[5]
+= w_j = 0.54 + 0.46\cos(\pi j/3):\quad 1,\ 0.77,\ 0.31,\ 0.08
+> La ventana de Hamming de 7 puntos: vale 1 en el centro y baja casi a cero en las orillas.
+@ usa c1[1-4]; da c3[1-4]
+= a_j w_j:\ 0.5,\ 0.2451,\ 0,\ -0.0085, \qquad \textstyle\sum = 0.9732
+> Los pesos lejanos, que causaban las ondulaciones, casi desaparecen.
+@ usa c2[1-4] c3[1-4]; da c4[1-5]
+= \frac{a_j w_j}{0.9732}:\ 0.5138,\ 0.2518,\ 0,\ -0.0087
+> Se normaliza para que $A(0) = 1$ (la tendencia pasa completa). El resultado es exactamente lo que devuelve `signal.firwin(7, 0.25, fs=1)`.
+@ usa c4[1-5]; da c5[1-5]
+= \text{con ventana}: A(0) = 1,\quad A(0.1) = 0.927,\quad A(0.25) = 0.514,\quad A(0.4) = 0.101,\quad A(0.5) = 0.028
+> Sin sobrepaso ni ganancias negativas, pero con una transición más ancha: con solo 7 pesos no se puede tener una pared vertical. Para una bajada más abrupta hacen falta más pesos.
+@ usa c5[1-5]
+:::
+
 :::interactivo w3-ideal | Del filtro ideal al real: truncar y suavizar {#w-ideal}
 Un pasa bajos ideal con corte $\omega_c$, truncado a $2M + 1$ pesos, con o sin ventana.
 @@@
@@ -92,6 +128,10 @@ Un pasa bajos ideal con corte $\omega_c$, truncado a $2M + 1$ pesos, con o sin v
 - **Abajo**: la ganancia resultante contra la ideal (rectángulo punteado). Sin ventana aparecen las ondulaciones de Gibbs; con Hamming desaparecen y la transición se ensancha.
 - Aumentar $M$ angosta la transición, pero no quita el 9% de sobrepaso si no hay ventana.
 - **Vista extra**: la tabla con la ondulación máxima en la banda de paso, la atenuación en la banda de rechazo y el ancho de la transición.
+:::
+
+:::duda Si el filtro ideal es el que queremos, ¿por qué no lo aplicamos directamente con la FFT?
+Se puede: calcular la DFT, poner en cero las frecuencias que no quieres y regresar con la transformada inversa. Pero eso trata la serie como si fuera **circular** (el último dato pegado al primero): si el final y el principio no coinciden, aparecen ondulaciones cerca de los bordes, y cada valor filtrado usa datos de toda la muestra, incluido el futuro. Por eso en economía se usan aproximaciones con un número finito de pesos (Baxter–King) o versiones adaptadas a muestras finitas (Christiano–Fitzgerald, `cffilter`), y en ingeniería, filtros FIR o IIR de diseño.
 :::
 
 ### FIR o IIR {#fir-iir}
@@ -104,6 +144,29 @@ Un pasa bajos ideal con corte $\omega_c$, truncado a $2M + 1$ pesos, con o sin v
 | Coeficientes para una transición abrupta | Muchos | Pocos |
 | Estabilidad | Siempre estable | Puede volverse inestable con órdenes altos (usa `output="sos"`) |
 | Ejemplos en series de tiempo | Medias móviles, Baxter–King | Suavizamiento exponencial, Butterworth |
+
+La fila de «coeficientes» se ve en números. Dos familias de pasa bajos con corte en $\omega = 0.1$:
+
+```python
+w_c = np.array([0, 0.05, 0.1, 0.15, 0.2, 0.3])
+print("ω =", w_c)
+for M in [15, 31, 61]:
+    h = signal.firwin(M, 0.1, fs=1)                                   # FIR por ventana (Hamming)
+    _, H = signal.freqz(h, 1, worN=w_c, fs=1)
+    print(f"FIR con {M:2d} pesos:              |A| = {np.round(np.abs(H), 3)}")
+for N in [2, 4, 8]:
+    b, a = signal.butter(N, 0.1, fs=1)                                # IIR Butterworth
+    _, H = signal.freqz(b, a, worN=w_c, fs=1)
+    print(f"Butterworth N = {N} ({len(b) + len(a):2d} coef.):  |A| = {np.round(np.abs(H), 3)}")
+```
+
+Para bajar a menos de 0.03 en $\omega = 0.15$, el FIR necesita unos 31 pesos y el Butterworth de orden 8, 18 coeficientes (9 de `b` y 9 de `a`). Observa también que en el corte el FIR vale 0.5 y el Butterworth 0.707: `firwin` define el corte a media **amplitud** y `butter` a media **potencia**. Antes de comparar dos filtros por su «corte», revisa qué convención usa cada uno.
+
+:::ejemplo ¿FIR o IIR? Tres situaciones
+- **Suavizar la demanda diaria para el tablero de hoy** (el valor suavizado se calcula cada día con los datos hasta ese día): hace falta un filtro **causal**. Una media móvil de los últimos días (FIR) o un suavizamiento exponencial (IIR) con `lfilter`. El costo es un retraso: la media de 7 días va 3 días atrás.
+- **Describir el ciclo de una serie histórica para un informe**: se puede usar el futuro, así que conviene un Butterworth pasa banda aplicado con `filtfilt` (fase cero y transición abrupta con pocos coeficientes) o un FIR simétrico como Baxter–King.
+- **Quitar una sola frecuencia exacta**, como la interferencia eléctrica en una señal o el patrón semanal: un **filtro de muesca** IIR de dos polos (`iirnotch`) lo hace con 6 coeficientes; un FIR igual de angosto necesitaría cientos de pesos [[notch]].
+:::
 
 ### Butterworth en Python {#butterworth}
 

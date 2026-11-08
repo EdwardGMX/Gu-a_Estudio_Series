@@ -263,7 +263,8 @@
   function ajustarPasos() {
     $$('.paso:not(.largo-fijo)').forEach(p => {
       if (p.classList.contains('largo') && !p.dataset.auto) { p.classList.add('largo-fijo'); return; }
-      const f = p.querySelector('.p-formula .ecuacion') || p.querySelector('.p-formula');
+      // El que se desborda es el contenedor de KaTeX (tiene su propio scroll), no la caja de la fórmula
+      const f = p.querySelector('.p-formula .katex-display') || p.querySelector('.p-formula .ecuacion') || p.querySelector('.p-formula');
       if (!f || !f.clientWidth) return;
       p.classList.remove('largo');
       if (f.scrollWidth > f.clientWidth + 2) { p.classList.add('largo'); p.dataset.auto = '1'; }

@@ -1193,4 +1193,104 @@
     }
     dibujar();
   });
+
+  /* =============== Ampliación: conversiones y diseño por requisitos =============== */
+  const TIPOS_DATOS = {
+    men: { nombre: 'mensuales', fs: 12, u: 'meses', ua: 'año', max: 240, pat: [[12, 'ciclo anual'], [6, 'semestral (2.º armónico)'], [4, '3.er armónico'], [24, 'bienal'], [120, '10 años']] },
+    tri: { nombre: 'trimestrales', fs: 4, u: 'trimestres', ua: 'año', max: 80, pat: [[4, 'ciclo anual'], [2, 'semestral (Nyquist)'], [6, 'ciclo económico corto'], [32, 'ciclo económico largo'], [40, '10 años']] },
+    dia: { nombre: 'diarios', fs: 7, u: 'días', ua: 'semana', max: 400, pat: [[7, 'semanal'], [3.5, '2.º armónico semanal'], [30.5, 'mensual'], [365.25, 'anual']] },
+    hor: { nombre: 'horarios', fs: 24, u: 'horas', ua: 'día', max: 400, pat: [[24, 'día y noche'], [12, '2.º armónico diario'], [8, 'turnos de 8 horas'], [168, 'semanal']] },
+    anu: { nombre: 'anuales', fs: 1, u: 'años', ua: 'año', max: 60, pat: [[11, 'ciclo solar'], [4, 'El Niño típico'], [10, 'década'], [2, 'bienal (Nyquist)']] }
+  };
+  const nn = v => num(Math.round(v * 1000) / 1000);
+  const fraccionPi = p => (Number.isInteger(p) ? (p === 2 ? 'π' : p % 2 === 0 ? `π/${p / 2}` : `2π/${p}`) : '');
+  R('w3-conversor', c => {
+    const ctr = lienzo(c);
+    const td = seleccion(ctr, { etiqueta: 'Datos', valor: 'men', opciones: Object.keys(TIPOS_DATOS).map(k => [k, TIPOS_DATOS[k].nombre]) }, () => { config(); dibujar(); });
+    const P = slider(ctr, { etiqueta: 'periodo P (en meses)', min: 2, max: 240, paso: 0.5, valor: 12, fmt: v => num(v) }, dibujar);
+    const n = slider(ctr, { etiqueta: 'número de datos n', min: 24, max: 600, paso: 12, valor: 240, fmt: v => num(v) }, dibujar);
+    const g1 = lamina(c), g2 = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: la tabla de conversiones de este tipo de datos'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function config() {
+      const T = TIPOS_DATOS[td.get()];
+      P.config({ min: 2, max: T.max, paso: 0.5, valor: T.pat[0][0], etiqueta: `periodo P (en ${T.u})`, fmt: v => num(v) });
+    }
+    const fila1 = (T, p, N) => {
+      const w = 1 / p, j = N / p, esF = Math.abs(j - Math.round(j)) < 1e-9;
+      return { w, lam: 2 * Math.PI * w, f: w * T.fs, Pt: p / T.fs, j, esF };
+    };
+    function dibujar() {
+      const T = TIPOS_DATOS[td.get()], p = P.get(), N = n.get(), r = fila1(T, p, N);
+      const arm = Number.isInteger(p) ? rango(Math.floor(p / 2), 1).map(k => k / p) : [r.w];
+      graf(g1, [{ x: arm, y: arm.map(v => (Math.abs(v - r.w) < 1e-12 ? 1 : 0.55)), type: 'bar', width: 0.004, marker: { color: arm.map(v => (Math.abs(v - r.w) < 1e-12 ? PAL.rosa : '#cfc8ea')) }, name: 'frecuencias del patrón', customdata: arm.map(v => 1 / v), hovertemplate: 'ω = %{x:.4f} · periodo %{customdata:.2f}<extra></extra>' },
+        { x: [r.w], y: [1.08], mode: 'text', text: [`ω = ${fmt(r.w, 4)}`], textfont: { color: PAL.rosa, size: 12 }, showlegend: false, hoverinfo: 'skip' }],
+        { height: 220, title: { text: Number.isInteger(p) && p > 2 ? `Frecuencia fundamental y armónicos k/${p} de un patrón de periodo ${p}` : `La frecuencia de un periodo de ${num(p)} ${T.u}` }, xaxis: EJE_W, yaxis: { range: [0, 1.25], showticklabels: false }, showlegend: false, shapes: [{ type: 'line', x0: 0.5, x1: 0.5, y0: 0, y1: 1, yref: 'paper', line: { color: PAL.gris, dash: 'dot', width: 1.2 } }] });
+      const tmax = Math.min(Math.max(3 * p, 24), 3 * p + 1, 240), tc = rango(Math.round(tmax * 12) + 1).map(i => i / 12), ti = rango(Math.floor(tmax) + 1);
+      graf(g2, [lin(tc, tc.map(t => Math.cos(2 * Math.PI * t / p)), '#cfc8ea', 'oscilación', { hoverinfo: 'skip' }),
+        { x: ti, y: ti.map(t => Math.cos(2 * Math.PI * t / p)), mode: 'markers', marker: { color: PAL.lav, size: 6 }, name: 'observaciones', hovertemplate: 't = %{x}<br>%{y:.3f}<extra></extra>' }],
+        { height: 220, title: { text: `cos(2πt/${num(p)}): una vuelta cada ${num(p)} ${T.u} = ${nn(r.Pt)} ${T.ua}${r.Pt === 1 ? '' : 's'}` }, xaxis: { title: { text: `t (${T.u})` } }, yaxis: { range: [-1.25, 1.25] }, showlegend: false });
+      const lamTxt = fraccionPi(p);
+      lec.className = 'w-lectura ' + (r.esF ? 'ok' : 'aviso');
+      lec.innerHTML = `P = ${num(p)} ${T.u} → <b>ω = 1/P = ${fmt(r.w, 4)}</b> ciclos por observación · <b>λ = 2πω = ${fmt(r.lam, 4)}</b> radianes${lamTxt ? ' (' + lamTxt + ')' : ''} · ` +
+        `con <code>fs=${T.fs}</code>: <b>${nn(r.f)}</b> ciclos por ${T.ua} (una vuelta cada ${nn(r.Pt)} ${T.ua}${r.Pt === 1 ? '' : 's'}). ` +
+        (r.esF ? `Con n = ${N}, j = n/P = <b>${num(Math.round(r.j))}</b>: es una frecuencia de Fourier, su potencia cae en una sola barra del periodograma.`
+          : `Con n = ${N}, j = n/P = ${fmt(r.j, 2)} no es entero: la frecuencia cae entre j = ${Math.floor(r.j)} y ${Math.ceil(r.j)} y su potencia se reparte (fuga).`);
+      const filas = T.pat.concat([[p, 'tu elección']]).map(([pp, nom]) => { const q = fila1(T, pp, N); return [nom, num(pp), fmt(q.w, 4), fmt(q.lam, 4), nn(q.f), q.esF ? num(Math.round(q.j)) : fmt(q.j, 2) + ' (fuga)']; });
+      tab.innerHTML = tablaHTML(['patrón', `periodo (${T.u})`, 'ω', 'λ (rad)', `ciclos por ${T.ua}`, `j con n = ${N}`], filas, filas.map((_, i) => (i === filas.length - 1 ? 'resaltado' : '')));
+    }
+    config(); dibujar();
+  });
+
+  R('w3-orden-butter', c => {
+    const ctr = lienzo(c);
+    const Pp = slider(ctr, { etiqueta: 'conservar periodos ≥', min: 6, max: 120, paso: 1, valor: 24, fmt: v => `${v} · ω = ${fmt(1 / v, 3)}` }, dibujar);
+    const Ps = slider(ctr, { etiqueta: 'quitar periodos ≤', min: 2, max: 60, paso: 1, valor: 12, fmt: v => `${v} · ω = ${fmt(1 / v, 3)}` }, dibujar);
+    const gp = slider(ctr, { etiqueta: 'ganancia mínima de paso', min: 0.7, max: 0.99, paso: 0.01, valor: 0.9, fmt: v => fmt(v, 2) }, dibujar);
+    const gs = slider(ctr, { etiqueta: 'ganancia máxima de rechazo', min: 0.01, max: 0.5, paso: 0.01, valor: 0.1, fmt: v => fmt(v, 2) }, dibujar);
+    const ff = casilla(ctr, 'Lo aplicaré con filtfilt (la ganancia se eleva al cuadrado)', false, dibujar);
+    const g1 = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: el orden mínimo para otros requisitos'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function disenar(wp, ws, ap, as) {                 // ap, as: ganancias por pasada (como buttord)
+      const r = Math.tan(Math.PI * ws) / Math.tan(Math.PI * wp), cp = 1 / (ap * ap) - 1, cs = 1 / (as * as) - 1;
+      const Nreal = Math.log(cs / cp) / (2 * Math.log(r)), N = Math.max(1, Math.ceil(Nreal - 1e-9));
+      const corte = M => Math.atan(Math.tan(Math.PI * wp) * Math.pow(cp, -1 / (2 * M))) / Math.PI;
+      return { r, cp, cs, Nreal, N, wc: corte(N), corte };
+    }
+    const gan = (N, wc, w) => 1 / Math.sqrt(1 + Math.pow(Math.tan(Math.PI * w) / Math.tan(Math.PI * wc), 2 * N));
+    function dibujar() {
+      const pp = Pp.get(), ps = Ps.get(), dos = ff.get();
+      if (ps >= pp) {
+        lec.className = 'w-lectura mal';
+        lec.innerHTML = '⚠️ El periodo que quieres quitar debe ser <b>menor</b> que el que quieres conservar: un pasa bajos deja los movimientos lentos y quita los rápidos.';
+        graf(g1, [], { height: 300, title: { text: 'Requisitos incompatibles' }, xaxis: EJE_W });
+        tab.innerHTML = '';
+        return;
+      }
+      const wp = 1 / pp, ws = 1 / ps, Gp = gp.get(), Gs = gs.get(), ap = dos ? Math.sqrt(Gp) : Gp, as = dos ? Math.sqrt(Gs) : Gs;
+      const d = disenar(wp, ws, ap, as), xmax = Math.min(0.5, 3 * ws), W = rango(601).map(i => xmax * i / 600);
+      const curva = (N, wc) => W.map(w => { const g = gan(N, wc, w); return dos ? g * g : g; });
+      const tr = [];
+      if (d.N > 1) tr.push(esp(W, curva(d.N - 1, d.corte(d.N - 1)), PAL.gris, `N = ${d.N - 1} (no alcanza)`, { line: { color: PAL.gris, width: 1.6, dash: 'dot' } }));
+      tr.push(esp(W, curva(d.N, d.wc), PAL.rosa, `N = ${d.N}, ω_c = ${fmt(d.wc, 4)}`, { line: { color: PAL.rosa, width: 2.6 } }));
+      tr.push({ x: [wp, ws], y: [Gp, Gs], mode: 'markers', marker: { color: PAL.texto, size: 9, symbol: 'diamond' }, name: 'requisitos', hovertemplate: 'ω = %{x:.4f}<br>ganancia %{y:.3f}<extra></extra>' });
+      const zona = (x0, x1, y0, y1, color) => ({ type: 'rect', x0, x1, y0, y1, fillcolor: color, line: { width: 0 }, layer: 'below' });
+      graf(g1, tr, { height: 310, title: { text: `Butterworth pasa bajos: orden mínimo ${d.N}${dos ? ' (con filtfilt)' : ''}` }, xaxis: { title: { text: 'ω' }, range: [0, xmax] }, yaxis: { range: [0, 1.08], title: { text: dos ? '|A(ω)|²' : '|A(ω)|' } },
+        shapes: [zona(0, wp, 0, Gp, 'rgba(224,112,159,.13)'), zona(ws, xmax, Gs, 1.08, 'rgba(224,112,159,.13)'), zona(0, wp, Gp, 1.08, 'rgba(63,174,138,.12)'), zona(ws, xmax, 0, Gs, 'rgba(63,174,138,.12)')] });
+      const gw = w => { const g = gan(d.N, d.wc, w); return dos ? g * g : g; }, g1m = d.N > 1 ? (w => { const g = gan(d.N - 1, d.corte(d.N - 1), w); return dos ? g * g : g; }) : null;
+      lec.className = 'w-lectura ok';
+      lec.innerHTML = `r = tan(πω_s)/tan(πω_p) = ${fmt(d.r, 4)}; N ≥ ln(${fmt(d.cs, 2)}/${fmt(d.cp, 4)}) / (2 ln ${fmt(d.r, 3)}) = ${fmt(d.Nreal, 2)} → <b>N = ${d.N}</b>, corte <b>ω_c = ${fmt(d.wc, 4)}</b> (periodo ${fmt(1 / d.wc, 1)}). ` +
+        `Ganancia${dos ? ' total' : ''}: ${fmt(gw(wp), 3)} en el periodo ${pp} y ${fmt(gw(ws), 3)} en el periodo ${ps}.` +
+        (g1m ? ` Con N = ${d.N - 1} (ajustado para cumplir la banda de paso) dejaría ${fmt(g1m(ws), 3)} en el periodo ${ps}: no cumple.` : '') +
+        (dos ? ' Como filtfilt aplica el filtro dos veces, cada pasada solo necesita √ de cada requisito.' : '');
+      const filas = [1.25, 1.5, 2, 3, 4].map(k => {
+        const p2 = Math.max(2, Math.round(pp / k)); if (p2 >= pp) return null;
+        const q = disenar(wp, 1 / p2, ap, as);
+        return [`${pp} y ${p2}`, fmt(q.Nreal, 2), q.N, fmt(q.wc, 4)];
+      }).filter(Boolean);
+      tab.innerHTML = tablaHTML(['conservar ≥ / quitar ≤ (periodos)', 'N exacto', 'N entero', 'ω_c'], filas);
+    }
+    dibujar();
+  });
 })();

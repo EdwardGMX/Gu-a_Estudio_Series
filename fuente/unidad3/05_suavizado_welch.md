@@ -55,6 +55,36 @@ Con pesos distintos $h_k$ (que suman 1), se usa $\Lsp_h = 1/\sum h_k^2$ en lugar
 > Intervalo de 95% con $2\Lsp = 10$ grados de libertad ($\chi^2_{10}(0.975) = 20.48$, $\chi^2_{10}(0.025) = 3.247$). Su cociente es 6.3; sin suavizar era 146.
 :::
 
+El mismo pico con el **Daniell modificado** ($m = 2$): las cinco ordenadas, pero las de los extremos pesan la mitad.
+
+:::guiado Daniell modificado con las mismas cinco ordenadas {#guia-daniell-modificado}
+| $j$ | $I(\omega_j)$ | Peso simple | Peso modificado $h_k$ | $h_k\,I(\omega_j)$ |
+|---|---|---|---|---|
+| 26 | 16 444 | 1/5 | 1/8 | 2 055.5 |
+| 27 | 592 | 1/5 | 1/4 | 148 |
+| 28 | 67 507 | 1/5 | 1/4 | 16 876.75 |
+| 29 | 22 804 | 1/5 | 1/4 | 5 701 |
+| 30 | 1 908 | 1/5 | 1/8 | 238.5 |
+| Suma | | 1 | 1 | 25 019.75 |
+---
+= h_k = \tfrac{1}{2m} = \tfrac14 \text{ en el interior}, \qquad h_{\pm m} = \tfrac{1}{4m} = \tfrac18 \text{ en los extremos}
+> Los pesos del núcleo modificado con $m = 2$. Suman 1, igual que los del simple.
+@ usa c3[1-5]; da c4[1-5]
+= \hat f(\omega_{28}) = \sum_k h_k\,I(\omega_{28 + k}) = 2\,055.5 + 148 + 16\,876.75 + 5\,701 + 238.5 = 25\,020
+> Cada ordenada por su peso. Sale un poco más alto que el simple (21 851) porque el pico pesa más que las ordenadas lejanas.
+@ usa c2[1-5] c4[1-5]; da c5[1-6]
+= \sum h_k^2 = 2\left(\tfrac{1}{8}\right)^2 + 3\left(\tfrac14\right)^2 = 0.21875 \;\Rightarrow\; \Lsp_h = \frac{1}{0.21875} = 4.57, \qquad \text{gl} = 2\Lsp_h = 9.14
+> El «número efectivo» de ordenadas: con pesos desiguales se promedia algo menos que con cinco pesos iguales ($\Lsp = 5$, 10 gl).
+@ usa c4[1-5]
+= \Bw = \Lsp_h/n = 4.57/309 = 0.0148
+> El ancho de banda también se calcula con $\Lsp_h$.
+= \left[\frac{9.14(25\,020)}{19.23},\ \frac{9.14(25\,020)}{2.777}\right] = [11\,894,\ 82\,374]
+> El intervalo de 95% con $\chi^2_{9.14}$ (los grados de libertad pueden no ser enteros). Cociente de los extremos: 6.9, contra 6.3 del simple.
+@ usa c5[6]
+:::
+
+¿Para qué los pesos desiguales, si dan intervalos un poco más anchos? Un núcleo con escalones (pesos iguales que caen de golpe a cero) se comporta en frecuencia como una ventana rectangular, con «lóbulos» que dejan pasar potencia de frecuencias lejanas; bajar los extremos a la mitad suaviza el escalón. Por eso es el núcleo que usan Shumway y Stoffer en sus ejemplos y el que aplica la función `spec.pgram` de R cuando se le pide suavizar (argumento `spans`).
+
 ### El dilema sesgo–varianza {#sesgo-varianza}
 
 Suavizar no es gratis. Si la densidad verdadera cambia dentro de la banda (un pico angosto), el promedio lo **aplana** y lo **ensancha**: es un sesgo. Además, dos picos separados por menos de $\Bw$ se funden en uno.
@@ -68,6 +98,14 @@ Suavizar no es gratis. Si la densidad verdadera cambia dentro de la banda (un pi
 
 :::intuicion El tamaño de la brocha
 Suavizar es pintar con una brocha de ancho $\Bw$: una brocha delgada respeta los detalles pero deja la superficie dispareja; una gruesa deja todo parejo pero borra los detalles finos. No hay un ancho «correcto» universal: se prueban varios, se mira el resultado y se elige uno cuyo ancho de banda sea menor que la separación entre los rasgos que te interesan (por ejemplo, que $\Bw < 1/12$ si quieres ver el pico anual de datos mensuales sin que se mezcle con la frecuencia cero).
+:::
+
+:::ejemplo Elegir $L$ con un objetivo
+Tienes $n = 480$ datos mensuales (40 años) y quieres saber si, además del ciclo anual ($\omega = 1/12 = 0.0833$), hay un ciclo de 10 meses ($\omega = 0.1$).
+- Los dos picos están separados $0.1 - 0.0833 = 0.0167$. Para no fundirlos, el ancho de banda debe ser menor: $\Bw = \Lsp/480 < 0.0167$, o sea $\Lsp < 8$.
+- Con $\Lsp = 7$ ($m = 3$): $\Bw = 7/480 = 0.0146$, 14 grados de libertad y un intervalo de $[0.536\,\hat f,\ 2.487\,\hat f]$ ($\chi^2_{14}(0.975) = 26.12$ y $\chi^2_{14}(0.025) = 5.63$).
+- Con $\Lsp = 3$ la resolución sobra ($\Bw = 0.0063$) pero el intervalo es $[0.415\,\hat f,\ 4.849\,\hat f]$: casi el doble de ancho. Con $\Lsp = 9$ ($\Bw = 0.0188$) los dos picos ya se mezclarían.
+- Decisión: $\Lsp = 7$, la mayor cantidad de promedio que todavía separa las dos frecuencias. Si el pico de 10 meses aparece con $\Lsp = 5$ y con $\Lsp = 7$, y su intervalo no se traslapa con el nivel de las frecuencias vecinas, es real.
 :::
 
 :::interactivo w3-daniell | Suaviza el periodograma {#w-daniell}
@@ -161,6 +199,29 @@ for M in [64, 128]:
     f_w, P_w = signal.welch(manchas.values, nperseg=M)          # Hann, traslape de 50%
     print(f"Welch con nperseg = {M}: pico en {1 / f_w[P_w.argmax()]:5.2f} años (resolución 1/{M} = {1 / M:.4f})")
 ```
+
+El Daniell modificado solo cambia los pesos del promedio, así que basta con otra convolución:
+
+```python
+def daniell_modificado(x, m):
+    """Pesos 1/(2m) en el interior y 1/(4m) en los extremos; devuelve (ω_j, f̂(ω_j), L_h)."""
+    h = np.r_[0.5, np.ones(2 * m - 1), 0.5] / (2 * m)
+    x = np.asarray(x, float) - np.mean(x)
+    n = len(x)
+    I = np.abs(np.fft.fft(x)) ** 2 / n
+    I[0] = (I[1] + I[-1]) / 2
+    I_ext = np.concatenate([I[-m:], I, I[:m]])
+    f_suave = np.convolve(I_ext, h, mode="valid")
+    j = np.arange(1, n // 2 + 1)
+    return j / n, f_suave[j], 1 / np.sum(h ** 2)
+
+for m in [1, 2, 5]:
+    w, fs, Lh = daniell_modificado(manchas.values, m)
+    k = fs.argmax()
+    print(f"modificado, m = {m}: L_h = {Lh:5.2f}, gl = {2 * Lh:5.2f}, f̂(ω_28) = {fs[27]:7.0f}, máximo en {1 / w[k]:5.2f} años")
+```
+
+Con $m = 2$ el valor en $\omega_{28}$ es, salvo redondeo, el del ejemplo a mano (25 020). El máximo de la curva suavizada no tiene por qué caer en la mayor ordenada cruda: depende también de las vecinas.
 
 :::interactivo py3-welch | Simulador: `scipy.signal.welch` {#sim-welch}
 Cambia los argumentos de `welch` y mira el código, la salida y el espectro estimado de El Niño.

@@ -23,6 +23,14 @@ La guía oficial empieza la unidad con esta distinción, porque decide qué mode
 Un reloj marca las 12 cada 12 horas, siempre: es periódico. Un corazón late más o menos 70 veces por minuto, pero cada latido dura un poco distinto y se acelera al correr: es un ciclo. Si quisieras predecir el próximo latido con «exactamente 0.857 segundos después del anterior», te equivocarías cada vez más; con el reloj nunca te equivocas.
 :::
 
+:::ejemplo Clasificar cinco series
+- **Ventas mensuales de juguetes**, con el máximo cada diciembre: **periodicidad** de $\Per = 12$, porque la fija el calendario. Modelo: diferencia estacional o SARIMA, o variables indicadoras de mes.
+- **Temperatura cada hora**: **periodicidad** de $\Per = 24$ (la rotación de la Tierra), más otra de $24 \times 365$ horas (el año).
+- **Llamadas por hora a un centro de atención**: dos periodicidades a la vez, la diaria ($\Per = 24$) y la semanal ($\Per = 7 \times 24 = 168$).
+- **PIB trimestral sin tendencia**: **ciclo** económico de 6 a 32 trimestres. Ninguna regla obliga a que la siguiente recesión llegue a los $s$ trimestres. Modelo: términos AR, o un filtro pasa banda si solo se quiere describir el ciclo [[bk]].
+- **Linces atrapados cada año en Canadá** (un ejemplo clásico de Box y Jenkins): **ciclo** de unos 10 años cuya duración y altura cambian de una vuelta a otra. Como las manchas solares, se modela con un AR(2) o de orden mayor.
+:::
+
 ### El ciclo solar: un ciclo que no es periódico {#ciclo-solar}
 
 Las manchas solares tienen un ciclo famoso «de 11 años». Midamos cuánto dura de verdad cada ciclo, de máximo a máximo:
@@ -105,6 +113,46 @@ En cambio, un **ciclo** como el del AR(2) con raíces complejas tiene una ACF qu
 | Estacionalidad determinística + ruido | Picos en $\Per, 2\Per, \dots$ que no bajan | Periodicidad con ruido encima |
 | AR(2) con raíces complejas | $\approx r^k\cos(\cdot)$: decae | Ciclo: la fase se va olvidando |
 | Ruido blanco | 0 para $k \ge 1$ | Sin repetición |
+
+:::guiado La misma oscilación de periodo 10, periódica y cíclica {#guia-acf-periodo-ciclo}
+| Rezago $k$ | $\rho(k)$ periódica: $\cos(2\pi k/10)$ | $\rho(k)$ del AR(2) | Envolvente $r^k = 0.9^k$ |
+|---|---|---|---|
+| 1 | 0.809 | 0.805 | 0.900 |
+| 2 | 0.309 | 0.362 | 0.810 |
+| 5 | −1 | −0.590 | 0.590 |
+| 10 | 1 | 0.349 | 0.349 |
+| 15 | −1 | −0.206 | 0.206 |
+| 20 | 1 | 0.122 | 0.122 |
+| 30 | 1 | 0.042 | 0.042 |
+---
+= r = 0.9,\ \theta = 2\pi/10 \;\Rightarrow\; \phi_1 = 2r\cos\theta = 1.4562, \qquad \phi_2 = -r^2 = -0.81
+> Un AR(2) con raíces inversas $0.9\,e^{\pm 2\pi i/10}$: su pseudo-ciclo dura 10 periodos, igual que la oscilación periódica [[u2:ar2-complejas]].
+= \text{periódica}: \rho(5) = \cos\pi = -1, \quad \rho(10) = \rho(20) = \rho(30) = 1
+> Medio ciclo después, el valor opuesto; un ciclo completo después, el mismo. Después de 30 rezagos se sigue sabiendo exactamente en qué fase estamos.
+@ usa c1[3-7]; da c2[3-7]
+= \text{AR(2)}: \rho(5) = -0.590, \quad \rho(10) = 0.349 = 0.9^{10}
+> También oscila con periodo 10, pero la altura se reduce con la envolvente $r^k$: un ciclo después queda el 35% de la «memoria» de la fase.
+@ usa c1[3-4] c4[3-4]; da c3[3-4]
+= \rho(20) = 0.122, \qquad \rho(30) = 0.042
+> Tres ciclos después, casi nada: el AR(2) ya no sabe si está en un máximo o en un mínimo. Es la diferencia entre un reloj y un corazón.
+@ usa c4[6-7]; da c3[6-7]
+= \text{espectro}: \text{línea en } \omega = 0.1 \text{ (periódica)} \quad\text{contra}\quad \text{joroba con pico en } \Per = 10.12 \text{ (AR(2))}
+> El mismo contraste en el otro idioma: la ACF que no decae corresponde a una línea angosta, y la que se apaga a una joroba [[espectro-ar2]].
+:::
+
+En los datos se ve lo mismo. La ACF de las manchas solares tiene máximos cada 10 u 11 años, cada vez más bajos:
+
+```python
+from statsmodels.tsa.stattools import acf
+
+r_m = acf(manchas.values, nlags=60, fft=True)
+maximos = [k for k in range(1, 59) if r_m[k] > r_m[k - 1] and r_m[k] > r_m[k + 1]]
+print("rezagos de los máximos de la ACF:", maximos)
+print("altura de esos máximos:          ", np.round(r_m[maximos], 3).tolist())
+print(f"separación media entre máximos = {np.diff(maximos).mean():.2f} años")
+```
+
+La separación de unos 10.75 años es el ciclo; la caída de 0.66 a 0.11 en cinco ciclos es la señal de que no es una periodicidad exacta.
 
 :::interactivo w3-ciclo | Periodicidad contra ciclo {#w-ciclo}
 Compara cuatro procesos: una oscilación periódica con ruido, un patrón estacional periódico, un ciclo AR(2) y un ciclo de duración aleatoria. Ajusta el periodo y la intensidad del ruido.

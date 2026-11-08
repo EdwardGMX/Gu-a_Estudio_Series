@@ -260,6 +260,44 @@ Los libros y las librerías no miden la frecuencia igual. En esta unidad seguimo
 En la Unidad II, el pseudo-ciclo del AR(2) se escribió con un ángulo en **radianes**: $\Per = 2\pi/\omega$ [[u2:demo-pseudociclo]]. En esta unidad $\omega$ está en **ciclos por observación** y $\Per = 1/\omega$. Para pasar de una a otra: radianes $= 2\pi \times$ ciclos. Un periodo de 8 es $\omega = 0.125$ ciclos, o $\pi/4 = 0.785$ radianes.
 :::
 
+:::guiado Traducir entre periodo, frecuencia, radianes y `fs` {#guia-conversiones}
+| Datos | Patrón | Periodo $\Per$ | $\omega = 1/\Per$ | $\tip{lambda-ang}{\lambda} = 2\pi\omega$ | Con `fs` |
+|---|---|---|---|---|---|
+| Mensuales | ciclo anual | 12 | 0.0833 | 0.5236 | `fs=12`: 1 ciclo por año |
+| Trimestrales | ciclo de 4 años | 16 | 0.0625 | 0.3927 | `fs=4`: 0.25 ciclos por año |
+| Diarios | patrón semanal | 7 | 0.1429 | 0.8976 | `fs=7`: 1 ciclo por semana |
+| Horarios | día y noche | 24 | 0.0417 | 0.2618 | `fs=24`: 1 ciclo por día |
+| Cualesquiera | señal de 0.6 ciclos por dato | 2.5 | 0.4 | 2.5133 | (es un alias) |
+---
+= \omega = \frac{1}{\Per} = \frac{1}{12} = 0.0833 \text{ ciclos por observación}
+> La conversión básica: el ciclo anual de datos mensuales cabe 0.0833 veces en cada mes.
+@ usa c3[1]; da c4[1]
+= \tip{lambda-ang}{\lambda} = 2\pi\omega = 2\pi(0.0833) = 0.5236 = \pi/6 \text{ radianes por observación}
+> Lo que verías en Brockwell–Davis o Hamilton: el mismo ciclo, medido como un ángulo.
+@ usa c4[1]; da c5[1]
+= f = \omega\cdot f_s = 0.0833 \times 12 = 1 \text{ ciclo por año}
+> Con `fs=12`, `scipy` pone el pico en 1: las unidades pasan de «por observación» a «por año».
+@ usa c4[1]; da c6[1]
+= \Per = 16 \text{ trimestres}:\quad \omega = 0.0625, \qquad f = 0.0625 \times 4 = 0.25 \text{ ciclos por año}
+> Un ciclo cada 4 años: 0.25 ciclos por año. El periodo en años es $1/0.25 = 4$, como debe ser.
+@ usa c3[2]; da c4[2] c6[2]
+= \Per = 7 \Rightarrow \omega = 0.1429,\ \tip{lambda-ang}{\lambda} = 0.8976; \qquad \Per = 24 \Rightarrow \omega = 0.0417,\ \tip{lambda-ang}{\lambda} = 0.2618
+> Los patrones semanal y diario: mientras más largo el periodo, menor la frecuencia.
+@ usa c3[3-4]; da c4[3-4] c5[3-4]
+= \omega = 0.6 > \tfrac12 \;\Rightarrow\; \text{alias } \lvert 0.6 - 1\rvert = 0.4, \qquad \Per = 1/0.4 = 2.5
+> Una frecuencia mayor que la de Nyquist no se ve como es: los datos la muestran como 0.4 ciclos por observación, una oscilación de periodo 2.5 [[demo-alias]].
+@ usa c2[5]; da c3[5] c4[5] c5[5]
+:::
+
+:::interactivo w3-conversor | Calculadora de periodos y frecuencias {#w-conversor}
+Elige el tipo de datos y un periodo; la calculadora da su frecuencia en las tres convenciones, el valor que verías en `scipy` con `fs` y si cae en una frecuencia de Fourier para tu número de datos.
+@@@
+- **Arriba**: dónde cae la frecuencia en el eje de 0 a 1/2. Si el periodo es entero, también aparecen en lila sus armónicos $k/\Per$, que es donde un patrón de ese periodo pone picos [[armonicos]].
+- **Abajo**: la oscilación de ese periodo y los puntos que observarías en tiempos enteros.
+- **Lectura**: $\omega$, $\tip{lambda-ang}{\lambda}$ (en fracciones de $\pi$ cuando se puede), los ciclos por año, semana o día, y el índice $j = n/\Per$. Si $j$ no es entero, la oscilación cae entre dos frecuencias de Fourier y su potencia se reparte (fuga) [[fuga]].
+- **Vista extra**: la tabla de los patrones típicos de ese tipo de datos, con tu elección resaltada.
+:::
+
 :::resumen Lo que debes llevarte de las herramientas
 - Una oscilación $A\cos(2\pi\omega t + \varphi)$ es una regresión sobre $\cos(2\pi\omega t)$ y $\sin(2\pi\omega t)$; la amplitud es $\sqrt{\beta_1^2 + \beta_2^2}$.
 - Euler: $e^{i\theta} = \cos\theta + i\sin\theta$; el coseno es el promedio de dos giros opuestos, por eso los espectros son simétricos.

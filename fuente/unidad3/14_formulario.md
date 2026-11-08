@@ -6,7 +6,7 @@
 | Concepto | Fórmula | Ver |
 |---|---|---|
 | Oscilación | $A\cos(2\pi\omega t + \varphi) = \beta_1\cos(2\pi\omega t) + \beta_2\sin(2\pi\omega t)$, $A = \sqrt{\beta_1^2 + \beta_2^2}$ | [[demo-fase-regresion]] |
-| Periodo y frecuencia | $\Per = 1/\omega$; radianes $\lambda = 2\pi\omega$; Nyquist $\omega = 1/2$ | [[oscilacion]] |
+| Periodo y frecuencia | $\Per = 1/\omega$; radianes $\tip{lambda-ang}{\lambda} = 2\pi\omega$; Nyquist $\omega = 1/2$ | [[guia-conversiones]] |
 | Alias | $\omega_{\text{alias}} = \lvert\omega - \operatorname{round}(\omega)\rvert$ | [[demo-alias]] |
 | Varianza de una oscilación | $A^2/2$ | [[guia-tres-componentes]] |
 | Suma de componentes | $\gamma(h) = \sum_k\sigma_k^2\cos(2\pi\omega_k h)$, $\Var = \sum_k\sigma_k^2$ | [[demo-varianza-componentes]] |
@@ -23,19 +23,26 @@
 | Parseval | $\sum(x_t - \bar x)^2 = \sum_{j=1}^{n-1}I(\omega_j)$ | [[parseval]] |
 | Distribución del periodograma | $2I(\omega_j)/f(\omega_j) \approx \chi^2_2$; IC: $[\,2I/\chi^2_2(0.975),\ 2I/\chi^2_2(0.025)\,] = [0.271I,\ 39.5I]$ | [[guia-ic-periodograma]] |
 | Daniell | $\hat f(\omega_j) = \frac1{\Lsp}\sum_{k=-m}^{m}I(\omega_j + k/n)$, $\Lsp = 2m + 1$, $\Bw = \Lsp/n$, gl $= 2\Lsp$ | [[idea-suavizar]] |
+| Daniell con pesos | $\Lsp_h = 1/\sum h_k^2$, gl $= 2\Lsp_h$; el modificado pesa $1/(2m)$ en el interior y $1/(4m)$ en los extremos | [[guia-daniell-modificado]] |
 | IC del suavizado | $[\,2\Lsp\hat f/\chi^2_{2\Lsp}(0.975),\ 2\Lsp\hat f/\chi^2_{2\Lsp}(0.025)\,]$ | [[guia-daniell]] |
 | Welch | $\Kseg$ segmentos de $M$; resolución $1/M$; gl $\approx 2\Kseg$ | [[welch]] |
 | AR paramétrico | $\hat f(\omega) = \hat\sigma^2/\lvert 1 - \sum_k\hat\phi_k e^{-2\pi i\omega k}\rvert^2$ | [[ar-espectral]] |
+| Yule–Walker de un AR(2) | $\hat\phi_1 = \frac{\hat\rho(1)[1 - \hat\rho(2)]}{1 - \hat\rho(1)^2}$, $\hat\phi_2 = \frac{\hat\rho(2) - \hat\rho(1)^2}{1 - \hat\rho(1)^2}$, $\hat\sigma^2 = \hat\gamma(0)[1 - \hat\phi_1\hat\rho(1) - \hat\phi_2\hat\rho(2)]$ | [[guia-yw-ar2]] |
 | Espectro cruzado | $\gamma_{yx}(k) = \Cov(y_{t+k}, x_t)$, $f_{yx}(\omega) = \sum_k\gamma_{yx}(k)e^{-2\pi i\omega k} = c_{yx} - iq_{yx}$ | [[cov-cruzada]] |
 | Coherencia y fase | $\rho^2_{yx} = \lvert f_{yx}\rvert^2/(f_xf_y)$; $\varphi = \operatorname{atan2}(-q_{yx}, c_{yx})$; retardo: $\varphi = -2\pi\omega D$ | [[demo-retardo]] |
+| Retardo con varias frecuencias | Desenvolver la fase (sumar o restar $2\pi$ hasta quitar los saltos); pendiente de la recta $= -2\pi D$ | [[guia-fase-varias]] |
 | Umbral de coherencia | $\hat\rho^2 > F_{2,2\Lsp-2}/(\Lsp - 1 + F_{2,2\Lsp-2})$ (0.312 con $\Lsp = 9$) | [[coherencia-cruda]] |
 | Filtro lineal | $y_t = \sum_j a_j x_{t-j}$; $A(\omega) = \sum_j a_j e^{-2\pi i\omega j}$; $f_y = \lvert A(\omega)\rvert^2 f_x$ | [[demo-filtro-espectro]] |
+| Varianza que deja pasar (ruido blanco) | $\Var(y_t) = \sigma^2\sum_j a_j^2 = \sigma^2\int_{-1/2}^{1/2}\lvert A(\omega)\rvert^2 d\omega$ | [[demo-varianza-filtro]] |
 | Media móvil centrada de 3 | $A(\omega) = (1 + 2\cos 2\pi\omega)/3$, cero en $\omega = 1/3$ | [[guia-ganancia-mm3]] |
 | Diferencias | $\lvert 1 - e^{-2\pi i\omega}\rvert^2 = 4\sin^2(\pi\omega)$; $1 - L^{s}$: cero en $k/s$ | [[demo-ganancia-diferencia]] |
 | Butterworth pasa bajos | $\lvert A(\omega)\rvert = [1 + (\tan\pi\omega/\tan\pi\omega_c)^{2N}]^{-1/2}$; vale 0.707 en $\omega_c$ | [[guia-butterworth]] |
+| Orden mínimo del Butterworth | $N \ge \dfrac{\ln\big[(1/g_s^2 - 1)/(1/g_p^2 - 1)\big]}{2\ln\big[\tan(\pi\omega_s)/\tan(\pi\omega_p)\big]}$, con $g_p$ la ganancia mínima de paso y $g_s$ la máxima de rechazo | [[guia-orden-butter]] |
 | Filtro ideal | $a_j = \sin(2\pi\omega_c j)/(\pi j)$, $a_0 = 2\omega_c$ | [[demo-filtro-ideal]] |
+| FIR por ventana | $a_j w_j$ (Hamming: $w_j = 0.54 + 0.46\cos(\pi j/M)$), normalizados para que sumen 1: es `firwin` | [[guia-pesos-ideal]] |
 | `filtfilt` | Ganancia $\lvert A\rvert^2$, fase 0 (usa el futuro) | [[demo-filtfilt]] |
-| Hodrick–Prescott | Ciclo: $\frac{4\lambda(1 - \cos 2\pi\omega)^2}{1 + 4\lambda(1 - \cos 2\pi\omega)^2}$; con λ = 1600, ganancia 1/2 en ~40 trimestres | [[demo-ganancia-hp]] |
+| Hodrick–Prescott | Ciclo: $\frac{4\lambda(1 - \cos 2\pi\omega)^2}{1 + 4\lambda(1 - \cos 2\pi\omega)^2}$; con λ = 1600, ganancia 1/2 en ~40 trimestres; en otras frecuencias, λ por la cuarta potencia: $1600 \cdot 3^4 = 129\,600$ (mensual), $1600/4^4 = 6.25$ (anual) | [[demo-ganancia-hp]] |
+| Baxter–King | $b_0 = (\omega_2 - \omega_1)/\pi$, $b_j = [\sin(j\omega_2) - \sin(j\omega_1)]/(\pi j)$ con $\omega$ en radianes, menos su promedio (suman 0) | [[guia-bk-pesos]] |
 
 ### Conversiones rápidas {#conversiones3}
 
@@ -47,6 +54,8 @@
 | Trimestrales | ciclo económico | 6 a 32 | 0.031 a 0.167 | — |
 | Diarios | semanal | 7 | 0.1429 | `fs=7` → 1 ciclo por semana |
 | Anuales | ciclo solar | ≈ 11 | ≈ 0.091 | — |
+
+Para practicar con cualquier periodo, usa la calculadora de [[w-conversor]].
 
 ### Python de la unidad {#python3}
 
@@ -98,11 +107,13 @@
 - [ ] Explicar el papel de la transformada de Fourier y calcular un periodograma pequeño a mano (con Parseval).
 - [ ] Explicar por qué el periodograma es ruidoso e inconsistente, y armar el IC con la $\chi^2$.
 - [ ] Suavizar con Daniell (ancho de banda, grados de libertad, IC) y explicar Welch.
+- [ ] Estimar un AR(2) por Yule–Walker a partir de $\hat\rho(1)$ y $\hat\rho(2)$, y calcular el pico de su espectro.
 - [ ] Comparar la estimación espectral paramétrica y la no paramétrica.
-- [ ] Explicar magnitud, fase y coherencia, leer un retardo en la fase y decidir si una coherencia es significativa.
+- [ ] Explicar magnitud, fase y coherencia, leer un retardo en la fase (desenvolviéndola si hace falta) y decidir si una coherencia es significativa.
 - [ ] Calcular la respuesta al impulso, la función de transferencia y la ganancia de medias móviles y diferencias.
 - [ ] Usar $f_y = \lvert A(\omega)\rvert^2 f_x$ para explicar qué hace un filtro.
 - [ ] Describir los filtros pasa bajos, pasa altos, pasa banda y rechaza banda, la frecuencia de corte y el orden.
 - [ ] Proponer un filtro para remover tendencia, ruido de alta frecuencia o una banda no deseada.
+- [ ] Calcular el orden y el corte de un Butterworth a partir de requisitos de ganancia, y diseñar un FIR pequeño con ventana.
 - [ ] Explicar la diferencia entre filtrar en tiempo real (`lfilter`) y con fase cero (`filtfilt`).
 - [ ] Redactar la conclusión de un análisis espectral con evidencia.

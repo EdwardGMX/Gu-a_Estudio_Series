@@ -45,6 +45,10 @@ La guía oficial resume la interpretación en cuatro reglas:
 | **Picos** | Periodicidades o ciclos dominantes, de periodo $1/\omega_{\text{pico}}$ | Estacionalidad, ciclo solar |
 | Potencia aproximadamente **plana** | Ruido blanco: ninguna frecuencia domina | Residuos de un buen modelo |
 
+:::intuicion Un histograma de la varianza
+Piensa en la densidad espectral como un **histograma** en el que el eje horizontal no tiene valores de la serie sino frecuencias, y el área de cada barra es la parte de la varianza que aportan las oscilaciones de esas frecuencias. Un histograma alto a la izquierda dice «casi toda la variabilidad viene de movimientos lentos»; uno plano dice «todas las velocidades aportan lo mismo»; una barra muy alta en medio dice «hay un ritmo que domina».
+:::
+
 ### Ruido blanco: el espectro plano {#espectro-rb}
 
 :::demo El ruido blanco tiene $f(\omega) = \sigma^2$ {#demo-espectro-rb}
@@ -95,6 +99,15 @@ La guía oficial resume la interpretación en cuatro reglas:
 = 2\int_0^{1/2}\big(1.25 + \cos(2\pi\omega)\big)d\omega = 2\,(0.625 + 0) = 1.25
 > El área es $\gamma(0) = \sigma^2(1 + \theta^2) = 1.25$: el coseno integra cero sobre medio ciclo.
 @ usa c4[1-6]
+:::
+
+:::ejemplo Un MA(2) que solo deja pasar las frecuencias medias
+Sea $y_t = \varepsilon_t - \varepsilon_{t-2}$ con $\sigma^2 = 1$:
+- Autocovarianzas: $\gamma(0) = 1 + 1 = 2$, $\gamma(1) = 0$ (no hay términos separados un periodo) y $\gamma(2) = -1$.
+- Espectro: $f(\omega) = \gamma(0) + 2\gamma(2)\cos(4\pi\omega) = 2 - 2\cos(4\pi\omega) = 4\sin^2(2\pi\omega)$.
+- Valores: $f(0) = 0$, $f(1/8) = 2$, $f(1/6) = 3$, $f(1/4) = 4$ y $f(1/2) = 0$. La potencia se concentra alrededor del periodo 4 y **desaparece** en los dos extremos.
+- La razón: $1 - L^2 = (1 - L)(1 + L)$. El factor $1 - L$ borra la frecuencia 0 y el factor $1 + L$ borra la 1/2; queda un **pasa banda** hecho con dos coeficientes, una idea que retomaremos con los filtros [[diferencia-filtro]].
+- Comprobación: $2\int_0^{1/2}4\sin^2(2\pi\omega)\,d\omega = 2 \cdot 4 \cdot \tfrac14 = 2 = \gamma(0)$.
 :::
 
 ### AR(1): rojo o azul según el signo de $\phi$ {#espectro-ar1}
@@ -158,6 +171,35 @@ Un AR(2) con raíces complejas genera un ciclo [[u2:ar2-complejas]]. En el espec
 - Pico: $\cos(2\pi\omega^*) = \frac{1\cdot(-1.5)}{4(-0.5)} = 0.75$, así que $\omega^* = \arccos(0.75)/2\pi = 0.1150$ y el periodo del pico es $1/0.1150 = 8.69$.
 - Altura: $D(0.75) = 2.25 - 2.25 + 0.125 = 0.125$, así que $f(\omega^*) = 8$, el doble que en la frecuencia cero ($f(0) = 1/0.25 = 4$).
 - En la Unidad II, el pseudo-periodo calculado con el **argumento de las raíces** daba exactamente 8 [[u2:demo-pseudociclo]]. No es un error: el pico del espectro y el argumento de la raíz coinciden solo cuando el módulo $r$ de la raíz inversa está cerca de 1. Con $r = \sqrt{0.5} = 0.71$ el pico se corre hacia frecuencias bajas. Con $\phi = (1.2, -0.72)$, $r = 0.85$ y el pico queda en 8.14, mucho más cerca de 8.
+:::
+
+:::guiado El espectro del AR(2) con $\phi = (1.2,\ -0.72)$ {#guia-espectro-ar2}
+| $\omega$ | Periodo | $\cos(2\pi\omega)$ | $\cos(4\pi\omega)$ | $D(\omega)$ | $f(\omega) = 1/D(\omega)$ |
+|---|---|---|---|---|---|
+| 0 | ∞ | 1 | 1 | 0.2704 | 3.70 |
+| 0.08 | 12.5 | 0.8763 | 0.5358 | 0.1126 | 8.88 |
+| 0.1228 | 8.14 | 0.7167 | 0.0272 | 0.0392 | 25.51 |
+| 0.125 | 8 | 0.7071 | 0 | 0.0395 | 25.34 |
+| 0.25 | 4 | 0 | −1 | 1.5184 | 0.659 |
+| 0.5 | 2 | −1 | 1 | 8.5264 | 0.117 |
+---
+= 1 + \phi_1^2 + \phi_2^2 = 2.9584, \qquad 2\phi_1(1 - \phi_2) = 2(1.2)(1.72) = 4.128, \qquad -2\phi_2 = 1.44
+> Las tres constantes del denominador de [[demo-pico-ar2]], con $\sigma^2 = 1$: $D(\omega) = 2.9584 - 4.128\cos(2\pi\omega) + 1.44\cos(4\pi\omega)$.
+= \cos(2\pi\omega^*) = \frac{\phi_1(\phi_2 - 1)}{4\phi_2} = \frac{1.2(-1.72)}{4(-0.72)} = 0.7167 \;\Rightarrow\; \omega^* = 0.1228,\ \Per = 8.14
+> La frecuencia del pico. Está entre −1 y 1, así que hay un pico interior.
+@ usa c3[3]; da c1[3] c2[3]
+= D(\omega^*) = 2.9584 - 4.128(0.7167) + 1.44(0.0272) = 0.0392 \;\Rightarrow\; f(\omega^*) = 25.5
+> En el pico, el denominador casi se anula.
+@ usa c3[3] c4[3]; da c5[3] c6[3]
+= \Per = 8:\quad D = 2.9584 - 4.128(0.7071) + 1.44(0) = 0.0395 \;\Rightarrow\; f = 25.3
+> En el pseudo-periodo de las raíces (8) el espectro vale casi lo mismo que en el pico (8.14): con $r = 0.85$ las dos medidas del ciclo casi coinciden.
+@ usa c3[4] c4[4]; da c5[4] c6[4]
+= f(0) = 1/0.2704 = 3.70, \qquad f(1/2) = 1/8.5264 = 0.117
+> El pico es 7 veces más alto que la frecuencia cero y más de 200 veces más alto que la de Nyquist: casi toda la varianza vive cerca del ciclo de 8 periodos.
+@ usa c3[1] c4[1] c3[6] c4[6]; da c5[1] c6[1] c5[6] c6[6]
+= \phi = (1,\ -0.5):\ \frac{f(\omega^*)}{f(0)} = \frac{8}{4} = 2 \qquad\text{contra}\qquad \phi = (1.2,\ -0.72):\ \frac{25.5}{3.70} = 6.9
+> Comparado con el ejemplo anterior ($r = 0.71$), el pico de este AR(2) ($r = 0.85$) es mucho más alto y angosto: cuanto más cerca de 1 está el módulo de la raíz, más regular es el ciclo.
+@ usa c6[1] c6[3]
 :::
 
 ### ARMA: un cociente de polinomios {#espectro-arma}
@@ -236,10 +278,22 @@ for nombre, (ar, ma) in casos.items():
     print(f"{nombre:22s} f(0) = {f[0]:6.3f}  f(1/2) = {f[-1]:6.3f}  pico en ω = {w[f.argmax()]:.4f}  área = {area:.4f}  γ(0) = {var:.4f}")
 ```
 
+La relación funciona en los dos sentidos. Con la transformada inversa, $\gamma(k) = \int_{-1/2}^{1/2}\cos(2\pi\omega k)\,f(\omega)\,d\omega$ (la parte imaginaria se cancela porque $f$ es par), se recuperan las autocovarianzas a partir del espectro:
+
+```python
+w_c = np.linspace(-0.5, 0.5, 200001)
+f_ar1 = 1 / np.abs(1 - 0.6 * np.exp(-2j * np.pi * w_c)) ** 2        # AR(1) con φ = 0.6 y σ² = 1
+for k in [0, 1, 2, 5]:
+    g_k = np.trapezoid(np.cos(2 * np.pi * w_c * k) * f_ar1, w_c)
+    print(f"k = {k}:  ∫cos(2πωk) f(ω) dω = {g_k:.4f}   fórmula del AR(1), φ^k/(1 − φ²) = {0.6 ** k / (1 - 0.36):.4f}")
+```
+
+Del espectro a la ACF y de la ACF al espectro: es la misma información en dos idiomas, como se anunció en [[misma-memoria]].
+
 :::cuidado La misma densidad, tres escalas
 - **Shumway–Stoffer** (esta guía): $f$ definida en $[-1/2, 1/2]$ y simétrica; el área total es la varianza. El ruido blanco tiene $f = \sigma^2$.
 - **`scipy.signal`** (periodogram, welch): devuelve la densidad **unilateral**, solo en $[0, 1/2]$ y **multiplicada por 2** para que su área en ese intervalo sea la varianza. El ruido blanco da $2\sigma^2$.
-- **Brockwell–Davis y Hamilton**: frecuencia en radianes, $\lambda \in [-\pi, \pi]$, con $f_\lambda = f/(2\pi)$. El ruido blanco da $\sigma^2/2\pi$.
+- **Brockwell–Davis y Hamilton**: frecuencia en radianes, $\tip{lambda-ang}{\lambda} \in [-\pi, \pi]$, con $f_{\tip{lambda-ang}{\lambda}} = f/(2\pi)$. El ruido blanco da $\sigma^2/2\pi$.
 
 `statsmodels` tiene `arma_periodogram`, pero usa todavía otra normalización; para no confundirte, evalúa la fórmula directamente como arriba. Y antes de comparar números de dos libros o librerías, revisa la convención.
 :::

@@ -29,6 +29,10 @@ $$\rho^2_{yx}(\omega) = \frac{\lvert f_{yx}(\omega)\rvert^2}{f_x(\omega)\,f_y(\o
 Valores altos sugieren una relación fuerte en esa banda.
 :::
 
+:::intuicion Dos músicos que tocan la misma pieza
+Imagina a dos músicos que tocan juntos. La **coherencia** en una nota dice qué tan parecido suena esa nota en los dos (1: idéntica; 0: no tienen nada que ver). La **fase** dice si uno toca esa nota un poco después que el otro. Si uno va siempre medio segundo atrás, el desfase en radianes es mayor en las notas agudas (más rápidas) que en las graves, porque medio segundo es una fracción mayor de su ciclo: por eso un retardo constante produce una fase que crece en línea recta con la frecuencia.
+:::
+
 :::demo Un retardo se ve como una fase que crece en línea recta {#demo-retardo}
 :::pasos
 = y_t = \beta\,x_{t-D} + v_t, \qquad v_t \text{ independiente de } x
@@ -54,6 +58,19 @@ Valores altos sugieren una relación fuerte en esa banda.
 > El espectro del error: lo que el filtro no explica.
 = \rho^2_{yx}(\omega) = 1 - \frac{f_e(\omega)}{f_y(\omega)}
 > La coherencia es la **fracción de la varianza de $y$ en la frecuencia $\omega$ que se explica linealmente con $x$**: un $R^2$ para cada frecuencia.
+:::
+:::
+
+:::demo Filtrar cada serie no cambia la coherencia {#demo-coh-invariante}
+:::pasos
+= \tilde x_t = \sum_j a_j x_{t-j}, \qquad \tilde y_t = \sum_j b_j y_{t-j}
+> Aplicamos un filtro distinto a cada serie (por ejemplo, diferenciamos una y suavizamos la otra).
+= f_{\tilde x} = \lvert A\rvert^2 f_x, \qquad f_{\tilde y} = \lvert B\rvert^2 f_y, \qquad f_{\tilde y\tilde x} = B\,\overline{A}\,f_{yx}
+> El teorema del filtro [[filtro-espectro]] y su versión cruzada, que se demuestra igual con dos filtros.
+= \rho^2_{\tilde y\tilde x} = \frac{\lvert B\rvert^2\lvert A\rvert^2\lvert f_{yx}\rvert^2}{\lvert A\rvert^2 f_x\,\lvert B\rvert^2 f_y} = \rho^2_{yx}
+> Las ganancias se cancelan en toda frecuencia donde no valen cero. La **fase** sí cambia: se le suma $\arg B - \arg A$.
+= \text{la correlación cruzada, en cambio, sí cambia}
+> En el dominio del tiempo, filtrar (por ejemplo, preblanquear) cambia por completo la correlación cruzada. La coherencia compara las dos series frecuencia por frecuencia, así que no le importa cómo se repartió la potencia dentro de cada una.
 :::
 :::
 
@@ -87,6 +104,33 @@ Valores altos sugieren una relación fuerte en esa banda.
 = A = \frac{f_{yx}}{f_x} = 0.6 - 0.8i, \qquad \lvert A\rvert = 1
 > La ganancia del filtro que lleva de $x$ a $y$: en esta frecuencia, $y$ copia la amplitud de $x$ completa.
 @ usa c2[1] c2[3] c2[4]
+:::
+
+Una sola frecuencia no basta para afirmar que hay un retardo: hay que ver que la fase sea una **recta** en varias frecuencias, con la misma pendiente. Y hay una trampa: `atan2` devuelve ángulos entre $-\pi$ y $\pi$, así que una fase verdadera de $-3.8$ aparece como $+2.5$.
+
+:::guiado El retardo leído en cuatro frecuencias {#guia-fase-varias}
+| $\omega$ | $\hat c_{yx}$ | $\hat q_{yx}$ | $\hat\varphi = \operatorname{atan2}(-\hat q, \hat c)$ | $D = -\hat\varphi/(2\pi\omega)$ | Fase desenvuelta | $D$ corregido |
+|---|---|---|---|---|---|---|
+| 0.05 | 4.0 | 3.0 | −0.644 | 2.05 | −0.644 | 2.05 |
+| 0.10 | 1.2 | 3.8 | −1.265 | 2.01 | −1.265 | 2.01 |
+| 0.20 | −1.6 | 1.2 | −2.498 | 1.99 | −2.498 | 1.99 |
+| 0.30 | −0.8 | −0.6 | 2.498 | −1.33 | −3.785 | 2.01 |
+---
+= \omega = 0.05:\ \hat\varphi = \operatorname{atan2}(-3,\ 4) = -0.644 \;\Rightarrow\; D = \frac{0.644}{2\pi(0.05)} = 2.05
+> El coespectro y el de cuadratura estimados (ya suavizados) dan la fase, y la fase el retardo.
+@ usa c2[1] c3[1]; da c4[1] c5[1]
+= \omega = 0.10 \text{ y } 0.20:\quad D = 2.01 \text{ y } 1.99
+> La misma cuenta: el retardo implícito casi no cambia con la frecuencia.
+@ usa c2[2-3] c3[2-3]; da c4[2-3] c5[2-3]
+= \omega = 0.30:\ \hat\varphi = \operatorname{atan2}(0.6,\ -0.8) = 2.498 \;\Rightarrow\; D = -1.33 \;\text{(¿negativo?)}
+> ¡Un retardo negativo, cuando las otras tres frecuencias dicen 2! La fase verdadera es $-2\pi(0.3)(2) = -3.77$, que está fuera de $[-\pi, \pi]$: `atan2` la «envolvió» sumándole $2\pi$.
+@ usa c2[4] c3[4]; da c4[4] c5[4]
+= \hat\varphi - 2\pi = 2.498 - 6.283 = -3.785 \;\Rightarrow\; D = \frac{3.785}{2\pi(0.3)} = 2.01
+> **Desenvolver la fase**: restar (o sumar) $2\pi$ hasta que la curva no tenga saltos. En Python, `np.unwrap`.
+@ usa c4[4]; da c6[4] c7[4]
+= \text{pendiente} = \frac{\sum\omega\hat\varphi}{\sum\omega^2} = -12.59 \;\Rightarrow\; D = \frac{12.59}{2\pi} = 2.00
+> La recta por el origen ajustada a las cuatro fases desenvueltas. Conclusión: $y$ va atrasada 2 periodos respecto a $x$ en todas estas frecuencias, la huella de un retardo puro [[demo-retardo]].
+@ usa c1[1-4] c6[1-4]
 :::
 
 ### Hay que suavizar: la coherencia cruda siempre vale 1 {#coherencia-cruda}
@@ -133,6 +177,25 @@ $y_t$ es una copia de $x_t$ con retardo $D$, multiplicada por $\beta$, más ruid
 - **Abajo, derecha**: la fase estimada y la recta teórica $-2\pi\omega D$ (envuelta entre $-\pi$ y $\pi$). La pendiente revela el retardo. Donde la coherencia es baja, la fase es puro ruido.
 - **Vista extra**: la correlación cruzada en el dominio del tiempo, con su pico en el rezago $D$: la misma información en el otro idioma.
 :::
+
+El mismo experimento en Python, con la receta completa: estimar la coherencia, quedarse con las frecuencias donde es alta, desenvolver la fase y ajustar una recta.
+
+```python
+rng = np.random.default_rng(11)
+n_s = 2000
+x_s = signal.lfilter([1], [1, -0.7], rng.normal(size=n_s + 50))[50:]      # AR(1) con φ = 0.7
+y_s = np.r_[np.zeros(3), 0.8 * x_s[:-3]] + rng.normal(0, 1, n_s)          # y copia a x con 3 periodos de retardo
+f_s, coh_s = signal.coherence(x_s, y_s, nperseg=128)
+_, pxy_s = signal.csd(x_s, y_s, nperseg=128)
+fase_s = np.unwrap(np.angle(pxy_s))                                         # fase desenvuelta
+usar = (coh_s > 0.5) & (f_s > 0)
+pendiente = np.polyfit(f_s[usar], fase_s[usar], 1)[0]
+print(f"frecuencias con coherencia > 0.5: {usar.sum()} de {len(f_s)} (hasta ω = {f_s[usar].max():.3f})")
+print(f"pendiente de la fase = {pendiente:.2f}  →  retardo estimado D = {-pendiente / (2 * np.pi):.2f} periodos")
+print(f"coherencia en ω ≈ 0.05: {coh_s[np.argmin(abs(f_s - 0.05))]:.2f}   en ω ≈ 0.4: {coh_s[np.argmin(abs(f_s - 0.4))]:.2f}")
+```
+
+El retardo sale cerca de 3, el verdadero. La coherencia teórica es $\beta^2 f_x/(\beta^2 f_x + 1)$: 0.80 en $\omega = 0.05$ y solo 0.20 en $\omega = 0.4$, porque el AR(1) casi no tiene potencia en frecuencias altas y ahí domina el ruido de $y$. Por eso la recta se ajusta solo con las frecuencias bajas: donde la coherencia es baja, la fase no dice nada.
 
 ### Un caso real: el ciclo económico de EE. UU. {#cruzado-macro}
 

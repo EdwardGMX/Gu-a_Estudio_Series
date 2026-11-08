@@ -82,6 +82,51 @@ Un patrón que se repite exactamente cada 12 meses pero **no** tiene forma de co
 > El máximo del primer armónico cae entre julio y agosto: justo la temporada alta de vacaciones.
 :::
 
+El mismo proceso con el **segundo** armónico ($k = 2$, periodo de 6 meses) explica de dónde sale el 20%:
+
+:::guiado El segundo armónico: dos máximos por año {#guia-armonico2}
+| Mes | $t$ | $s_t$ | $\cos(2\pi\cdot 2t/12)$ | $\sin(2\pi\cdot 2t/12)$ | $s_t\cos$ | $s_t\sin$ |
+|---|---|---|---|---|---|---|
+| ene | 1 | −0.0858 | 0.5 | 0.866 | −0.0429 | −0.0743 |
+| feb | 2 | −0.1144 | −0.5 | 0.866 | 0.0572 | −0.0991 |
+| mar | 3 | 0.0181 | −1 | 0 | −0.0181 | 0 |
+| abr | 4 | −0.0130 | −0.5 | −0.866 | 0.0065 | 0.0113 |
+| may | 5 | −0.0090 | 0.5 | −0.866 | −0.0045 | 0.0078 |
+| jun | 6 | 0.1154 | 1 | 0 | 0.1154 | 0 |
+| jul | 7 | 0.2108 | 0.5 | 0.866 | 0.1054 | 0.1826 |
+| ago | 8 | 0.2045 | −0.5 | 0.866 | −0.1023 | 0.1771 |
+| sep | 9 | 0.0648 | −1 | 0 | −0.0648 | 0 |
+| oct | 10 | −0.0753 | −0.5 | −0.866 | 0.0377 | 0.0652 |
+| nov | 11 | −0.2158 | 0.5 | −0.866 | −0.1079 | 0.1869 |
+| dic | 12 | −0.1003 | 1 | 0 | −0.1003 | 0 |
+| suma | | 0 | | | −0.1186 | 0.4574 |
+---
+= \omega = 2/12 = 1/6: \quad \cos(2\pi\cdot 2t/12) = \cos(\pi t/3)
+> Una oscilación que da dos vueltas por año: sus valores se repiten cada 6 meses (compara enero con julio).
+@ usa c4[1-12] c5[1-12]
+= \sum s_t\cos(\pi t/3) = -0.1186, \qquad \sum s_t\sin(\pi t/3) = 0.4574
+> Los mismos doce valores del patrón, ahora contra el coseno y el seno de periodo 6.
+@ usa c3[1-12] c4[1-12] c5[1-12]; da c6[1-13] c7[1-13]
+= \beta_1 = \tfrac{2}{12}(-0.1186) = -0.0198, \qquad \beta_2 = \tfrac{2}{12}(0.4574) = 0.0762
+> Los coeficientes del segundo armónico.
+@ usa c6[13] c7[13]
+= A_2 = \sqrt{0.0198^2 + 0.0762^2} = 0.0788, \qquad \frac{A_2^2}{2} = 0.00310 = 19.9\%\ \text{de } 0.01559
+> Un armónico de ±8%. Con el primero (72%) ya suman el 92% de la varianza del patrón.
+@ usa c6[13] c7[13]
+= \varphi_2 = \operatorname{atan2}(-0.0762,\ -0.0198) = -1.824 \;\Rightarrow\; t_{\max} = \frac{12}{4\pi}\,(1.824 + 2\pi m) = 1.7 \text{ y } 7.7
+> Dos máximos al año, a finales de febrero y de julio. Sumado al primer armónico (máximo en 6.7), el pico de verano se vuelve más agudo y aparece la pequeña subida de marzo: la forma que un solo coseno no puede dar.
+= \text{armónicos 3 a 6}: 2.6\% + 3.9\% + 1.6\% + 0.1\% = 8.1\%
+> Los detalles finos. El de periodo 2 casi no aporta: el patrón no alterna mes a mes.
+:::
+
+:::ejemplo ¿Cuántos armónicos tiene cada estacionalidad?
+Un patrón de periodo $s$ tiene $s - 1$ valores libres (suman cero), y cada armónico aporta dos coeficientes, salvo el de Nyquist, que solo tiene coseno:
+- **Trimestral** ($s = 4$): armónicos en $1/4$ (periodo 4) y $2/4 = 1/2$ (periodo 2). Dos coeficientes más uno: tres valores libres.
+- **Semanal en datos diarios** ($s = 7$): $1/7$, $2/7$ y $3/7$, con periodos de 7, 3.5 y 2.33 días. Como 7 es impar, no hay armónico de Nyquist: $3 \times 2 = 6$ valores libres.
+- **Diario en datos horarios** ($s = 24$): doce armónicos, de 24 horas hasta 2 horas.
+- **Anual en datos semanales** ($s = 52$): 26 armónicos. Aquí se nota la ventaja de Fourier: con $K = 3$ armónicos (6 coeficientes) se describe casi cualquier patrón anual suave, en lugar de 51 variables indicadoras.
+:::
+
 :::interactivo w3-armonicos | Reconstruye el patrón estacional con armónicos {#w-armonicos}
 Suma los armónicos uno por uno y mira cuánto del patrón de AirPassengers reproducen.
 @@@
@@ -110,6 +155,10 @@ for wi, fi in zip(w, f_aerolinea):
 
 :::duda Si la diferencia estacional borra los picos, ¿ya no hay estacionalidad?
 En $\Delta\Delta_{12}\ln y_t$ no queda estacionalidad **determinística** (el patrón fijo se eliminó); lo que modela el término $\Theta$ es la forma en que el patrón **cambia** de un año a otro. Por eso el pronóstico del SARIMA sí tiene estacionalidad: al deshacer la diferencia estacional, el patrón del último año se vuelve a sumar [[u2:arima-pronostico]].
+:::
+
+:::duda Si uso términos de Fourier en un modelo, ¿cuántos armónicos $K$ pongo?
+Los que pida el patrón, no todos. El espectro y la tabla de Parseval del patrón dan una primera respuesta (en AirPassengers, $K = 2$ explica el 92%); después se comparan modelos con $K = 1, 2, 3, \dots$ con el AIC [[u2:aic-def]], porque cada armónico agrega dos parámetros. Con estacionalidades largas (semanal en datos diarios, anual en datos semanales) suele bastar con $K$ entre 2 y 5.
 :::
 
 :::resumen Lo que debes llevarte de AirPassengers en frecuencia

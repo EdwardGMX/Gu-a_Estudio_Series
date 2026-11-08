@@ -71,6 +71,66 @@ for k in [1, 2, 3]:
 
 Las dos tendencias difieren menos de 0.4 ppm: con un buen diseño, el resultado no depende mucho del filtro. Los **filtros de muesca** quitan solo una banda angosta alrededor de cada frecuencia: después de aplicarlos en $1/12$ y $1/6$, el periodograma ya no tiene picos ahí, pero conserva el de $3/12$ (que no tocamos) y toda la tendencia.
 
+### Del requisito al orden {#orden-requisito}
+
+En el paso 4 de la receta el orden se puede **calcular**. Supón que el requisito es: en datos mensuales, conservar al menos el 90% de la amplitud de los movimientos de 24 meses o más, y dejar como máximo el 10% de los de 12 meses o menos.
+
+:::guiado El orden y el corte de un Butterworth a partir de dos requisitos {#guia-orden-butter}
+| Cantidad | Valor |
+|---|---|
+| Frecuencia de paso $\omega_p$ (periodo 24) | 0.04167 |
+| Frecuencia de rechazo $\omega_s$ (periodo 12) | 0.08333 |
+| $r = \tan(\pi\omega_s)/\tan(\pi\omega_p)$ | 2.0353 |
+| Condición de paso: $1/0.9^2 - 1$ | 0.2346 |
+| Condición de rechazo: $1/0.1^2 - 1$ | 99 |
+| Orden mínimo | 4.25 → $N = 5$ |
+| Corte $\omega_c$ | 0.0481 (periodo 20.8) |
+| Ganancia en $\omega_p$ y en $\omega_s$ | 0.900 y 0.059 |
+---
+= \lvert A(\omega)\rvert \ge 0.9 \iff \Big(\frac{\tan\pi\omega_p}{\tan\pi\omega_c}\Big)^{2N} \le \frac{1}{0.81} - 1 = 0.2346
+> El requisito de la banda de paso, despejado de la fórmula de la ganancia del Butterworth [[corte-orden]].
+@ usa c2[1]; da c2[4]
+= \lvert A(\omega)\rvert \le 0.1 \iff \Big(\frac{\tan\pi\omega_s}{\tan\pi\omega_c}\Big)^{2N} \ge \frac{1}{0.01} - 1 = 99
+> El requisito de la banda de rechazo.
+@ usa c2[2]; da c2[5]
+= \Big(\frac{\tan\pi\omega_s}{\tan\pi\omega_p}\Big)^{2N} \ge \frac{99}{0.2346} = 422, \qquad \frac{\tan(\pi/12)}{\tan(\pi/24)} = \frac{0.26795}{0.13165} = 2.0353
+> Dividimos las dos condiciones: el corte se cancela y queda una condición solo sobre $N$.
+@ usa c2[1-2] c2[4-5]; da c2[3]
+= N \ge \frac{\ln 422}{2\ln 2.0353} = \frac{6.045}{1.421} = 4.25 \;\Rightarrow\; N = 5
+> El orden es entero: redondeamos hacia arriba. Con $N = 4$ no hay ningún corte que cumpla los dos requisitos a la vez.
+@ usa c2[3-5]; da c2[6]
+= \tan(\pi\omega_c) = \frac{\tan(\pi/24)}{0.2346^{1/10}} \;\Rightarrow\; \omega_c = 0.0481 \quad (\text{periodo } 20.8)
+> El corte que cumple **justo** la banda de paso. Cualquier $\omega_c$ entre 0.0481 y 0.0534 sirve; `scipy` elige este extremo.
+@ usa c2[1] c2[4] c2[6]; da c2[7]
+= \lvert A(1/24)\rvert = 0.900, \qquad \lvert A(1/12)\rvert = 0.059
+> Verificación: se cumple el 90% en la banda de paso y sobra margen en la de rechazo. Si lo vas a aplicar con `filtfilt`, la ganancia se eleva al cuadrado: pide 0.949 y 0.316 por pasada.
+@ usa c2[7]; da c2[8]
+:::
+
+`scipy` hace la misma cuenta con `buttord`, que recibe los requisitos en decibeles: $-20\log_{10}(0.9) = 0.915$ dB de pérdida máxima en la banda de paso y $-20\log_{10}(0.1) = 20$ dB de atenuación mínima en la de rechazo.
+
+```python
+from scipy.signal import buttord, freqz
+
+gpass = -20 * np.log10(0.9)                 # pérdida máxima permitida en la banda de paso (dB)
+gstop = -20 * np.log10(0.1)                 # atenuación mínima en la banda de rechazo (dB)
+N, wc = buttord(1 / 24, 1 / 12, gpass, gstop, fs=1)
+b, a = butter(N, wc, fs=1)
+_, h = freqz(b, a, worN=[1 / 48, 1 / 24, 1 / 18, 1 / 12, 1 / 6], fs=1)
+print(f"orden N = {N}, corte ω_c = {wc:.4f} (periodo {1 / wc:.1f} meses)")
+print("ganancia en periodos de 48, 24, 18, 12 y 6 meses:", np.round(np.abs(h), 3))
+```
+
+:::interactivo w3-orden-butter | Del requisito al orden: diseña el Butterworth {#w-orden-butter}
+Escribe tus requisitos (qué periodos conservar y cuáles quitar, y con qué ganancias) y mira el orden mínimo y el corte que los cumplen, igual que `buttord`.
+@@@
+- **La gráfica**: las zonas verdes son las permitidas y las rosas, las prohibidas. La curva rosa (orden $N$) pasa por arriba del rombo de la banda de paso y por debajo del de la banda de rechazo; la gris punteada (orden $N - 1$, con el corte ajustado a la banda de paso) se mete en la zona prohibida de rechazo.
+- Acerca los dos periodos (por ejemplo, conservar 24 y quitar 18): la bajada tiene que ser más empinada y el orden sube rápido. Relaja las ganancias y baja.
+- Con la casilla de `filtfilt`, la curva es la ganancia total (al cuadrado) y cada pasada necesita menos orden.
+- **Lectura**: la cuenta del orden con logaritmos, el corte y las ganancias que se obtienen.
+- **Vista extra**: el orden necesario para otros periodos de rechazo, con el mismo periodo de paso.
+:::
+
 ### Filtros de muesca {#notch}
 
 :::definicion Filtro de muesca (notch)
@@ -86,6 +146,10 @@ Cada escenario tiene una serie simulada con componentes conocidos y un objetivo.
 - **Abajo**: el periodograma de la serie con la ganancia de tu filtro encima. Un buen filtro tiene ganancia cerca de 1 donde está el objetivo y cerca de 0 donde está lo que estorba.
 - El botón **Ver propuesta** muestra un diseño razonable y por qué.
 - **Vista extra**: la tabla con la ganancia de tu filtro en las frecuencias de cada componente.
+:::
+
+:::duda ¿Qué hago con los valores filtrados de los extremos?
+Desconfiar de ellos. Cerca de los bordes el filtro necesita datos que no existen: una media móvil centrada simplemente no se calcula ahí, Baxter–King los descarta, y `filtfilt` **inventa** datos reflejando la serie (`padtype="odd"`), así que los primeros y últimos valores dependen de ese relleno. Una regla práctica es no interpretar el primer ni el último periodo largo de lo que estás extrayendo (por ejemplo, un año en una tendencia mensual), y comparar el resultado con otro filtro: si dos diseños razonables coinciden en el centro y discrepan en las puntas, las puntas son poco confiables.
 :::
 
 :::examen Así te lo pueden preguntar: «Proponga un filtro para remover tendencia, ruido de alta frecuencia o una banda no deseada»

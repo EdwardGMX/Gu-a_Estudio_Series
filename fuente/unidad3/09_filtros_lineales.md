@@ -60,6 +60,10 @@ Es la transformada de Fourier de la respuesta al impulso (guía oficial: *muestr
 - su argumento es el **desplazamiento de fase**: cuánto se corre esa oscilación en el tiempo.
 :::
 
+:::intuicion El ecualizador
+Un ecualizador de música tiene una perilla por cada banda de frecuencias: bajos, medios, agudos. La ganancia $\lvert A(\omega)\rvert$ es la posición de esas perillas para **todas** las frecuencias a la vez: 1 deja la banda como está, 0 la silencia y 2 la duplica. Diseñar un filtro es decidir cómo quieres esas perillas; la respuesta al impulso es la receta, en el tiempo, que produce ese ajuste.
+:::
+
 :::demo Una oscilación entra y sale con la misma frecuencia {#demo-oscilacion-filtro}
 :::pasos
 = x_t = e^{2\pi i\omega t}
@@ -72,6 +76,14 @@ Es la transformada de Fourier de la respuesta al impulso (guía oficial: *muestr
 :::
 
 En el filtro del ejemplo anterior: $A(0) = 1$; en $\omega = 1/4$, $A = 0.5 + 0.3e^{-i\pi/2} + 0.2e^{-i\pi} = 0.3 - 0.3i$, ganancia $0.42$ y fase $-\pi/4$ (la oscilación de periodo 4 sale a menos de la mitad y retrasada medio periodo); en $\omega = 1/2$, $A = 0.4$. Es un **pasa bajos** suave.
+
+:::ejemplo El ciclo anual a través de tres filtros
+Entra $x_t = 10\cos(2\pi t/12)$, un ciclo anual de amplitud 10 en datos mensuales ($\omega = 1/12$):
+- **Media móvil causal de 3**, $y_t = \frac13(x_t + x_{t-1} + x_{t-2})$: $A(1/12) = e^{-i\pi/6}\,\frac{1 + 2\cos(\pi/6)}{3} = 0.911\,e^{-i\pi/6}$. Sale $y_t = 9.11\cos\big(2\pi t/12 - \pi/6\big)$: casi la misma amplitud y **un mes de retraso** ($\pi/6$ es la doceava parte de una vuelta).
+- **Media móvil centrada de 3**: la misma ganancia, 0.911, pero $A$ es real: **sin retraso**.
+- **Diferencia** $y_t = x_t - x_{t-1}$: $A(1/12) = 1 - e^{-i\pi/6} = 2\sin(\pi/12)\,e^{i(\pi/2 - \pi/12)} = 0.518\,e^{1.309i}$. Sale $y_t = 5.18\cos(2\pi t/12 + 1.309)$: la mitad de la amplitud y **adelantada 2.5 meses** ($1.309/(2\pi/12) = 2.5$). La razón: la diferencia es grande donde $x$ sube más rápido, un cuarto de ciclo (3 meses) antes de su máximo; como compara con el mes anterior, queda medio mes más atrás.
+- En los tres casos sale una oscilación de periodo 12: un filtro lineal cambia la amplitud y la fase, nunca la frecuencia.
+:::
 
 ### El teorema clave: $f_y = \lvert A\rvert^2 f_x$ {#filtro-espectro}
 
@@ -87,6 +99,34 @@ En el filtro del ejemplo anterior: $A(0) = 1$; en $\omega = 1/4$, $A = 0.5 + 0.3
 > La triple suma se factoriza: el segundo paréntesis es el conjugado de $A(\omega)$.
 = f_y(\omega) = \lvert A(\omega)\rvert^2 f_x(\omega)
 > La **función de transferencia de potencia** $\lvert A(\omega)\rvert^2$ multiplica el espectro frecuencia por frecuencia. Con $x = \varepsilon$ (ruido blanco, $f_x = \sigma^2$) y $A = \theta(e^{-2\pi i\omega})/\phi(e^{-2\pi i\omega})$ sale la fórmula del ARMA [[espectro-arma]].
+:::
+:::
+
+El teorema da un segundo camino, mucho más corto, hacia los espectros de la sección de densidad espectral:
+
+:::demo El espectro del AR(1), otra vez, con el teorema del filtro {#demo-ar1-filtro}
+:::pasos
+= (1 - \phi L)\,y_t = \varepsilon_t \;\Rightarrow\; y_t = \sum_{j=0}^{\infty}\phi^j\varepsilon_{t-j}
+> El AR(1) estacionario es un filtro lineal del ruido blanco con pesos $a_j = \phi^j$: su forma MA(∞) [[u2:demo-invertir]].
+= A(\omega) = \sum_{j=0}^{\infty}\phi^j e^{-2\pi i\omega j} = \frac{1}{1 - \phi\,e^{-2\pi i\omega}}
+> Serie geométrica de razón $\phi e^{-2\pi i\omega}$, cuyo módulo es $\lvert\phi\rvert < 1$.
+= f_y(\omega) = \lvert A(\omega)\rvert^2\sigma^2 = \frac{\sigma^2}{\lvert 1 - \phi e^{-2\pi i\omega}\rvert^2} = \frac{\sigma^2}{1 + \phi^2 - 2\phi\cos(2\pi\omega)}
+> El teorema con $f_\varepsilon = \sigma^2$. Es el resultado de [[demo-espectro-ar1]], pero sin sumar ninguna autocovarianza.
+= \phi(L)\,y_t = \theta(L)\,\varepsilon_t \;\Rightarrow\; A(\omega) = \frac{\theta(e^{-2\pi i\omega})}{\phi(e^{-2\pi i\omega})}, \qquad f_y = \sigma^2\lvert A(\omega)\rvert^2
+> En general, un ARMA es el filtro $\theta(L)/\phi(L)$ aplicado a un ruido blanco: de ahí sale de un solo golpe la fórmula de [[espectro-arma]].
+:::
+:::
+
+:::demo Cuánta varianza deja pasar un filtro aplicado a ruido blanco {#demo-varianza-filtro}
+:::pasos
+= y_t = \sum_j a_j\varepsilon_{t-j} \;\Rightarrow\; \Var(y_t) = \sigma^2\sum_j a_j^2
+> En el tiempo: los choques son independientes, así que sus varianzas se suman con los pesos al cuadrado.
+= \Var(y_t) = \int_{-1/2}^{1/2}f_y(\omega)\,d\omega = \sigma^2\int_{-1/2}^{1/2}\lvert A(\omega)\rvert^2\,d\omega
+> En frecuencia: el área bajo $f_y = \lvert A\rvert^2\sigma^2$.
+= \int_{-1/2}^{1/2}\lvert A(\omega)\rvert^2\,d\omega = \sum_j\sum_l a_j a_l\int_{-1/2}^{1/2}e^{-2\pi i\omega(j - l)}\,d\omega = \sum_j a_j^2
+> La integral vale 1 si $j = l$ y 0 si $j \ne l$: la ortogonalidad, ahora en el continuo. Es la identidad de Parseval para los pesos de un filtro.
+= \text{media de 3}: \tfrac{3}{9} = \tfrac13, \qquad 1 - L: 1^2 + 1^2 = 2, \qquad \text{SES}: \sum_{j\ge0}\alpha^2(1 - \alpha)^{2j} = \frac{\alpha}{2 - \alpha}
+> Tres aplicaciones. Con $\alpha = 0.3$, el suavizamiento exponencial deja pasar el 18% de la varianza de un ruido blanco; la diferencia la duplica.
 :::
 :::
 
@@ -122,6 +162,37 @@ Elige el espectro de entrada y un filtro. La salida es el producto frecuencia po
 = \omega = 1/2:\; A = \tfrac13(1 - 2) = -\tfrac13
 > La oscilación más rápida no se elimina: sale con un tercio de su amplitud y **con el signo invertido** (ganancia negativa = desfase de $\pi$). Un pasa bajos imperfecto.
 @ usa c3[6]; da c4[6] c5[6]
+:::
+
+Con esa ganancia y el teorema $f_y = \lvert A\rvert^2 f_x$ se calcula qué le hace la media móvil a una serie concreta. Usemos el AR(1) con $\phi = 0.6$ de [[guia-espectro-ar1]]:
+
+:::guiado Un AR(1) a través de la media móvil centrada de 3 {#guia-salida-filtro}
+| $\omega$ | $A(\omega)$ | $\lvert A(\omega)\rvert^2$ | $f_x(\omega)$ del AR(1) | $f_y = \lvert A\rvert^2 f_x$ |
+|---|---|---|---|---|
+| 0 | 1 | 1 | 6.25 | 6.25 |
+| 1/12 | 0.911 | 0.829 | 3.118 | 2.586 |
+| 1/6 | 0.667 | 0.444 | 1.316 | 0.585 |
+| 1/4 | 0.333 | 0.111 | 0.735 | 0.082 |
+| 1/3 | 0 | 0 | 0.510 | 0 |
+| 1/2 | −0.333 | 0.111 | 0.391 | 0.043 |
+---
+= f_x(\omega) = \frac{1}{1.36 - 1.2\cos(2\pi\omega)}, \qquad f_x(1/12) = \frac{1}{1.36 - 1.2(0.866)} = 3.118
+> El espectro de entrada: rojo, con casi toda la potencia en frecuencias bajas.
+@ usa c1[2]; da c4[2]
+= \lvert A(\omega)\rvert^2 = \Big(\frac{1 + 2\cos(2\pi\omega)}{3}\Big)^2:\quad 1,\ 0.829,\ 0.444,\ 0.111,\ 0,\ 0.111
+> La ganancia de la tabla anterior, al cuadrado: el filtro actúa sobre la **potencia**.
+@ usa c2[1-6]; da c3[1-6]
+= f_y(1/12) = 0.829 \times 3.118 = 2.586, \qquad f_y(1/4) = 0.111 \times 0.735 = 0.082
+> Frecuencia por frecuencia: lo lento casi no cambia; lo de periodo 4 se reduce a la novena parte.
+@ usa c3[2] c4[2] c3[4] c4[4]; da c5[2] c5[4]
+= f_y(1/3) = 0
+> La salida no tiene **ninguna** oscilación de periodo 3: el filtro las borró.
+@ usa c3[5] c4[5]; da c5[5]
+= \Var(y) = \frac{3\gamma_x(0) + 4\gamma_x(1) + 2\gamma_x(2)}{9} = \frac{3(1.5625) + 4(0.9375) + 2(0.5625)}{9} = 1.0625
+> La varianza de $y_t = \frac13(x_{t-1} + x_t + x_{t+1})$ en el dominio del tiempo, con $\gamma_x(k) = 0.6^k/0.64$. En frecuencia es el área bajo $f_y$, y da lo mismo: $2\int_0^{1/2}\lvert A\rvert^2 f_x\,d\omega = 1.0625$.
+= \frac{1.0625}{1.5625} = 68\%
+> El filtro conserva dos tercios de la varianza: casi toda la que estaba en frecuencias bajas, que es donde el AR(1) tenía su potencia. Si la entrada fuera ruido blanco, conservaría solo $\sum a_j^2 = 1/3$.
+@ usa c5[1-6]
 :::
 
 La media móvil $2\times 12$ de la descomposición clásica es mucho mejor para su tarea: su ganancia vale **0 exactamente en $1/12, 2/12, \dots, 6/12$**, así que elimina el patrón estacional completo y deja pasar las frecuencias muy bajas (0.90 en periodos de 4 años, 0.63 en periodos de 2 años). Por eso extrae la tendencia sin estacionalidad [[u1:mm-estacional]].
@@ -163,6 +234,35 @@ Elige un filtro clásico o escribe tus propios pesos. Mira su respuesta al impul
 - **Abajo**: una serie de prueba con tendencia, estacionalidad de 12 y ruido (o AirPassengers en logaritmos), y la salida del filtro.
 - La media $2\times 12$ quita la estacionalidad y deja la tendencia; $1 - L^{12}$ quita ambas; la media causal retrasa la tendencia.
 - **Vista extra**: la ganancia en las frecuencias clave y la suma de los pesos ($A(0)$).
+:::
+
+### Comprobarlo en Python {#filtros-lineales-python}
+
+`scipy.signal.freqz(b, a, worN, fs=1)` evalúa $A(\omega)$ para un filtro con pesos `b` (y parte recursiva `a`, que aquí es 1). Las ganancias salen idénticas a las de las tablas:
+
+```python
+pesos = {"media móvil de 3": np.ones(3) / 3,
+         "diferencia 1 − L": np.array([1.0, -1.0]),
+         "diferencia estacional 1 − L¹²": np.r_[1.0, np.zeros(11), -1.0],
+         "media móvil 2×12": np.r_[0.5, np.ones(11), 0.5] / 12}
+w_f = np.array([0, 1 / 24, 1 / 12, 1 / 6, 1 / 4, 1 / 3, 1 / 2])
+print("ω =", np.round(w_f, 4))
+for nombre, b in pesos.items():
+    _, h = signal.freqz(b, 1, worN=w_f, fs=1)                     # A(ω) en las frecuencias pedidas
+    print(f"{nombre:30s} |A(ω)| = {np.round(np.abs(h), 3)}")
+
+# La varianza de la salida con ruido blanco a la entrada: σ² Σ a_j²
+e = np.random.default_rng(3).normal(size=100_000)
+for nombre in ["media móvil de 3", "diferencia 1 − L"]:
+    b = pesos[nombre]
+    y = signal.lfilter(b, 1, e)
+    print(f"{nombre:30s} varianza de la salida = {y.var():.3f} | teórica σ²Σa² = {np.sum(b ** 2):.3f}")
+```
+
+`freqz` usa los pesos como si fueran causales ($j = 0, 1, 2$); para la media centrada eso solo cambia la fase, no la ganancia. La varianza de la salida confirma el teorema: la media de 3 deja un tercio de la varianza de un ruido blanco y la diferencia la duplica.
+
+:::duda ¿La ganancia puede ser mayor que 1?
+Sí. La diferencia tiene ganancia 2 en $\omega = 1/2$ y $\sqrt2$ en $\omega = 1/4$: esas oscilaciones salen **más grandes** que como entraron. Por eso diferenciar una serie que no lo necesita aumenta su varianza (sobrediferenciación). En un filtro de suavizamiento bien diseñado la ganancia no pasa de 1; cuando la ganancia es negativa, como en la media móvil simple, lo que cambia es el **signo** de la oscilación, no su tamaño.
 :::
 
 :::cuidado Ganancias negativas y efectos de borde

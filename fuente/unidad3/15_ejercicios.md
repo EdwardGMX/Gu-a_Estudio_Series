@@ -1,5 +1,5 @@
 ## 🧩 Ejercicios de la Unidad III {#ejercicios3}
-@mapa 63 ejercicios de opción múltiple y de cálculo paso a paso, cada uno con su respuesta explicada y un enlace al tema.
+@mapa 70 ejercicios de opción múltiple y de cálculo paso a paso, cada uno con su respuesta explicada y un enlace al tema.
 
 Elige una opción y presiona **Ver respuesta**: se marca la correcta, se explica por qué y hay un enlace a la sección donde se estudia. Los ejercicios de cálculo abierto tienen **Ver solución paso a paso**. Intenta resolverlos en papel antes de abrir la solución.
 
@@ -48,13 +48,13 @@ $\cos(2\pi\cdot 0.8\,t) = \cos(2\pi(1 - 0.2)t) = \cos(2\pi\cdot 0.2\,t)$ para $t
 :::
 
 :::ejercicio Intermedio | [[unidades-frecuencia]]
-Un libro reporta un pico en $\lambda = \pi/6$ radianes por observación. ¿Cuál es el periodo?
+Un libro reporta un pico en $\tip{lambda-ang}{\lambda} = \pi/6$ radianes por observación. ¿Cuál es el periodo?
 - [ ] 6
 - [ ] 3
 - [ ] $\pi/6$
 - [x] 12
 ---
-$\omega = \lambda/2\pi = 1/12$ ciclos por observación, así que $\Per = 12$ (el ciclo anual en datos mensuales).
+$\omega = \tip{lambda-ang}{\lambda}/2\pi = 1/12$ ciclos por observación, así que $\Per = 12$ (el ciclo anual en datos mensuales).
 :::
 
 :::ejercicio Intermedio | [[demo-fase-regresion]]
@@ -333,14 +333,24 @@ $P = \beta_1^2 + \beta_2^2 = 5 = \frac{4}{n}I$, así que $I = \frac{100}{4}(5) =
 La ventana evita el corte brusco en los extremos y baja la fuga lejana, a cambio de un pico un poco más ancho. Rellenar con ceros solo interpola.
 :::
 
+:::ejercicio Básico | [[guia-armonico2]]
+En el patrón estacional de AirPassengers, el primer armónico explica el 72% de su varianza y el segundo el 20%. ¿Cuánto explican, juntos, los armónicos 3 a 6?
+- [ ] 92%
+- [ ] 28%
+- [x] 8%
+- [ ] No se puede saber sin calcularlos
+---
+Por Parseval, las fracciones de todos los armónicos suman 100%: $100 - 72 - 20 = 8\%$.
+:::
+
 ### Bloque E · Estimación del espectro {#ej3-e}
 
 :::ejercicio Básico | [[idea-suavizar]]
 Un periodograma suavizado de Daniell con $L = 5$ tiene cuántos grados de libertad:
 - [ ] 5
 - [ ] 2
-- [x] 10
 - [ ] 4
+- [x] 10
 ---
 Es la suma de 5 ji-cuadradas de 2 grados de libertad: $2L = 10$.
 :::
@@ -348,9 +358,9 @@ Es la suma de 5 ji-cuadradas de 2 grados de libertad: $2L = 10$.
 :::ejercicio Básico | [[idea-suavizar]]
 Con $n = 240$ y $L = 9$, ¿cuál es el ancho de banda?
 - [ ] $\Bw = 26.7$
-- [ ] $\Bw = 9$
-- [ ] $\Bw = 0.0042$
 - [x] $\Bw = 0.0375$
+- [ ] $\Bw = 0.0042$
+- [ ] $\Bw = 9$
 ---
 $\Bw = L/n = 9/240 = 0.0375$ ciclos por observación: dos picos más cercanos que eso no se distinguen.
 :::
@@ -371,9 +381,9 @@ Tres ordenadas vecinas valen 12, 30 y 18. Calcula el suavizado de Daniell con $L
 :::ejercicio Intermedio | [[welch]]
 Welch con $n = 1000$, `nperseg=200` y `noverlap=100`. ¿Cuántos segmentos se promedian y cuál es la resolución?
 - [ ] 5 segmentos, resolución 1/1000
-- [x] 9 segmentos, resolución 1/200
-- [ ] 10 segmentos, resolución 1/100
 - [ ] 9 segmentos, resolución 1/100
+- [ ] 10 segmentos, resolución 1/100
+- [x] 9 segmentos, resolución 1/200
 ---
 Los segmentos empiezan cada 100 datos: $(1000 - 200)/100 + 1 = 9$. La resolución es $1/M = 1/200$.
 :::
@@ -400,22 +410,47 @@ $\hat f(0) = \hat\sigma^2/(1 - \hat\phi)^2 = 2/0.25 = 8$. En $\omega = 1/2$ vale
 
 :::ejercicio Básico | [[comparacion-espectral]]
 ¿Cuál de estos estimadores es **paramétrico**?
-- [ ] El periodograma suavizado de Daniell
+- [x] El espectro de un AR($p$) ajustado por Yule–Walker
 - [ ] El método de Welch
 - [ ] El periodograma con ventana de Hann
-- [x] El espectro de un AR($p$) ajustado por Yule–Walker
+- [ ] El periodograma suavizado de Daniell
 ---
 Supone un modelo y calcula el espectro con sus parámetros. Los otros tres solo promedian periodogramas.
 :::
 
 :::ejercicio Intermedio | [[orden-ar]]
 ¿Qué riesgo tiene usar un orden AR mucho mayor que el que sugiere el AIC para estimar el espectro?
-- [x] Que aparezcan picos falsos (el modelo ajusta el ruido)
-- [ ] Que el espectro quede plano
 - [ ] Que el espectro sea negativo
+- [ ] Que el espectro quede plano
+- [x] Que aparezcan picos falsos (el modelo ajusta el ruido)
 - [ ] Ninguno: más orden siempre es mejor
 ---
 Con muchos coeficientes, el AR puede «inventar» oscilaciones. Por eso se elige $p$ con un criterio y se compara con el periodograma suavizado.
+:::
+
+:::ejercicio Intermedio | [[guia-yw-ar2]]
+Una serie tiene $\hat\rho(1) = 0.5$ y $\hat\rho(2) = 0.1$. ¿Qué coeficientes da Yule–Walker para un AR(2)?
+- [ ] $\hat\phi_1 = 0.5$, $\hat\phi_2 = 0.1$
+- [x] $\hat\phi_1 = 0.6$, $\hat\phi_2 = -0.2$
+- [ ] $\hat\phi_1 = 0.5$, $\hat\phi_2 = -0.15$
+- [ ] $\hat\phi_1 = 0.4$, $\hat\phi_2 = 0.1$
+---
+:::pasos
+= \hat\phi_1 = \frac{\hat\rho(1)[1 - \hat\rho(2)]}{1 - \hat\rho(1)^2} = \frac{0.5(0.9)}{0.75} = 0.6
+> Primera ecuación de Yule–Walker, despejada.
+= \hat\phi_2 = \frac{\hat\rho(2) - \hat\rho(1)^2}{1 - \hat\rho(1)^2} = \frac{0.1 - 0.25}{0.75} = -0.2
+> Como $\hat\phi_1^2 + 4\hat\phi_2 = -0.44 < 0$, hay raíces complejas: el espectro tiene un pico en $\cos(2\pi\omega^*) = 0.9$, periodo 13.9.
+:::
+:::
+
+:::ejercicio Intermedio | [[guia-daniell-modificado]]
+El Daniell modificado con $m = 1$ usa los pesos $(1/4,\ 1/2,\ 1/4)$. ¿Cuántos grados de libertad tiene su intervalo de confianza?
+- [x] 5.33
+- [ ] 6
+- [ ] 3
+- [ ] 2.67
+---
+$\Lsp_h = 1/\sum h_k^2 = 1/(1/16 + 1/4 + 1/16) = 1/0.375 = 2.67$ y los grados de libertad son $2\Lsp_h = 5.33$, un poco menos que los 6 del Daniell simple con tres ordenadas.
 :::
 
 ### Bloque F · Espectro cruzado y coherencia {#ej3-f}
@@ -453,9 +488,9 @@ $\lvert d_y\bar d_x\rvert^2/(\lvert d_x\rvert^2\lvert d_y\rvert^2) = 1$ siempre:
 :::ejercicio Intermedio | [[coherencia-cruda]]
 Con $L = 9$ ordenadas promediadas, el umbral de 5% es 0.312. Una coherencia estimada de 0.25 en una frecuencia:
 - [ ] Es significativa
-- [x] No es significativa al 5%
-- [ ] Indica una relación negativa
 - [ ] Indica un retardo de 2 periodos
+- [ ] Indica una relación negativa
+- [x] No es significativa al 5%
 ---
 $0.25 < 0.312$: con independencia saldrían valores así por azar.
 :::
@@ -463,8 +498,8 @@ $0.25 < 0.312$: con independencia saldrían valores así por azar.
 :::ejercicio Básico | [[cruzado-macro]]
 En las frecuencias del ciclo económico, la fase entre el PIB y el cambio del desempleo es cercana a $\pi$. ¿Qué significa?
 - [ ] Que no hay relación
-- [ ] Que van en fase
 - [x] Que se mueven en sentidos opuestos
+- [ ] Que van en fase
 - [ ] Que el desempleo se adelanta un año
 ---
 Una fase de $\pi$ es medio ciclo de desfase: cuando una sube, la otra baja (la relación es negativa).
@@ -472,8 +507,8 @@ Una fase de $\pi$ es medio ciclo de desfase: cuando una sube, la otra baja (la r
 
 :::ejercicio Intermedio | [[demo-retardo]]
 $y_t = 2x_{t-3} + v_t$, con $v$ independiente de $x$ y $f_v = f_x$. ¿Cuánto vale la coherencia?
-- [x] 0.8
 - [ ] 0.5
+- [x] 0.8
 - [ ] 1
 - [ ] 0.667
 ---
@@ -482,20 +517,40 @@ $\rho^2 = \beta^2 f_x/(\beta^2 f_x + f_v) = 4f_x/(4f_x + f_x) = 0.8$. El retardo
 
 :::ejercicio Intermedio | [[cruzado-macro]]
 Con `scipy.signal.csd(x, y)`, la fase baja en línea recta con pendiente negativa. ¿Qué indica?
-- [ ] Que $x$ va atrasada respecto a $y$
+- [x] Que $y$ va atrasada respecto a $x$
 - [ ] Que las series no son estacionarias
 - [ ] Que la coherencia es 0
-- [x] Que $y$ va atrasada respecto a $x$
+- [ ] Que $x$ va atrasada respecto a $y$
 ---
 `csd(x, y)` calcula $\overline{X}Y$, cuya fase es $-2\pi\omega D$ cuando $y_t$ copia a $x_{t-D}$: pendiente $-2\pi D$ con $D > 0$.
+:::
+
+:::ejercicio Reto | [[guia-fase-varias]]
+En las frecuencias bajas, la fase estimada sigue la recta $-4\pi\omega$ (un retardo de 2). En $\omega = 0.4$, `atan2` devuelve $+1.257$. ¿Qué concluyes?
+- [ ] En $\omega = 0.4$ el retardo es $-0.5$: ahí $y$ se adelanta
+- [ ] Hay que sumarle $\pi$ porque la relación es negativa
+- [ ] La relación se rompe en las frecuencias altas
+- [x] La fase está envuelta: $1.257 - 2\pi = -5.027$, que da otra vez $D = 2$
+---
+La fase verdadera, $-2\pi(0.4)(2) = -5.027$, está fuera de $[-\pi, \pi]$; `atan2` le sumó $2\pi$. Al desenvolverla, $D = 5.027/(2\pi \cdot 0.4) = 2$, igual que en las otras frecuencias.
+:::
+
+:::ejercicio Intermedio | [[demo-coh-invariante]]
+Antes de calcular la coherencia entre $x$ y $y$, diferencias $x$. ¿Qué pasa con la coherencia estimada?
+- [ ] Baja en las frecuencias bajas, porque la diferencia las atenúa
+- [ ] Se vuelve 1 en todas las frecuencias
+- [x] No cambia (salvo en $\omega = 0$, donde la ganancia es cero); la fase sí cambia
+- [ ] Se duplica en las frecuencias altas
+---
+La ganancia del filtro aparece arriba y abajo del cociente y se cancela: $\rho^2_{y\tilde x} = \lvert A\rvert^2\lvert f_{yx}\rvert^2/(\lvert A\rvert^2 f_x f_y) = \rho^2_{yx}$. A la fase se le resta $\arg A$.
 :::
 
 ### Bloque G · Filtros lineales {#ej3-g}
 
 :::ejercicio Básico | [[guia-ganancia-mm3]]
 ¿Cuál es la ganancia de la media móvil centrada de 3 en $\omega = 1/6$?
-- [ ] 1
 - [x] 2/3
+- [ ] 1
 - [ ] 1/3
 - [ ] 0
 ---
@@ -505,8 +560,8 @@ $A = (1 + 2\cos(2\pi/6))/3 = (1 + 1)/3 = 2/3$. En $\omega = 1/3$ vale 0.
 :::ejercicio Intermedio | [[demo-ganancia-diferencia]]
 ¿Cuál es la ganancia $\lvert A(\omega)\rvert$ de la diferencia $1 - L$ en $\omega = 1/2$?
 - [ ] 0
-- [x] 2
 - [ ] 4
+- [x] 2
 - [ ] 1
 ---
 $\lvert A\rvert^2 = 4\sin^2(\pi/2) = 4$, así que $\lvert A\rvert = 2$: la oscilación más rápida sale con el doble de amplitud (y 4 veces su varianza).
@@ -514,10 +569,10 @@ $\lvert A\rvert^2 = 4\sin^2(\pi/2) = 4$, así que $\lvert A\rvert = 2$: la oscil
 
 :::ejercicio Intermedio | [[demo-filtro-espectro]]
 Si diferencias un ruido blanco con $\sigma^2 = 1$, ¿cuál es la varianza de la serie diferenciada?
-- [x] 2
+- [ ] 0.5
 - [ ] 1
 - [ ] 4
-- [ ] 0.5
+- [x] 2
 ---
 $f_y = 4\sin^2(\pi\omega)\cdot 1$ y su área es 2; directamente, $\Var(\varepsilon_t - \varepsilon_{t-1}) = 2\sigma^2$. Es la sobrediferenciación [[u2:sobrediferenciar]].
 :::
@@ -525,18 +580,18 @@ $f_y = 4\sin^2(\pi\omega)\cdot 1$ y su área es 2; directamente, $\Var(\varepsil
 :::ejercicio Básico | [[respuesta-impulso]]
 ¿Cuál es la respuesta al impulso de $y_t = 0.4x_t + 0.4x_{t-1} + 0.2x_{t-2}$ y su ganancia en $\omega = 0$?
 - [ ] $(0.4,\ 0.8,\ 1)$ y ganancia 1
-- [ ] $(1,\ 1,\ 1)$ y ganancia 3
-- [ ] $(0.2,\ 0.4,\ 0.4)$ y ganancia 0
 - [x] $(0.4,\ 0.4,\ 0.2)$ y ganancia 1
+- [ ] $(0.2,\ 0.4,\ 0.4)$ y ganancia 0
+- [ ] $(1,\ 1,\ 1)$ y ganancia 3
 ---
 La respuesta al impulso son los pesos; $A(0) = \sum a_j = 1$. La opción $(0.4, 0.8, 1)$ es la respuesta al **escalón**.
 :::
 
 :::ejercicio Básico | [[demo-ganancia-diferencia]]
 ¿En qué frecuencias vale cero la ganancia de la diferencia estacional $1 - L^{12}$?
-- [ ] Solo en $\omega = 0$
-- [ ] Solo en $\omega = 1/12$
 - [x] En $\omega = 0, 1/12, 2/12, \dots, 6/12$
+- [ ] Solo en $\omega = 1/12$
+- [ ] Solo en $\omega = 0$
 - [ ] En $\omega = 1/24, 3/24, \dots$
 ---
 $\lvert A\rvert^2 = 4\sin^2(12\pi\omega)$ se anula en los múltiplos de $1/12$: quita la tendencia y toda la estacionalidad.
@@ -544,8 +599,8 @@ $\lvert A\rvert^2 = 4\sin^2(12\pi\omega)$ se anula en los múltiplos de $1/12$: 
 
 :::ejercicio Intermedio | [[mm-filtro]]
 ¿Cuántos periodos retrasa la tendencia una media móvil **causal** de los últimos 5 valores?
-- [x] 2
 - [ ] 5
+- [x] 2
 - [ ] 0
 - [ ] 2.5
 ---
@@ -556,8 +611,8 @@ Su fase es $-\pi\omega(k - 1)$, un retraso de $(k - 1)/2 = 2$ periodos en todas 
 Visto como filtro, el suavizamiento exponencial simple es:
 - [ ] Un rechaza banda en $1/12$
 - [ ] Un pasa altos de fase cero
-- [x] Un pasa bajos causal que retrasa los movimientos lentos
 - [ ] Un filtro que no cambia la ganancia
+- [x] Un pasa bajos causal que retrasa los movimientos lentos
 ---
 Sus pesos $\alpha(1 - \alpha)^j$ promedian el pasado: atenúan las frecuencias altas y, por ser causal, introducen un retraso de unos $(1 - \alpha)/\alpha$ periodos.
 :::
@@ -567,8 +622,8 @@ Sus pesos $\alpha(1 - \alpha)^j$ promedian el pasado: atenúan las frecuencias a
 :::ejercicio Básico | [[cuatro-tipos]]
 Quieres quitar la tendencia lenta de una serie. ¿Qué tipo de filtro usas?
 - [ ] Pasa bajos
-- [x] Pasa altos
 - [ ] Rechaza banda en $1/12$
+- [x] Pasa altos
 - [ ] Ninguno: la tendencia no tiene frecuencia
 ---
 La tendencia vive en las frecuencias cercanas a 0; un pasa altos (o la diferencia) las elimina.
@@ -577,18 +632,18 @@ La tendencia vive en las frecuencias cercanas a 0; un pasa altos (o la diferenci
 :::ejercicio Intermedio | [[guia-butterworth]]
 Para aislar el ciclo económico (6 a 32 trimestres) con un pasa banda, ¿qué frecuencias de corte usas?
 - [ ] $[6,\ 32]$
-- [ ] $[0.6,\ 3.2]$
-- [ ] $[1/6,\ 1/32]$ en radianes
 - [x] $[1/32,\ 1/6] = [0.031,\ 0.167]$
+- [ ] $[1/6,\ 1/32]$ en radianes
+- [ ] $[0.6,\ 3.2]$
 ---
 Cada periodo se traduce con $\omega = 1/\Per$; el periodo largo da la frecuencia baja.
 :::
 
 :::ejercicio Básico | [[corte-orden]]
 En un filtro Butterworth, ¿cuánto vale la ganancia en la frecuencia de corte?
-- [x] $1/\sqrt2 \approx 0.707$
-- [ ] 0.5
 - [ ] 0
+- [ ] 0.5
+- [x] $1/\sqrt2 \approx 0.707$
 - [ ] 1
 ---
 La potencia cae a la mitad (−3 dB) en $\omega_c$, para cualquier orden $N$.
@@ -597,19 +652,19 @@ La potencia cae a la mitad (−3 dB) en $\omega_c$, para cualquier orden $N$.
 :::ejercicio Intermedio | [[guia-butterworth]]
 Butterworth pasa bajos de orden 2 con corte en 0.1. ¿Cuál es su ganancia en $\omega = 0.2$?
 - [ ] 0.707
-- [x] 0.196
-- [ ] 0.5
 - [ ] 0.04
+- [ ] 0.5
+- [x] 0.196
 ---
 $\tan(0.2\pi)/\tan(0.1\pi) = 2.236$ y $1/\sqrt{1 + 2.236^4} = 0.196$. Con orden 4 sería 0.04.
 :::
 
 :::ejercicio Intermedio | [[fase-cero]]
 ¿Por qué no conviene usar `filtfilt` para construir una variable que entrará en un modelo de pronóstico?
-- [ ] Porque cambia la frecuencia de las oscilaciones
+- [x] Porque usa datos futuros (fase cero) y eso es fuga de información
 - [ ] Porque su ganancia es mayor que 1
 - [ ] Porque solo funciona con FIR
-- [x] Porque usa datos futuros (fase cero) y eso es fuga de información
+- [ ] Porque cambia la frecuencia de las oscilaciones
 ---
 Filtra hacia adelante y hacia atrás: cada valor filtrado depende del futuro. Sirve para describir, no para pronosticar [[u2:fuga]].
 :::
@@ -617,8 +672,8 @@ Filtra hacia adelante y hacia atrás: cada valor filtrado depende del futuro. Si
 :::ejercicio Intermedio | [[hp]]
 Con λ = 1600 en datos trimestrales, ¿cerca de qué periodo la ganancia del ciclo HP vale 1/2?
 - [ ] 6 trimestres
-- [ ] 16 trimestres
 - [x] 40 trimestres
+- [ ] 16 trimestres
 - [ ] 160 trimestres
 ---
 $4\lambda(1 - \cos 2\pi\omega)^2 = 1$ da $\omega \approx 0.025$, periodo ≈ 40 trimestres (10 años).
@@ -627,9 +682,9 @@ $4\lambda(1 - \cos 2\pi\omega)^2 = 1$ da $\omega \approx 0.025$, periodo ≈ 40 
 :::ejercicio Intermedio | [[notch]]
 En datos diarios quieres quitar el patrón semanal sin tocar lo demás. ¿Qué propones?
 - [ ] Un pasa bajos con corte en 1/2
-- [x] Muescas (rechaza banda angostos) en $1/7$, $2/7$ y $3/7$
-- [ ] Un pasa altos con corte en 1/7
 - [ ] La diferencia $1 - L$
+- [ ] Un pasa altos con corte en 1/7
+- [x] Muescas (rechaza banda angostos) en $1/7$, $2/7$ y $3/7$
 ---
 El patrón semanal tiene potencia en su frecuencia y sus armónicos. La diferencia $1 - L^7$ también lo quita, pero además elimina la tendencia y amplifica otras frecuencias.
 :::
@@ -646,12 +701,32 @@ Es el fenómeno de Gibbs: con la ventana las ondulaciones casi desaparecen, a ca
 
 :::ejercicio Básico | [[bk]]
 El filtro de Baxter–King con $K = 12$ aplicado a 203 trimestres, ¿cuántos datos devuelve?
-- [ ] 203
+- [x] 179
 - [ ] 191
 - [ ] 12
-- [x] 179
+- [ ] 203
 ---
 Pierde $K = 12$ datos al inicio y 12 al final: $203 - 24 = 179$.
+:::
+
+:::ejercicio Básico | [[guia-bk-pesos]]
+¿Por qué al construir el filtro de Baxter–King se le resta el promedio a los pesos del pasa banda ideal truncado?
+- [x] Para que sumen cero: así la ganancia en $\omega = 0$ es 0 y el filtro elimina la tendencia
+- [ ] Para que sumen uno y el nivel de la serie no cambie
+- [ ] Para que el filtro sea causal
+- [ ] Para quitar el fenómeno de Gibbs
+---
+Al truncar, los pesos dejan de sumar cero (con $K = 3$ suman 0.734). Restar su promedio corrige la ganancia en la frecuencia cero, $A(0) = \sum b_j = 0$. Las ondulaciones de Gibbs no desaparecen con eso: para reducirlas se usan más pesos.
+:::
+
+:::ejercicio Reto | [[guia-orden-butter]]
+Con los periodos de [[guia-orden-butter]] (conservar 24 meses con 90% de ganancia y quitar los de 12), un Butterworth de orden 5 deja el 10% en el periodo 12. Si ahora exiges dejar solo el 1%, ¿qué orden necesitas?
+- [ ] 5
+- [ ] 6
+- [x] 8
+- [ ] 50
+---
+$N \ge \ln\!\big[(1/0.01^2 - 1)/0.2346\big]/(2\ln 2.0353) = \ln(42\,622)/1.421 = 7.50$, así que $N = 8$. Pedir diez veces menos ganancia en el rechazo cuesta tres órdenes más, no diez veces más.
 :::
 
 :::ejercicio Reto | [[guia-co2]]

@@ -91,6 +91,29 @@ for j in sorted(mayores):
 print("varianza de x:", round(x.var(), 2), "| suma de A²/2:", (13 + 41 + 85) / 2)
 ```
 
+:::ejemplo La misma cuenta con ruido
+Sea $x_t = 2\cos(2\pi t/12) + \sin(2\pi t/4) + \varepsilon_t$, con $\sigma^2 = 0.5$ y $n = 240$ datos mensuales:
+- Las dos oscilaciones aportan $2^2/2 = 2$ y $1^2/2 = 0.5$, y el ruido otro $0.5$: la varianza total es 3, repartida en **67%, 17% y 17%**.
+- La diferencia está en **dónde** pone cada uno su varianza. Cada oscilación la pone toda en una frecuencia ($j = 240/12 = 20$ y $j = 240/4 = 60$); el ruido reparte su 0.5 entre las 120 frecuencias de Fourier, unas $0.5/120 \approx 0.004$ en cada una.
+- Por eso la segunda oscilación se ve como un pico clarísimo aunque aporte lo mismo que el ruido: compite solo con el ruido **de su frecuencia**, que es 120 veces menor.
+:::
+
+```python
+n_r = 240
+t_r = np.arange(1, n_r + 1)
+rng = np.random.default_rng(7)
+x_r = 2 * np.cos(2 * np.pi * t_r / 12) + np.sin(2 * np.pi * t_r / 4) + rng.normal(0, np.sqrt(0.5), n_r)
+I_r = np.abs(np.fft.fft(x_r - x_r.mean())) ** 2 / n_r      # periodograma I(ω_j)
+aporte = 2 * I_r[1 : n_r // 2] / n_r                        # varianza que aporta cada frecuencia, j = 1, …, n/2 − 1
+for j in np.argsort(aporte)[::-1][:4] + 1:
+    print(f"j = {j:3d}  ω = {j / n_r:.4f}  periodo = {n_r / j:6.2f}  aporte a la varianza = {2 * I_r[j] / n_r:.3f}")
+resto = np.delete(aporte, [20 - 1, 60 - 1])                  # quitamos las dos frecuencias de las oscilaciones
+print(f"varianza muestral = {x_r.var():.3f} | aporte promedio de cada una de las demás frecuencias = {resto.mean():.4f}")
+print(f"las dos oscilaciones explican {(2 * I_r[20] + 2 * I_r[60]) / n_r / x_r.var():.0%} de la varianza muestral")
+```
+
+Las dos frecuencias verdaderas aportan 2.04 y 0.46 (contra 2 y 0.5 teóricos); la tercera más grande apenas llega a 0.016. Con $\frac{2}{n}I(\omega_j)$ se lee directamente **cuánta varianza aporta cada frecuencia**, la misma cuenta de la tabla de arriba pero hecha con datos.
+
 :::interactivo w3-mezcla | Arma una serie con tres oscilaciones {#w-mezcla}
 Elige la frecuencia y la amplitud de tres oscilaciones y agrega ruido. El periodograma encuentra las tres frecuencias aunque la serie se vea desordenada.
 @@@

@@ -52,6 +52,13 @@ El primer término pide que la tendencia siga a los datos; el segundo castiga qu
 
 Una curiosidad útil: con los valores usuales, el corte del HP queda **siempre cerca de los 10 años**: con $\lambda = 6.25$ en datos anuales cae en 9.8 años, y con $\lambda = 129\,600$ en datos mensuales en 119 meses. Por eso esos valores se consideran equivalentes entre frecuencias de muestreo.
 
+:::ejemplo ¿De dónde salen 129 600 y 6.25?
+- En frecuencias bajas, $1 - \cos(2\pi\omega) \approx (2\pi\omega)^2/2$, así que $u = 4\lambda(1 - \cos 2\pi\omega)^2 \approx 4\pi^4\lambda\,\omega^4$: la ganancia depende de $\lambda\,\omega^4$.
+- Un ciclo de 10 años tiene $\omega = 1/40$ en datos trimestrales, $1/120$ en mensuales y $1/10$ en anuales. Para que $\lambda\,\omega^4$ sea el mismo, $\lambda$ debe multiplicarse por la cuarta potencia del cambio de frecuencia de muestreo (regla de Ravn y Uhlig).
+- Mensuales: tres veces más datos por año que trimestrales, $\lambda = 1600 \times 3^4 = 129\,600$. Anuales: cuatro veces menos, $\lambda = 1600/4^4 = 6.25$.
+- Comprobación: la ganancia del ciclo cruza 1/2 en 39.7 trimestres (9.9 años), 119.2 meses (9.9 años) y 9.8 años. La regla de «multiplicar por 3» o «dividir entre 4», en cambio, daría cortes muy distintos.
+:::
+
 :::interactivo w3-hp | Hodrick–Prescott sobre el PIB de EE. UU. {#w-hp}
 Cambia λ y mira la tendencia, el ciclo y la ganancia del filtro sobre el logaritmo del PIB real trimestral (1959–2009).
 @@@
@@ -71,6 +78,38 @@ Con la banda de periodos $[\Per_{\min}, \Per_{\max}]$, en radianes $\omega_1 = 2
 $$b_0 = \frac{\omega_2 - \omega_1}{\pi}, \qquad b_j = \frac{\sin(j\omega_2) - \sin(j\omega_1)}{\pi j}, \quad j = 1, \dots, K$$
 
 y a todos se les resta su promedio para que sumen cero (ganancia 0 en la frecuencia cero: elimina la tendencia). El ciclo es $c_t = \sum_{j=-K}^{K}b_{\lvert j\rvert}\,y_{t-j}$. Con datos trimestrales, lo usual es $[6, 32]$ y $K = 12$: se pierden 12 datos al inicio y 12 al final.
+:::
+
+¿Por qué $K = 12$ y no algo más corto? Hagamos las cuentas con $K = 3$ (siete pesos), que caben en una hoja:
+
+:::guiado Los pesos de Baxter–King con $K = 3$ {#guia-bk-pesos}
+| $j$ | $\sin(j\omega_2)$ | $\sin(j\omega_1)$ | $b_j$ antes de ajustar | $b_j$ ajustado (suma 0) |
+|---|---|---|---|---|
+| 0 | | | 0.27083 | 0.16599 |
+| 1 | 0.86603 | 0.19509 | 0.21357 | 0.10872 |
+| 2 | 0.86603 | 0.38268 | 0.07693 | −0.02792 |
+| 3 | 0 | 0.55557 | −0.05895 | −0.16379 |
+---
+= \omega_1 = \frac{2\pi}{32} = 0.1963, \qquad \omega_2 = \frac{2\pi}{6} = 1.0472 \text{ radianes}
+> Los extremos de la banda. Ojo: la fórmula de Baxter–King está en **radianes**; en ciclos serían $1/32$ y $1/6$.
+= b_0 = \frac{1.0472 - 0.1963}{\pi} = 0.27083 \qquad\Big(= 2\big(\tfrac16 - \tfrac1{32}\big)\Big)
+> El peso central del pasa banda ideal: el ancho de la banda.
+@ da c4[1]
+= b_1 = \frac{0.86603 - 0.19509}{\pi} = 0.21357, \qquad b_2 = \frac{0.86603 - 0.38268}{2\pi} = 0.07693
+> Los pesos del ideal: diferencia de senos entre los dos extremos de la banda, dividida entre $\pi j$.
+@ usa c2[2-3] c3[2-3]; da c4[2-3]
+= b_3 = \frac{0 - 0.55557}{3\pi} = -0.05895
+> Truncamos en $K = 3$.
+@ usa c2[4] c3[4]; da c4[4]
+= \textstyle\sum_{j=-3}^{3}b_j = 0.27083 + 2(0.21357 + 0.07693 - 0.05895) = 0.73392
+> Los siete pesos no suman cero: al truncar, el filtro dejaría pasar parte de la tendencia. Su promedio es $0.73392/7 = 0.10485$.
+@ usa c4[1-4]
+= b_j - 0.10485:\quad 0.16599,\ 0.10872,\ -0.02792,\ -0.16379, \qquad \textstyle\sum = 0
+> Restamos el promedio: ahora $A(0) = 0$ y la tendencia se elimina por completo. Son exactamente los pesos que usa `bkfilter(x, 6, 32, K=3)`.
+@ usa c4[1-4]; da c5[1-4]
+= A(1/12) = 0.16599 + 2\big[0.10872\cos(\tfrac{\pi}{6}) - 0.02792\cos(\tfrac{\pi}{3}) - 0.16379\cos(\tfrac{\pi}{2})\big] = 0.326
+> La ganancia en un ciclo de 12 trimestres, **en medio** de la banda: solo 33%. Con siete pesos el pasa banda es un borrón. Con $K = 12$ esa ganancia sube a 0.97, a cambio de perder 12 datos en cada extremo.
+@ usa c5[1-4]
 :::
 
 :::interactivo w3-bk | Baxter–King: aislar ciclos de 6 a 32 trimestres {#w-bk}
@@ -100,6 +139,28 @@ for lam in [100, 1600, 14400]:
 ```
 
 El ciclo del PIB tiene una desviación estándar de alrededor de 1.5%, sea cual sea el filtro; pero cambia mucho con λ (0.9% con λ = 100, 2.0% con λ = 14 400). **El tamaño del «ciclo» lo decide en buena parte el analista** al elegir el filtro.
+
+Las dos ganancias se pueden revisar sin datos, solo con las fórmulas: dónde corta el HP según λ y qué tanto se parece el BK al pasa banda ideal según $K$.
+
+```python
+for lam, unidad, por_anio in [(6.25, "años", 1), (1600, "trimestres", 4), (129600, "meses", 12)]:
+    P_medio = 2 * np.pi / np.arccos(1 - 1 / (2 * np.sqrt(lam)))       # periodo donde la ganancia del ciclo vale 1/2
+    print(f"HP con λ = {lam:>8}: ganancia 1/2 en P = {P_medio:6.1f} {unidad} = {P_medio / por_anio:.1f} años")
+
+def pesos_bk(K, P_min=6, P_max=32):
+    w1, w2 = 2 * np.pi / P_max, 2 * np.pi / P_min
+    j = np.arange(1, K + 1)
+    b = np.r_[(w2 - w1) / np.pi, (np.sin(j * w2) - np.sin(j * w1)) / (np.pi * j)]
+    b = np.r_[b[:0:-1], b]                                              # b_K, …, b_1, b_0, b_1, …, b_K
+    return b - b.mean()
+
+for K in [3, 12, 20]:
+    b, j = pesos_bk(K), np.arange(-K, K + 1)
+    ganancia = [np.sum(b * np.cos(2 * np.pi * j / P)) for P in [3, 6, 12, 20, 32, 64]]
+    print(f"BK con K = {K:2d}: ganancia en P = 3, 6, 12, 20, 32, 64 trimestres → {np.round(ganancia, 2)}")
+```
+
+Con $K = 3$ el BK casi no distingue el ciclo (0.33 en 12 trimestres) y deja pasar, invertido, parte del ruido de 3 trimestres; con $K = 12$ la ganancia es casi 1 entre 8 y 20 trimestres y cae a la mitad cerca de los extremos de la banda (6 y 32). Agregar pesos más allá de 12 cambia poco y cuesta más datos.
 
 :::cuidado Los riesgos de estos filtros
 - **Usan el futuro**: el HP y el BK son simétricos (de fase cero). La tendencia HP del último trimestre cambia cuando llegan datos nuevos (el problema del final de muestra). No los uses para construir variables de un modelo de pronóstico [[fase-cero]].
