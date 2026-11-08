@@ -392,6 +392,11 @@
     }
     return h;
   };
+  // Filtro de muesca (como scipy.signal.iirnotch(w0, Q, fs=1)): ganancia 0 en w0 y ≈ 1 lejos de ahí
+  T3.iirnotch = (w0, Q) => {
+    const wn = 2 * w0, bw = (wn / Q) * PI, w = wn * PI, beta = Math.tan(bw / 2), g = 1 / (1 + beta);
+    return { b: [g, -2 * g * Math.cos(w), g], a: [1, -2 * g * Math.cos(w), 2 * g - 1] };
+  };
   // Pesos de medias móviles
   T3.pesosMM = k => new Array(k).fill(1 / k);                 // causal: promedio de los últimos k
   T3.pesosCentrada = s => (s % 2 ? new Array(s).fill(1 / s) : [1 / (2 * s)].concat(new Array(s - 1).fill(1 / s), [1 / (2 * s)]));

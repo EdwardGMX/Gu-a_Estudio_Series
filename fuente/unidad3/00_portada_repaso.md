@@ -81,7 +81,9 @@ print("macro:", macro.shape, list(macro.columns[:6]))
 
 ```python oculto
 # --- Datos para las gráficas de la unidad (se guardan en la página) ---
-exportar("manchas", {"anio": [int(a) for a in manchas.index], "y": manchas.values})
+from scipy.signal import find_peaks as _fp
+exportar("manchas", {"anio": [int(a) for a in manchas.index], "y": manchas.values,
+                     "picos": [int(i) for i in _fp(manchas.values, distance=6, prominence=20)[0]]})
 exportar("nino", {"y": nino.values})
 exportar("co2", {"y": co2_mensual.values})
 _lpib = np.log(macro.realgdp.values) * 100
