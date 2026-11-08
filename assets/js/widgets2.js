@@ -16,6 +16,7 @@
   const AP = TS.datos.airpassengers, FECHAS_AP = TS.datos.fechasMensuales(1949, 144), LOGAP = AP.map(Math.log);
   const rango = TS.rango;
   const f3 = v => fmt(v, 3), f4 = v => fmt(v, 4);
+  const pq = p => (p < 1e-4 ? 'p < 0.0001' : 'p = ' + fp(p));
   const sgn = v => (v < 0 ? '− ' + num(-v) : '+ ' + num(v));
   const lin = (x, y, color, nombre, extra) => Object.assign({ x, y, mode: 'lines', line: { color, width: 1.8 }, name: nombre }, extra || {});
   const vline = (x, y0, y1, color, dash, nombre) => ({ x: [x, x], y: [y0, y1], mode: 'lines', line: { color, width: 2, dash: dash || 'solid' }, name: nombre || '', hoverinfo: 'skip', showlegend: !!nombre });
@@ -63,11 +64,11 @@
       const rb = tipo.get() !== 'ar';
       lec.className = 'w-lectura ' + (lb.p > 0.05 ? 'ok' : 'mal');
       lec.innerHTML = `Media ${f3(M.media)} · varianza ${f3(M.var)} · asimetría ${f3(M.skew)} · curtosis ${f3(M.kurt)}. Barras fuera de la banda: <b>${fuera} de 20</b> (se esperan ≈ 1). ` +
-        `Ljung–Box con h = 10: Q = ${f3(lb.Q)}, p = <b>${fp(lb.p)}</b> → ${lb.p > 0.05 ? 'no hay evidencia de autocorrelación' : 'hay autocorrelación: <b>no</b> es ruido blanco'}. ` +
+        `Ljung–Box con h = 10: Q = ${f3(lb.Q)}, <b>${pq(lb.p)}</b> → ${lb.p > 0.05 ? 'no hay evidencia de autocorrelación' : 'hay autocorrelación: <b>no</b> es ruido blanco'}. ` +
         (rb ? '' : '💡 El AR(1) tiene memoria: la ACF decae como 0.6<sup>k</sup>.') + (tipo.get() === 't3' ? ' 💡 Colas pesadas: la curtosis es mucho mayor que 3, pero sigue siendo ruido blanco.' : '');
       const x2 = x.map(v => v * v), r2 = TS.acf(x2, 20), lb2 = TS.ljungBox(x2, 10);
       graf(gx, trazasACF(r2, N, { color: PAL.cel }), layoutACF('ACF de la serie al cuadrado', { height: 220 }));
-      lx.innerHTML = `Ljung–Box sobre los cuadrados (h = 10): p = <b>${fp(lb2.p)}</b>. ` + (tipo.get() === 'arch' ? 'El ARCH es ruido blanco en los valores, pero sus cuadrados están correlacionados: <b>la volatilidad tiene memoria</b>.' : tipo.get() === 'ar' ? 'Los cuadrados heredan la memoria del AR(1).' : 'Los cuadrados tampoco tienen memoria: este ruido blanco es además independiente.');
+      lx.innerHTML = `Ljung–Box sobre los cuadrados (h = 10): <b>${pq(lb2.p)}</b>. ` + (tipo.get() === 'arch' ? 'El ARCH es ruido blanco en los valores, pero sus cuadrados están correlacionados: <b>la volatilidad tiene memoria</b>.' : tipo.get() === 'ar' ? 'Los cuadrados heredan la memoria del AR(1).' : 'Los cuadrados tampoco tienen memoria: este ruido blanco es además independiente.');
     }
     dibujar();
   });
@@ -1314,7 +1315,7 @@
       graf(g3, [{ type: 'bar', x: ['(n/6)·S²', '(n/24)·(K − 3)²'], y: J.partes, marker: { color: [PAL.dur, PAL.lav] }, text: J.partes.map(v => fmt(v, 2)), textposition: 'outside' }, hline(-0.5, 1.5, 5.99, PAL.rosa, 'dash', '')],
         { height: 270, title: { text: `JB = ${fmt(J.jb, 2)} (línea: 5.99 = crítico 5%)` }, showlegend: false, yaxis: { rangemode: 'tozero' } });
       lec.className = 'w-lectura ' + (J.p > 0.05 ? 'ok' : 'mal');
-      lec.innerHTML = `S = ${fmt(J.skew, 3)} · K = ${fmt(J.kurt, 3)} · JB = <b>${fmt(J.jb, 3)}</b>, p = <b>${fp(J.p)}</b> → ${J.p > 0.05 ? 'no se rechaza la normalidad' : 'se rechaza la normalidad'}. ` +
+      lec.innerHTML = `S = ${fmt(J.skew, 3)} · K = ${fmt(J.kurt, 3)} · JB = <b>${fmt(J.jb, 3)}</b>, <b>${pq(J.p)}</b> → ${J.p > 0.05 ? 'no se rechaza la normalidad' : 'se rechaza la normalidad'}. ` +
         `De la asimetría viene el ${fmt(100 * J.partes[0] / Math.max(J.jb, 1e-12), 0)}% del estadístico.`;
     }
     dibujar();
@@ -1383,7 +1384,7 @@
         : 'ValueError: lags debe ser mayor que model_df');
       params({ lags: `[${H}]`, model_df: mdf, nlags: nl.get() }, activo === 'lags' ? 'lags' : activo === 'model_df' ? 'model_df' : activo === 'nlags' ? 'nlags' : null);
       lec.className = 'w-lectura ' + (lb.p > 0.05 && J.p > 0.05 && A.p > 0.05 ? 'ok' : 'aviso');
-      lec.innerHTML = `Ljung–Box con ${H} rezagos y ${lb.df} grados de libertad: p = <b>${fp(lb.p)}</b> ${lb.p > 0.05 ? '✓' : '✗ queda autocorrelación'} · Jarque–Bera p = ${fp(J.p)} · ARCH-LM p = ${fp(A.p)}. ` + (mdf === 0 && k > 0 ? '💡 Sin <code>model_df</code> la prueba es demasiado benévola.' : '');
+      lec.innerHTML = `Ljung–Box con ${H} rezagos y ${lb.df} grados de libertad: <b>${pq(lb.p)}</b> ${lb.p > 0.05 ? '✓' : '✗ queda autocorrelación'} · Jarque–Bera ${pq(J.p)} · ARCH-LM ${pq(A.p)}. ` + (mdf === 0 && k > 0 ? '💡 Sin <code>model_df</code> la prueba es demasiado benévola.' : '');
     }
     dibujar();
   });
@@ -1408,7 +1409,7 @@
       graf(g3, trazasACF(r2, n, { color: PAL.cel }).concat([teoricoTr(rango(21).map(k => Math.pow(a, k)), 1, 'α^k')]), layoutACF('ACF de ε²_t: memoria en la varianza', { height: 260 }));
       const M = T2.momentos(e), A = T2.hetArch(e, 5), kt = 3 * a * a < 1 ? 3 * (1 - a * a) / (1 - 3 * a * a) : Infinity;
       lec.className = 'w-lectura ' + (A.p < 0.05 ? 'aviso' : 'ok');
-      lec.innerHTML = `Varianza muestral ${fmt(M.var, 3)} (teórica ω/(1 − α) = ${fmt(w / (1 - a), 3)}) · curtosis muestral ${fmt(M.kurt, 2)} (teórica ${isFinite(kt) ? fmt(kt, 2) : '∞: 3α² ≥ 1'}) · ARCH-LM (5 rezagos): LM = ${fmt(A.lm, 2)}, p = <b>${fp(A.p)}</b> ${A.p < 0.05 ? '→ hay efectos ARCH' : '→ sin evidencia de efectos ARCH'}.`;
+      lec.innerHTML = `Varianza muestral ${fmt(M.var, 3)} (teórica ω/(1 − α) = ${fmt(w / (1 - a), 3)}) · curtosis muestral ${fmt(M.kurt, 2)} (teórica ${isFinite(kt) ? fmt(kt, 2) : '∞: 3α² ≥ 1'}) · ARCH-LM (5 rezagos): LM = ${fmt(A.lm, 2)}, <b>${pq(A.p)}</b> ${A.p < 0.05 ? '→ hay efectos ARCH' : '→ sin evidencia de efectos ARCH'}.`;
       const lim = Math.max(...e.map(Math.abs));
       graf(gx, [histograma(e, null, 50), curvaNormal(0, Math.sqrt(M.var), -lim, lim, PAL.rosa, 'normal')], { height: 260, title: { text: 'ARCH: más valores cerca de 0 y más extremos que la normal' }, showlegend: false, bargap: 0.05 });
     }
@@ -1433,8 +1434,127 @@
       graf(g2, [{ type: 'bar', x: qs, y: lms, marker: { color: lms.map((v, i) => v > CHI2_95[i + 1] ? PAL.dur : 'rgba(124,105,214,.7)') }, name: 'LM' }, lin(qs, qs.map(q => CHI2_95[q]), PAL.rosa, 'crítico 5%', { line: { dash: 'dash', color: PAL.rosa, width: 2 } })],
         { height: 300, title: { text: 'LM = n′R² según el número de rezagos q' }, xaxis: { title: { text: 'q' }, dtick: 1 }, legend: { orientation: 'h', y: -0.3 } });
       lec.className = 'w-lectura ' + (A1.p < 0.05 ? 'aviso' : 'ok');
-      lec.innerHTML = `Con q = 1: LM = ${A1.n}·${fmt(A1.r2, 4)} = <b>${fmt(A1.lm, 2)}</b>, p = <b>${fp(A1.p)}</b>. ` + (a === 0 ? 'Sin efecto ARCH, la nube no tiene inclinación y LM queda bajo la línea crítica casi siempre.' : 'Barras naranjas = se rechaza H₀ (sin efectos ARCH) con ese número de rezagos.');
+      lec.innerHTML = `Con q = 1: LM = ${A1.n}·${fmt(A1.r2, 4)} = <b>${fmt(A1.lm, 2)}</b>, <b>${pq(A1.p)}</b>. ` + (a === 0 ? 'Sin efecto ARCH, la nube no tiene inclinación y LM queda bajo la línea crítica casi siempre.' : 'Barras naranjas = se rechaza H₀ (sin efectos ARCH) con ese número de rezagos.');
       tab.innerHTML = tablaHTML(['cantidad', 'valor'], [['a₀ (constante)', fmt(A1.beta[0], 4)], ['a₁ (pendiente)', fmt(A1.beta[1], 4)], ['R²', fmt(A1.r2, 4)], ["n′ (pares usados)", A1.n], ['LM = n′R²', fmt(A1.lm, 3)], ['p = P(χ²₁ > LM)', fp(A1.p)]]);
+    }
+    dibujar();
+  });
+
+  /* ======================= 15 · Validación ======================= */
+  R('w2-validacion', c => {
+    const ctr = lienzo(c);
+    let semilla = 4;
+    const sp = slider(ctr, { etiqueta: 'Proporción de prueba', min: 0.1, max: 0.3, paso: 0.05, valor: 0.15, fmt: v => Math.round(v * 100) + '%' }, dibujar);
+    boton(ctr, 'Otra partición aleatoria', () => { semilla += 5; dibujar(); });
+    const g1 = lamina(c), g2 = lamina(c), lec = lectura(c);
+    function dibujar() {
+      const n = AP.length, k = Math.round(sp.get() * n), r = TS.rng(semilla);
+      // Aleatoria: k meses al azar (sin los extremos), cada uno «pronosticado» con el promedio de sus vecinos de entrenamiento
+      const idx = rango(n - 2, 1), prueba = new Set();
+      while (prueba.size < k) prueba.add(idx[Math.floor(r.unif() * idx.length)]);
+      const vecino = (i, paso) => { let j = i + paso; while (j >= 0 && j < n && prueba.has(j)) j += paso; return j >= 0 && j < n ? AP[j] : null; };
+      const errA = [...prueba].map(i => { const a = vecino(i, -1), b = vecino(i, 1), p = a !== null && b !== null ? (a + b) / 2 : (a || b); return Math.abs(AP[i] - p) / AP[i]; });
+      // Temporal: los últimos k meses, con ingenuo estacional y crecimiento anual estimado con el entrenamiento
+      const T = n - k, g = TS.media(AP.slice(T - 12, T)) / TS.media(AP.slice(T - 24, T - 12)), ext = AP.slice(0, T);
+      for (let i = T; i < n; i++) ext.push(ext[i - 12] * g);
+      const errT = rango(k).map(j => Math.abs(AP[T + j] - ext[T + j]) / AP[T + j]);
+      const colA = AP.map((_, i) => prueba.has(i) ? PAL.rosa : 'rgba(124,105,214,.6)'), colT = AP.map((_, i) => i >= T ? PAL.rosa : 'rgba(124,105,214,.6)');
+      const A = apilado([{ x: FECHAS_AP, y: AP, color: PAL.gris, nombre: 'aleatoria' }, { x: FECHAS_AP, y: AP, color: PAL.gris, nombre: 'temporal' }], 360);
+      A.tr[0] = Object.assign(A.tr[0], { mode: 'lines+markers', marker: { color: colA, size: 5 }, line: { color: '#ddd8ee', width: 1 } });
+      A.tr[1] = Object.assign(A.tr[1], { mode: 'lines+markers', marker: { color: colT, size: 5 }, line: { color: '#ddd8ee', width: 1 } });
+      A.L.annotations = [{ text: 'Partición aleatoria (rosa = prueba)', xref: 'paper', yref: 'paper', x: 0, y: 1.06, showarrow: false, xanchor: 'left', font: { size: 11 } }, { text: 'Partición temporal (rosa = prueba)', xref: 'paper', yref: 'paper', x: 0, y: 0.47, showarrow: false, xanchor: 'left', font: { size: 11 } }];
+      graf(g1, A.tr, A.L);
+      const mA = 100 * TS.media(errA), mT = 100 * TS.media(errT);
+      graf(g2, [{ type: 'bar', x: ['aleatoria (interpola)', 'temporal (pronostica)'], y: [mA, mT], marker: { color: [PAL.rosa, PAL.menta] }, text: [fmt(mA, 2) + '%', fmt(mT, 2) + '%'], textposition: 'outside' }],
+        { height: 250, title: { text: 'MAPE en la prueba' }, showlegend: false, yaxis: { rangemode: 'tozero', title: { text: 'MAPE %' } } });
+      lec.className = 'w-lectura aviso';
+      lec.innerHTML = `Con ${k} meses de prueba: la partición aleatoria da MAPE = <b>${fmt(mA, 2)}%</b>; la temporal, <b>${fmt(mT, 2)}%</b>. La aleatoria es ${fmt(mT / mA, 1)} veces más optimista porque «ve» meses del futuro.`;
+    }
+    dibujar();
+  });
+
+  R('w2-unpaso', c => {
+    const V = DATOS.validacion_ap;
+    if (!V) { c.textContent = 'Faltan los datos.'; return; }
+    const ctr = lienzo(c);
+    const v1 = casilla(ctr, 'Mostrar a un paso', true, dibujar), v2 = casilla(ctr, 'Mostrar a 12 pasos', true, dibujar);
+    const g = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: los dos pronósticos mes por mes'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const xs = V.fechas.slice(108), xt = V.fechas.slice(132), real = V.serie.slice(132), E = a => a.map(Math.exp);
+      const tr = [lin(xs.slice(0, 24), V.serie.slice(108, 132), '#45397a', 'datos hasta 1959', { line: { color: '#45397a', width: 1.6 } })];
+      if (v2.get()) tr.push(bandaTr(xt, E(V.multi.inf), E(V.multi.sup), 'rgba(224,112,159,.15)', ''), lin(xt, E(V.multi.media), PAL.rosa, 'a 12 pasos', { line: { color: PAL.rosa, width: 2.3 } }));
+      if (v1.get()) tr.push(bandaTr(xt, E(V.uno.inf), E(V.uno.sup), 'rgba(63,174,138,.18)', ''), lin(xt, E(V.uno.media), PAL.menta, 'a un paso', { line: { color: PAL.menta, width: 2.3, dash: 'dot' } }));
+      tr.push({ x: xt, y: real, mode: 'markers', marker: { color: '#45397a', size: 7 }, name: 'real 1960' });
+      graf(g, tr, { height: 330, title: { text: '1960: pronóstico a un paso contra pronóstico a 12 pasos' }, legend: { orientation: 'h', y: -0.2 } });
+      const m = a => 100 * TS.media(real.map((r, i) => Math.abs(r - Math.exp(a[i])) / r));
+      lec.innerHTML = `MAPE a un paso: <b>${fmt(m(V.uno.media), 2)}%</b> · a 12 pasos: <b>${fmt(m(V.multi.media), 2)}%</b>. En este año quedaron parecidos (incluso un poco mejor el de 12 pasos, por azar), pero la banda a un paso es mucho más angosta: ${fmt(Math.exp(V.uno.sup[11]) - Math.exp(V.uno.inf[11]), 0)} contra ${fmt(Math.exp(V.multi.sup[11]) - Math.exp(V.multi.inf[11]), 0)} pasajeros en diciembre.`;
+      tab.innerHTML = tablaHTML(['mes', 'real', 'a un paso', 'error %', 'a 12 pasos', 'error %'], xt.map((x, i) => [x.slice(0, 7), fmt(real[i], 0), fmt(Math.exp(V.uno.media[i]), 1), fmt(100 * (real[i] - Math.exp(V.uno.media[i])) / real[i], 2), fmt(Math.exp(V.multi.media[i]), 1), fmt(100 * (real[i] - Math.exp(V.multi.media[i])) / real[i], 2)]));
+    }
+    dibujar();
+  });
+
+  R('w2-estrategias', c => {
+    const ctr = lienzo(c);
+    let semilla = 500;
+    const mod = segmentado(ctr, { etiqueta: 'Modelo ajustado', valor: 'ar1', opciones: [['ar1', 'AR(1): mal especificado'], ['ar2', 'AR(2): correcto']] }, dibujar);
+    const sn = slider(ctr, { etiqueta: 'n de entrenamiento', min: 50, max: 400, paso: 50, valor: 150 }, dibujar);
+    boton(ctr, 'Repetir', () => { semilla += 1000; dibujar(); });
+    const g = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: error cuadrático medio por horizonte'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const H = 10, R_ = 200, n = sn.get(), p = mod.get() === 'ar1' ? 1 : 2, ar = [1, -0.3, -0.5];
+      const mse = { rec: new Array(H).fill(0), dir: new Array(H).fill(0), opt: new Array(H).fill(0) };
+      for (let r = 0; r < R_; r++) {
+        const y = T2.simularARMA(ar, [1], n + H, { semilla: semilla + r, quemado: 200 }).y, tr = y.slice(0, n), fut = y.slice(n);
+        const A = T2.ajustarAR(tr, p);
+        const ext = tr.slice();
+        for (let h = 0; h < H; h++) { let v = A.beta[0]; for (let j = 1; j <= p; j++) v += A.beta[j] * ext[ext.length - j]; ext.push(v); }
+        const opt = T2.pronosticar(tr, ar, [1], H, {}).media;
+        for (let h = 1; h <= H; h++) {
+          const X = [], z = [];
+          for (let t = p - 1; t + h < n; t++) { const f = [1]; for (let j = 0; j < p; j++) f.push(tr[t - j]); X.push(f); z.push(tr[t + h]); }
+          const b = TS.ols(X, z).beta;
+          let d = b[0]; for (let j = 0; j < p; j++) d += b[j + 1] * tr[n - 1 - j];
+          mse.rec[h - 1] += (fut[h - 1] - ext[n + h - 1]) ** 2 / R_;
+          mse.dir[h - 1] += (fut[h - 1] - d) ** 2 / R_;
+          mse.opt[h - 1] += (fut[h - 1] - opt[h - 1]) ** 2 / R_;
+        }
+      }
+      const hs = rango(H, 1);
+      graf(g, [lin(hs, mse.rec, PAL.lav, 'recursiva', { mode: 'lines+markers' }), lin(hs, mse.dir, PAL.rosa, 'directa', { mode: 'lines+markers' }), lin(hs, mse.opt, PAL.gris, 'modelo verdadero (óptimo)', { line: { dash: 'dot', color: PAL.gris } })],
+        { height: 320, title: { text: `Datos AR(2) con φ = (0.3, 0.5); se ajusta un AR(${p})` }, xaxis: { title: { text: 'horizonte h' }, dtick: 1 }, yaxis: { title: { text: 'error cuadrático medio' } }, legend: { orientation: 'h', y: -0.25 } });
+      const gana = hs.filter(h => mse.dir[h - 1] < mse.rec[h - 1]).length;
+      lec.innerHTML = p === 1 ? `Con el modelo mal especificado, la directa gana en ${gana} de ${H} horizontes: cada modelo directo aprende la relación real entre y<sub>t</sub> y y<sub>t+h</sub>, mientras la recursiva arrastra el error del AR(1).`
+        : `Con el modelo correcto, la recursiva y la directa casi coinciden (la directa gana en ${gana} de ${H} horizontes) y las dos se acercan al óptimo.`;
+      tab.innerHTML = tablaHTML(['h', 'recursiva', 'directa', 'óptimo'], hs.map(h => [h, fmt(mse.rec[h - 1], 3), fmt(mse.dir[h - 1], 3), fmt(mse.opt[h - 1], 3)]));
+    }
+    dibujar();
+  });
+
+  R('w2-rolling', c => {
+    const V = DATOS.validacion_ap;
+    if (!V) { c.textContent = 'Faltan los datos.'; return; }
+    const MOD = [['aerolinea', 'aerolínea (0,1,1)(0,1,1)', PAL.rosa, 'aerolínea'], ['ar_est', '(1,1,0)(1,1,0)', PAL.dur, '(1,1,0)(1,1,0)'], ['arima', 'ARIMA(1,1,1) sin estacionalidad', PAL.cel, 'ARIMA sin est.'], ['ingenuo_est', 'ingenuo estacional', PAL.menta, 'ingenuo est.'], ['ingenuo', 'ingenuo', PAL.gris, 'ingenuo']];
+    const ctr = lienzo(c);
+    const so = slider(ctr, { etiqueta: 'Origen', min: 0, max: V.origenes.length - 1, paso: 1, valor: 6, fmt: i => V.fechas[V.origenes[i] - 1].slice(0, 7) }, dibujar);
+    const g1 = lamina(c), f = fila(c), g2 = lamina(f), g3 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: MAE y MAPE totales de cada modelo'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    const s = V.serie, err = {}, errp = {};
+    MOD.forEach(([k]) => { err[k] = V.origenes.map((T, i) => V.pred[k][i].map((p, h) => Math.abs(s[T + h] - p))); errp[k] = V.origenes.map((T, i) => V.pred[k][i].map((p, h) => Math.abs(s[T + h] - p) / s[T + h])); });
+    const porH = k => rango(12).map(h => TS.media(err[k].map(e => e[h]))), total = k => TS.media(err[k].flat()), totalP = k => 100 * TS.media(errp[k].flat());
+    function dibujar() {
+      const i = so.get(), T = V.origenes[i], xs = V.fechas;
+      const tr = [lin(xs.slice(0, T), s.slice(0, T), '#9a94b8', 'entrenamiento', { line: { color: '#9a94b8', width: 1.4 } }), { x: xs.slice(T, T + 12), y: s.slice(T, T + 12), mode: 'markers', marker: { color: '#45397a', size: 7 }, name: 'real' }];
+      MOD.forEach(([k, nm, col]) => tr.push(lin(xs.slice(T, T + 12), V.pred[k][i], col, nm, { line: { color: col, width: 2 } })));
+      graf(g1, tr, { height: 320, title: { text: `Origen ${xs[T - 1].slice(0, 7)}: ${T} meses de entrenamiento, pronóstico de los 12 siguientes` }, xaxis: { range: [xs[Math.max(0, T - 48)], xs[Math.min(143, T + 12)]] }, legend: { orientation: 'h', y: -0.25 } });
+      graf(g2, MOD.map(([k, nm, col]) => lin(rango(12, 1), porH(k), col, nm, { mode: 'lines+markers', marker: { size: 5 } })), { height: 300, title: { text: 'MAE promedio por horizonte (13 orígenes)' }, xaxis: { title: { text: 'h' }, dtick: 1 }, showlegend: false });
+      graf(g3, [{ type: 'bar', x: MOD.map(m => m[3]), y: MOD.map(m => total(m[0])), marker: { color: MOD.map(m => m[2]) }, text: MOD.map(m => fmt(total(m[0]), 1)), textposition: 'outside' }], { height: 300, title: { text: 'MAE total' }, showlegend: false, yaxis: { rangemode: 'tozero' } });
+      lec.innerHTML = `En este origen, MAE de 12 meses: ` + MOD.map(([k, nm, col, corto]) => `${corto} ${fmt(TS.media(err[k][i]), 1)}`).join(' · ') + '. Sobre los 13 orígenes, aerolínea y (1,1,0)(1,1,0) quedan prácticamente empatados y muy por debajo de los ingenuos.';
+      tab.innerHTML = tablaHTML(['modelo', 'MAE total', 'MAPE total %', 'MAE h = 1', 'MAE h = 12'], MOD.map(([k, nm]) => [nm, fmt(total(k), 2), fmt(totalP(k), 2), fmt(porH(k)[0], 1), fmt(porH(k)[11], 1)]));
     }
     dibujar();
   });

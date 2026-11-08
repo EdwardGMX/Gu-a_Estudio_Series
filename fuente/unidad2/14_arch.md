@@ -79,7 +79,7 @@ Con $\varepsilon_0 = 0$ y estos choques estandarizados $z_t$:
 Simula un ARCH(1). Mira cómo los choques grandes llegan en rachas aunque la ACF de la serie esté vacía.
 @@@
 - **Arriba**: la serie $\varepsilon_t$ (lila) y la banda $\pm 2\sigma_t$ (rosa), que se ensancha después de cada choque grande.
-- **Abajo a la izquierda**: la ACF de $\varepsilon_t$: plana (ruido blanco). **Abajo a la derecha**: la ACF de $\varepsilon_t^2$: decae como $\alpha^k$ (rombos).
+- **Abajo a la izquierda**: la ACF de $\varepsilon_t$: plana (ruido blanco). **Abajo a la derecha**: la ACF de $\varepsilon_t^2$: decae como $\alpha^k$ (rombos). La ACF **muestral** de los cuadrados suele quedar por debajo de los rombos: con colas tan pesadas converge muy despacio, así que no esperes que coincida.
 - **Lectura**: la varianza muestral contra $\omega/(1 - \alpha)$, la curtosis muestral contra $3(1 - \alpha^2)/(1 - 3\alpha^2)$ y la prueba ARCH-LM.
 - Con $\alpha = 0$ es ruido blanco normal; con $\alpha$ cerca de 0.6, la curtosis teórica ya es infinita y aparecen choques gigantes.
 - **Vista extra**: el histograma con la normal de la misma varianza: el ARCH tiene más valores cerca de 0 **y** más valores extremos.
