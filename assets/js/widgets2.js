@@ -991,6 +991,168 @@
     dibujar();
   });
 
+  /* ======================= 9 · Exógenas ======================= */
+  R('w2-armax', c => {
+    const ctr = lienzo(c);
+    const tipo = segmentado(ctr, { etiqueta: 'Variable externa', valor: 'pulso', opciones: [['pulso', 'festivo aislado'], ['escalon', 'cambio permanente'], ['aleatoria', 'cambia cada día']] }, dibujar);
+    const sb = slider(ctr, { etiqueta: 'β', min: -2, max: 2, paso: 0.1, valor: -1, fmt: num }, dibujar);
+    const sp = slider(ctr, { etiqueta: 'φ', min: 0, max: 0.95, paso: 0.05, valor: 0.6, fmt: num }, dibujar);
+    const ruido = casilla(ctr, 'Agregar choques', false, dibujar);
+    const g = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: las dos respuestas periodo por periodo'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const n = 40, b = sb.get(), p = sp.get(), t0 = 10, r = TS.rng(5);
+      const x = rango(n).map(i => tipo.get() === 'pulso' ? (i === t0 ? 1 : 0) : tipo.get() === 'escalon' ? (i >= t0 ? 1 : 0) : (i >= 5 ? r.normal() : 0));
+      const e = ruido.get() ? TS.rng(9).normales(n, 0.3) : new Array(n).fill(0);
+      const ya = [], yr = [];
+      let u = 0;
+      for (let i = 0; i < n; i++) {
+        ya.push((i ? p * ya[i - 1] : 0) + b * x[i] + e[i]);
+        u = (i ? p * u : 0) + e[i];
+        yr.push(b * x[i] + u);
+      }
+      const A = apilado([{ x: rango(n), y: ya, color: PAL.lav, nombre: 'ARMAX' }, { x: rango(n), y: x, color: PAL.gris, nombre: 'x_t' }], 400);
+      A.tr.splice(1, 0, { x: rango(n), y: yr, mode: 'lines+markers', marker: { size: 4 }, line: { color: PAL.rosa, width: 2 }, name: 'regresión con errores AR(1)', xaxis: 'x', yaxis: 'y' });
+      A.tr[2] = { type: 'bar', x: rango(n), y: x, marker: { color: 'rgba(169,165,194,.7)' }, name: 'x_t', xaxis: 'x2', yaxis: 'y2' };
+      A.L.showlegend = true; A.L.legend = { orientation: 'h', y: 1.12 };
+      graf(g, A.tr, A.L);
+      const largo = b / (1 - p);
+      lec.innerHTML = tipo.get() === 'escalon' ? `Cambio permanente: la regresión salta de inmediato a β = ${num(b)}; el ARMAX se acerca poco a poco a β/(1 − φ) = ${fmt(largo, 3)}.`
+        : tipo.get() === 'pulso' ? `Festivo aislado: la regresión solo cambia ese día (${num(b)}); en el ARMAX el efecto dura y suma en total β/(1 − φ) = ${fmt(largo, 3)}.`
+          : 'Con una x que cambia cada día, el ARMAX «suaviza» y acumula su efecto; en la regresión, y sigue a x de inmediato.';
+      tab.innerHTML = tablaHTML(['t', 'x_t', 'ARMAX', 'regresión con errores AR(1)'], rango(12, t0 - 2).map(i => [i, fmt(x[i], 3), fmt(ya[i], 4), fmt(yr[i], 4)]), rango(12, t0 - 2).map(i => i === t0 ? 'resaltado' : ''));
+    }
+    dibujar();
+  });
+
+  R('w2-fuga', c => {
+    const ctr = lienzo(c);
+    let semilla = 3;
+    const rz = slider(ctr, { etiqueta: 'Ruido propio de z', min: 0.5, max: 6, paso: 0.5, valor: 1.5, fmt: num }, dibujar);
+    boton(ctr, 'Otros datos', () => { semilla += 7; dibujar(); });
+    const g1 = lamina(c), g2 = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: los tres modelos y dónde entra la trampa'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const n = 250, nt = 200, r = TS.rng(semilla), f = T2.simularARMA([1, -0.8], [1], n, { semilla: semilla + 1 }).y;
+      const y = f.map(v => 50 + 5 * v + 1.5 * r.normal()), z = f.map(v => 40 + 5 * v + rz.get() * r.normal());
+      const ols = (X, Y) => TS.ols(X, Y).beta;
+      const bz = ols(rango(nt).map(i => [1, z[i]]), y.slice(0, nt));                                   // y sobre z (mismo día)
+      const by = ols(rango(nt - 1, 1).map(i => [1, y[i - 1]]), y.slice(1, nt));                         // AR(1) de y
+      const bzz = ols(rango(nt - 1, 1).map(i => [1, z[i - 1]]), z.slice(1, nt));                        // AR(1) de z
+      const pf = [], ph = [], ps = [];
+      for (let t = nt; t < n; t++) {
+        pf.push(bz[0] + bz[1] * z[t]);                       // con fuga: usa el z real de ese día
+        const zh = bzz[0] + bzz[1] * z[t - 1];               // honesto: pronóstico de z con lo que se sabe ayer
+        ph.push(bz[0] + bz[1] * zh);
+        ps.push(by[0] + by[1] * y[t - 1]);                    // sin z: AR(1) de y
+      }
+      const real = y.slice(nt), mae = p => TS.media(p.map((v, i) => Math.abs(real[i] - v)));
+      const M = [mae(pf), mae(ph), mae(ps)], cor = TS.correlacion ? TS.correlacion(y, z) : null;
+      graf(g1, [lin(rango(n - nt, nt + 1), real, PAL.lav, 'y (lo que queremos pronosticar)'), lin(rango(n - nt, nt + 1), z.slice(nt), PAL.dur, 'z (estación vecina, mismo día)'), lin(rango(n - nt, nt + 1), pf, PAL.rosa, 'pronóstico con fuga', { line: { dash: 'dot', color: PAL.rosa, width: 1.6 } })],
+        { height: 260, title: { text: 'Periodo de prueba (50 días)' }, legend: { orientation: 'h', y: -0.25 } });
+      graf(g2, [{ type: 'bar', x: ['con z real (fuga)', 'con z pronosticado (honesto)', 'sin z (AR(1) de y)'], y: M, marker: { color: [PAL.rosa, PAL.menta, PAL.lav] }, text: M.map(v => fmt(v, 2)), textposition: 'outside' }],
+        { height: 260, title: { text: 'MAE en la prueba (pronóstico a un día)' }, yaxis: { rangemode: 'tozero' }, showlegend: false });
+      const rr = (() => { const my = TS.media(y), mz = TS.media(z); let a = 0, b1 = 0, b2 = 0; for (let i = 0; i < n; i++) { a += (y[i] - my) * (z[i] - mz); b1 += (y[i] - my) ** 2; b2 += (z[i] - mz) ** 2; } return a / Math.sqrt(b1 * b2); })();
+      lec.className = 'w-lectura aviso';
+      lec.innerHTML = `Correlación entre y y z el mismo día: ${fmt(rr, 3)}. La validación con fuga promete MAE = <b>${fmt(M[0], 2)}</b>, pero en la práctica, sin el z de mañana, el error real sería <b>${fmt(M[1], 2)}</b> ${M[1] > M[2] ? `(¡peor que no usar z: ${fmt(M[2], 2)}!)` : `(apenas mejor que no usar z: ${fmt(M[2], 2)})`}.`;
+      tab.innerHTML = tablaHTML(['modelo', 'ecuación estimada', 'qué necesita para pronosticar mañana'], [
+        ['con fuga', `ŷ = ${fmt(bz[0], 2)} + ${fmt(bz[1], 3)}·z<sub>t+1</sub>`, '<b>el z de mañana</b>: no se conoce a tiempo ❌'],
+        ['honesto', `ŷ = ${fmt(bz[0], 2)} + ${fmt(bz[1], 3)}·ẑ<sub>t+1</sub>, ẑ<sub>t+1</sub> = ${fmt(bzz[0], 2)} + ${fmt(bzz[1], 3)}·z<sub>t</sub>`, 'el z de hoy ✓'],
+        ['sin z', `ŷ = ${fmt(by[0], 2)} + ${fmt(by[1], 3)}·y<sub>t</sub>`, 'el y de hoy ✓']]);
+    }
+    dibujar();
+  });
+
+  /* ======================= 10 · Máxima verosimilitud ======================= */
+  R('w2-moneda', c => {
+    const ctr = lienzo(c);
+    const n = slider(ctr, { etiqueta: 'Lanzamientos n', min: 5, max: 200, paso: 1, valor: 10 }, () => { k.input.max = n.get(); if (k.get() > n.get()) k.set(n.get()); dibujar(); });
+    const k = slider(ctr, { etiqueta: 'Águilas', min: 0, max: 10, paso: 1, valor: 7 }, dibujar);
+    boton(ctr, '×10 los datos', () => { const N = Math.min(200, n.get() * 10), K = Math.round(k.get() / n.get() * N); n.set(N); k.input.max = N; k.set(K); dibujar(); });
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: ℓ(p) en una rejilla'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const N = n.get(), K = Math.min(k.get(), N), ps = rango(499).map(i => 0.002 + i * 0.002);
+      const ll = p => K * Math.log(p) + (N - K) * Math.log(1 - p), ph = Math.min(0.998, Math.max(0.002, K / N)), lmax = ll(ph);
+      const rel = ps.map(p => ll(p) - lmax), L = rel.map(Math.exp), dentro = ps.filter((p, i) => rel[i] >= -1.92);
+      graf(g1, [lin(ps, L, PAL.lav, 'L(p)/L(p̂)', { fill: 'tozeroy', fillcolor: 'rgba(124,105,214,.12)' }), vline(ph, 0, 1, PAL.rosa, 'dash', 'p̂')], { height: 280, title: { text: 'Verosimilitud (reescalada)' }, showlegend: false, xaxis: { title: { text: 'p' }, range: [0, 1] }, yaxis: { range: [0, 1.05] } });
+      graf(g2, [lin(ps, rel, PAL.menta, 'ℓ(p) − ℓ(p̂)'), hline(0, 1, -1.92, PAL.rosa, 'dot', ''), bandaTr(dentro, dentro.map(() => -12), dentro.map(() => 0.5), 'rgba(224,112,159,.10)', '')],
+        { height: 280, title: { text: 'Log-verosimilitud relativa' }, showlegend: false, xaxis: { title: { text: 'p' }, range: [0, 1] }, yaxis: { range: [-12, 0.5] } });
+      const se = Math.sqrt(ph * (1 - ph) / N), curv = K / (ph * ph) + (N - K) / ((1 - ph) ** 2);
+      lec.innerHTML = `p̂ = ${K}/${N} = <b>${fmt(K / N, 3)}</b>. Curvatura I(p̂) = ${fmt(curv, 2)} ⇒ error estándar 1/√I = <b>${fmt(1 / Math.sqrt(curv), 4)}</b> (= √(p̂(1−p̂)/n) = ${fmt(se, 4)}). ` +
+        `Intervalo de verosimilitud 95%: [${fmt(dentro[0], 3)}, ${fmt(dentro[dentro.length - 1], 3)}].`;
+      tab.innerHTML = tablaHTML(['p', 'ℓ(p)', 'ℓ(p) − ℓ(p̂)'], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].map(p => [num(p), fmt(ll(p), 3), fmt(ll(p) - lmax, 3)]), [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].map(p => Math.abs(p - K / N) < 0.05 ? 'elegido' : ''));
+    }
+    dibujar();
+  });
+
+  R('w2-verosimilitud-ar1', c => {
+    const ctr = lienzo(c);
+    let semilla = 13;
+    const sp = slider(ctr, { etiqueta: 'φ verdadero', min: -0.95, max: 0.95, paso: 0.05, valor: 0.6, fmt: num }, dibujar);
+    const sn = slider(ctr, { etiqueta: 'n', min: 10, max: 500, paso: 5, valor: 30 }, dibujar);
+    boton(ctr, 'Otra muestra', () => { semilla += 3; dibujar(); });
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: el error estándar a partir de la curvatura'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const phi = sp.get(), n = sn.get(), y = T2.simularARMA([1, -phi], [1], n, { semilla, quemado: 300 }).y;
+      const ssr = p => { let s = 0; for (let t = 1; t < n; t++) s += (y[t] - p * y[t - 1]) ** 2; return s; };
+      const llc = p => T2.llConcentrada(ssr(p), n - 1);
+      const lle = p => { if (Math.abs(p) >= 1) return NaN; const s2 = ((1 - p * p) * y[0] * y[0] + ssr(p)) / n; return -n / 2 * (Math.log(2 * Math.PI) + Math.log(s2) + 1) + 0.5 * Math.log(1 - p * p); };
+      const gc = rango(441).map(i => -1.1 + i * 0.005), ge = gc.filter(p => Math.abs(p) < 0.995);
+      const vc = gc.map(llc), ve = ge.map(lle);
+      const ic = vc.indexOf(Math.max(...vc)), ie = ve.indexOf(Math.max(...ve.filter(isFinite)));
+      const top = Math.max(vc[ic], ve[ie]);
+      graf(g1, [lin(gc, vc, PAL.lav, 'condicional'), lin(ge, ve, PAL.rosa, 'exacta'), vline(phi, top - 25, top + 1, PAL.gris, 'dot', 'verdadero'),
+        { x: [gc[ic]], y: [vc[ic]], mode: 'markers', marker: { symbol: 'diamond', size: 11, color: PAL.lav }, name: 'máx. condicional' }, { x: [ge[ie]], y: [ve[ie]], mode: 'markers', marker: { symbol: 'diamond', size: 11, color: PAL.rosa }, name: 'máx. exacta' }],
+      { height: 300, title: { text: 'ℓ(φ) con σ² optimizado' }, xaxis: { title: { text: 'φ' }, range: [-1.1, 1.1] }, yaxis: { range: [top - 25, top + 1] }, legend: { orientation: 'h', y: -0.3 } });
+      graf(g2, [lin(rango(n, 1), y, PAL.lav, 'y', { line: { width: 1.3, color: PAL.lav } })], { height: 300, title: { text: `Muestra de un AR(1), φ = ${num(phi)}, n = ${n}` }, showlegend: false });
+      const h = 0.005, d2 = (llc(gc[ic] + h) - 2 * llc(gc[ic]) + llc(gc[ic] - h)) / (h * h), se = 1 / Math.sqrt(-d2), ph = gc[ic];
+      lec.innerHTML = `Máximo condicional: φ̂ = <b>${fmt(gc[ic], 3)}</b> · máximo exacto: φ̂ = <b>${fmt(ge[ie], 3)}</b> (verdadero ${num(phi)}). ` + (n <= 40 ? 'Con tan pocos datos el primer dato pesa y las dos curvas difieren.' : 'Con muchos datos las dos curvas casi coinciden.');
+      tab.innerHTML = tablaHTML(['cantidad', 'valor'], [['curvatura −ℓ″(φ̂) (numérica)', fmt(-d2, 2)], ['error estándar 1/√curvatura', fmt(se, 4)], ['fórmula √((1 − φ̂²)/n)', fmt(Math.sqrt(Math.max(0, 1 - ph * ph) / n), 4)], ['intervalo ±1.96·se', `[${fmt(ph - 1.96 * se, 3)}, ${fmt(ph + 1.96 * se, 3)}]`]]);
+    }
+    dibujar();
+  });
+
+  R('w2-superficie', c => {
+    const ctr = lienzo(c);
+    let semilla = 4;
+    const caso = segmentado(ctr, { etiqueta: 'Modelo verdadero', valor: 'normal', opciones: [['normal', 'φ = 0.7, θ = 0.4'], ['cancel', 'casi cancelación: φ = 0.5, θ = −0.5'], ['ma', 'MA(1): θ = 0.6']] }, dibujar);
+    const sn = slider(ctr, { etiqueta: 'n', min: 100, max: 1000, paso: 100, valor: 300 }, dibujar);
+    boton(ctr, 'Otra muestra', () => { semilla += 3; dibujar(); });
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: los cinco mejores puntos de la rejilla'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const V = { normal: [0.7, 0.4], cancel: [0.5, -0.5], ma: [0, 0.6] }[caso.get()], n = sn.get();
+      const y = T2.simularARMA([1, -V[0]], [1, V[1]], n, { semilla, quemado: 300 }).y;
+      const g = rango(39).map(i => -0.95 + i * 0.05), Z = [];
+      let mejor = { v: -Infinity }, puntos = [];
+      for (const t of g) {
+        const fila_ = [];
+        for (const p of g) { const r = T2.cssARMA(y, [1, -p], [1, t], 0, 1), v = r.llf; fila_.push(v); puntos.push({ p, t, v }); if (v > mejor.v) mejor = { p, t, v }; }
+        Z.push(fila_);
+      }
+      const Zr = Z.map(f_ => f_.map(v => Math.max(-60, v - mejor.v)));
+      graf(g1, [{ type: 'contour', x: g, y: g, z: Zr, colorscale: [[0, '#f7f5fd'], [0.6, '#cbbff3'], [0.9, '#8d79dc'], [1, '#3f2f9a']], contours: { start: -60, end: 0, size: 5 }, colorbar: { title: { text: 'ℓ − máx' }, len: 0.8 }, hovertemplate: 'φ = %{x:.2f}<br>θ = %{y:.2f}<br>ℓ − máx = %{z:.2f}<extra></extra>' },
+        { x: [V[0]], y: [V[1]], mode: 'markers', marker: { symbol: 'x', size: 13, color: PAL.rosa, line: { width: 2 } }, name: 'verdadero' }, { x: [mejor.p], y: [mejor.t], mode: 'markers', marker: { symbol: 'diamond', size: 11, color: '#fff', line: { color: '#3f2f9a', width: 2 } }, name: 'máximo' }],
+      { height: 360, title: { text: 'Log-verosimilitud (CSS) en el plano (φ, θ)' }, xaxis: { title: { text: 'φ' } }, yaxis: { title: { text: 'θ' }, scaleanchor: 'x' }, showlegend: false });
+      const it = g.indexOf(mejor.t), corte = Z[it];
+      graf(g2, [lin(g, corte.map(v => v - mejor.v), PAL.lav, 'corte'), vline(mejor.p, -40, 2, PAL.rosa, 'dash', '')], { height: 360, title: { text: `Corte con θ = ${fmt(mejor.t, 2)}` }, xaxis: { title: { text: 'φ' } }, yaxis: { range: [-40, 2], title: { text: 'ℓ − máx' } }, showlegend: false });
+      puntos.sort((a, b) => b.v - a.v);
+      const cresta = puntos.slice(0, 10).filter(q => Math.abs(q.p + q.t) < 0.16).length;
+      lec.className = 'w-lectura ' + (caso.get() === 'cancel' ? 'aviso' : '');
+      lec.innerHTML = `Máximo de la rejilla: φ̂ = ${fmt(mejor.p, 2)}, θ̂ = ${fmt(mejor.t, 2)} (verdadero ${V[0]}, ${V[1]}). ` +
+        (caso.get() === 'cancel' ? `${cresta} de los 10 mejores puntos están sobre la diagonal φ ≈ −θ: una <b>cresta</b>, el modelo no puede decidir.` : 'La región clara alrededor del máximo es pequeña: la estimación es precisa.');
+      tab.innerHTML = tablaHTML(['φ', 'θ', 'ℓ', 'ℓ − máx'], puntos.slice(0, 5).map(q => [fmt(q.p, 2), fmt(q.t, 2), fmt(q.v, 2), fmt(q.v - mejor.v, 3)]));
+    }
+    dibujar();
+  });
+
   /* Las demás secciones se agregan abajo */
   U.u2 = { T2, AP, FECHAS_AP, LOGAP, f3, f4, sgn, lin, vline, hline, choques, histograma, curvaNormal, polTexto, DATOS };
 })();

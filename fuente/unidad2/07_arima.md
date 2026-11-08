@@ -130,8 +130,8 @@ except ValueError as e:
     print("ARIMA con trend='c' y d=1 ->", str(e)[:110], "...")
 a = ARIMA(y_deriva, order=(0, 1, 0), trend="t").fit()
 s = SARIMAX(y_deriva, order=(0, 1, 0), trend="c").fit(disp=False)
-print("ARIMA   trend='t':", dict(zip(a.param_names, np.round(a.params, 4))))
-print("SARIMAX trend='c':", dict(zip(s.param_names, np.round(s.params, 4))))
+print("ARIMA   trend='t':", dict(zip(a.param_names, np.round(a.params, 4).tolist())))
+print("SARIMAX trend='c':", dict(zip(s.param_names, np.round(s.params, 4).tolist())))
 print("Pronósticos:", np.round(a.get_forecast(3).predicted_mean, 3), "=", np.round(s.get_forecast(3).predicted_mean, 3))
 ```
 
