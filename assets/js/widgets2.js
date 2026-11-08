@@ -590,6 +590,201 @@
     dibujar();
   });
 
+  /* ======================= 5 · Identificación Box–Jenkins ======================= */
+  const RESP_CASOS = {
+    A: { modelo: 'AR(2) con φ = (0.5, 0.3)', lectura: 'La ACF decae poco a poco y la PACF tiene dos barras grandes y luego se corta: AR(2).' },
+    B: { modelo: 'MA(1) con θ = 0.7', lectura: 'La ACF tiene un solo pico y luego se corta; la PACF decae alternando signo: MA(1).' },
+    C: { modelo: 'ARMA(1,1) con φ = 0.8 y θ = −0.4', lectura: 'Las dos decaen, aunque la PACF se ve casi cortada en 2. Es ambigua entre AR(2) y ARMA(1,1): el AIC prefiere el ARMA(1,1).' },
+    D: { modelo: 'Paseo aleatorio: ARIMA(0,1,0)', lectura: 'En niveles la ACF decae casi en línea recta (raíz unitaria). Diferenciada, todo queda dentro de la banda: ruido blanco.' }
+  };
+  function tablaAIC(y, tab) {
+    const filas = [];
+    for (let p = 0; p <= 2; p++) for (let q = 0; q <= 2; q++) {
+      const a = T2.ajustarARMA(y, p, q, { desde: 2 });
+      filas.push({ m: `ARMA(${p},${q})`, aic: a.aic, bic: a.bic, k: a.k });
+    }
+    const min = Math.min(...filas.map(f => f.aic));
+    filas.sort((a, b) => a.aic - b.aic);
+    tab.innerHTML = tablaHTML(['modelo', 'parámetros k', 'AIC (CSS)', 'BIC (CSS)'], filas.map(f => [f.m, f.k, fmt(f.aic, 2), fmt(f.bic, 2)]), filas.map(f => f.aic === min ? 'elegido' : '')) +
+      '<p style="margin:6px 4px;font-size:.88rem">Estimados por mínimos cuadrados condicionales desde t = 3 para que todos usen las mismas observaciones; los valores difieren un poco de los de <code>SARIMAX</code> (máxima verosimilitud exacta), pero el orden suele coincidir.</p>';
+  }
+  R('w2-identificar', c => {
+    const D = DATOS.casos_identificacion;
+    if (!D) { c.textContent = 'Faltan los datos de los casos.'; return; }
+    const ctr = lienzo(c);
+    let revelado = false;
+    const s = segmentado(ctr, { etiqueta: 'Serie', valor: 'A', opciones: [['A', 'A'], ['B', 'B'], ['C', 'C'], ['D', 'D']] }, () => { revelado = false; dibujar(); });
+    const dif = casilla(ctr, 'Diferenciar la serie D', false, dibujar);
+    boton(ctr, 'Revelar el modelo', () => { revelado = true; dibujar(); });
+    const g1 = lamina(c), f = fila(c), gA = lamina(f), gP = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: AIC y BIC de los nueve ARMA(p, q) con p, q ≤ 2'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const k = s.get(), esD = k === 'D';
+      dif.mostrar(esD);
+      let y = D[k];
+      const usaDif = esD && dif.get();
+      if (usaDif) y = TS.diff(y);
+      const N = y.length;
+      graf(g1, [lin(rango(N, 1), y, PAL.lav, 'serie', { line: { width: 1.2, color: PAL.lav } })], { height: 220, title: { text: `Serie ${k}${usaDif ? ' diferenciada' : ''}` }, showlegend: false });
+      graf(gA, trazasACF(TS.acf(y, 20), N), layoutACF('ACF', { height: 260 }));
+      graf(gP, trazasACF(TS.pacf(y, 20), N, { color: PAL.cel }), layoutACF('PACF', { height: 260 }));
+      lec.className = 'w-lectura ' + (revelado ? 'ok' : '');
+      lec.innerHTML = revelado ? `<b>${RESP_CASOS[k].modelo}.</b> ${RESP_CASOS[k].lectura}` : 'Antes de revelar: ¿la ACF se corta o decae? ¿Y la PACF? ¿Hace falta diferenciar?';
+      tablaAIC(usaDif || !esD ? y : TS.diff(y), tab);
+    }
+    dibujar();
+  });
+
+  R('w2-adivina', c => {
+    const ctr = lienzo(c), OPC = [['rb', 'Ruido blanco'], ['ar1', 'AR(1)'], ['ar2', 'AR(2)'], ['ma1', 'MA(1)'], ['ma2', 'MA(2)'], ['arma', 'ARMA(1,1)'], ['paseo', 'Paseo aleatorio']];
+    const n = slider(ctr, { etiqueta: 'n', min: 100, max: 1000, paso: 50, valor: 300 }, () => nueva());
+    boton(ctr, 'Nueva serie', () => nueva());
+    const marcador = el('span', { class: 'w-marcador' });
+    ctr.append(marcador);
+    const g1 = lamina(c), f = fila(c), gA = lamina(f), gP = lamina(f), juego = el('div', { class: 'w-juego' }), lec = lectura(c);
+    c.append(juego);
+    let ronda = 0, aciertos = 0, intentos = 0, actual = null, respondido = false;
+    const r = TS.rng(20261107);
+    const ent = (a, b) => a + (b - a) * r.unif(), sg = () => (r.unif() < 0.5 ? -1 : 1);
+    function generar() {
+      const tipo = OPC[Math.floor(r.unif() * OPC.length)][0];
+      let ar = [1], ma = [1], txt = '', pista = '';
+      if (tipo === 'ar1') { const p = sg() * ent(0.5, 0.85); ar = [1, -p]; txt = `φ = ${fmt(p, 2)}`; pista = `la PACF se corta en 1 y la ACF decae${p < 0 ? ' alternando signo' : ''}`; }
+      if (tipo === 'ar2') { let p1, p2; do { p1 = ent(-1.2, 1.2); p2 = ent(-0.7, 0.6); } while (!(p1 + p2 < 0.9 && p2 - p1 < 0.9 && Math.abs(p2) > 0.3)); ar = [1, -p1, -p2]; txt = `φ = (${fmt(p1, 2)}, ${fmt(p2, 2)})`; pista = 'la PACF tiene dos barras y se corta; la ACF decae (a veces como onda)'; }
+      if (tipo === 'ma1') { const t = sg() * ent(0.5, 0.9); ma = [1, t]; txt = `θ = ${fmt(t, 2)}`; pista = 'la ACF tiene un solo pico y se corta; la PACF decae'; }
+      if (tipo === 'ma2') { const t1 = sg() * ent(0.4, 0.8), t2 = sg() * ent(0.4, 0.7); ma = [1, t1, t2]; if (!T2.esInvertible(ma)) ma = [1, t1 * 0.6, t2 * 0.6]; txt = `θ = (${fmt(ma[1], 2)}, ${fmt(ma[2], 2)})`; pista = 'la ACF tiene dos barras y se corta; la PACF decae'; }
+      if (tipo === 'arma') { const p = sg() * ent(0.5, 0.85); let t = sg() * ent(0.4, 0.8); if (Math.abs(p + t) < 0.4) t = -t; ma = [1, t]; ar = [1, -p]; txt = `φ = ${fmt(p, 2)}, θ = ${fmt(t, 2)}`; pista = 'las dos decaen; ninguna se corta de golpe'; }
+      if (tipo === 'paseo') { ar = [1, -1]; txt = 'ψ_j = 1 para todo j'; pista = 'la ACF decae casi en línea recta desde valores cercanos a 1'; }
+      if (tipo === 'rb') { txt = 'sin memoria'; pista = 'nada sale de la banda (salvo alguna falsa alarma)'; }
+      const y = tipo === 'paseo' ? TS.cumsum(r.normales(n.get())) : T2.simularARMA(ar, ma, n.get(), { semilla: 1000 + ronda * 7, quemado: 300 }).y;
+      return { tipo, y, txt, pista };
+    }
+    function nueva() {
+      ronda++; respondido = false; actual = generar();
+      const y = actual.y, N = y.length;
+      graf(g1, [lin(rango(N, 1), y, PAL.lav, 'serie', { line: { width: 1.2, color: PAL.lav } })], { height: 220, title: { text: `Ronda ${ronda}: ¿qué modelo es?` }, showlegend: false });
+      graf(gA, trazasACF(TS.acf(y, 20), N), layoutACF('ACF', { height: 250 }));
+      graf(gP, trazasACF(TS.pacf(y, 20), N, { color: PAL.cel }), layoutACF('PACF', { height: 250 }));
+      juego.innerHTML = '';
+      OPC.forEach(([k, t]) => { const b = el('button', { type: 'button' }, t); b.addEventListener('click', () => responder(k, b)); juego.append(b); });
+      lec.className = 'w-lectura'; lec.innerHTML = 'Elige una opción.';
+      marcador.textContent = `Aciertos: ${aciertos} / ${intentos}`;
+    }
+    function responder(k, b) {
+      if (respondido) return;
+      respondido = true; intentos++;
+      const ok = k === actual.tipo;
+      if (ok) aciertos++;
+      b.classList.add(ok ? 'bien' : 'mal');
+      [...juego.children].forEach((x, i) => { if (OPC[i][0] === actual.tipo) x.classList.add('bien'); });
+      const nombre = OPC.find(o => o[0] === actual.tipo)[1];
+      lec.className = 'w-lectura ' + (ok ? 'ok' : 'mal');
+      lec.innerHTML = `${ok ? '✓ ¡Correcto!' : '✗ No.'} Era <b>${nombre}</b> (${actual.txt}). La pista: ${actual.pista}.`;
+      marcador.textContent = `Aciertos: ${aciertos} / ${intentos}`;
+    }
+    nueva();
+  });
+
+  /* ======================= 6 · Transformaciones ======================= */
+  const ANIOS_AP = rango(12).map(i => 1949 + i);
+  const LAM_AP = T2.boxcoxMLE(AP);
+  function porAnio(z) {
+    return ANIOS_AP.map((a, i) => { const v = z.slice(12 * i, 12 * i + 12); return { anio: a, media: TS.media(v), sd: TS.desv(v, 1) }; });
+  }
+  R('w2-boxcox', c => {
+    const ctr = lienzo(c);
+    const s = slider(ctr, { etiqueta: 'λ', min: -1, max: 1.5, paso: 0.01, valor: 1, fmt: v => fmt(v, 2) }, dibujar);
+    boton(ctr, `Usar λ̂ = ${fmt(LAM_AP, 3)}`, () => { s.set(Math.round(LAM_AP * 100) / 100); dibujar(); });
+    boton(ctr, 'Logaritmo (λ = 0)', () => { s.set(0); dibujar(); }, 'sec');
+    const g1 = lamina(c), f = fila(c), g2 = lamina(f), g3 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: media y desviación estándar por año en la escala transformada'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    const lams = rango(126).map(i => -1 + i * 0.02), llfs = lams.map(l => T2.boxcoxLLF(AP, l));
+    function dibujar() {
+      const l = s.get(), z = T2.boxcox(AP, l), A = porAnio(z);
+      graf(g1, [lin(FECHAS_AP, z, PAL.lav, 'transformada', { line: { color: PAL.lav, width: 1.6 } })], { height: 240, title: { text: `AirPassengers con Box–Cox, λ = ${fmt(l, 2)}` }, showlegend: false });
+      const xs = A.map(a => a.media), ys = A.map(a => a.sd), reg = TS.ols(xs.map(v => [1, v]), ys), b = reg.beta[1];
+      const x0 = Math.min(...xs), x1 = Math.max(...xs);
+      graf(g2, [Object.assign(dispersion(xs, ys, PAL.dur, A.map(a => a.anio)), { mode: 'markers+text', textposition: 'top center', textfont: { size: 9, color: '#8a84a8' } }),
+        lin([x0, x1], [reg.beta[0] + b * x0, reg.beta[0] + b * x1], PAL.rosa, 'recta', { line: { color: PAL.rosa, dash: 'dash', width: 2 } })],
+      { height: 300, title: { text: 'Desviación estándar de cada año vs su media' }, showlegend: false, xaxis: { title: { text: 'media del año' } }, yaxis: { title: { text: 'desv. estándar del año' }, rangemode: 'tozero' } });
+      graf(g3, [lin(lams, llfs, PAL.menta, 'ℓ(λ)'), { x: [LAM_AP], y: [T2.boxcoxLLF(AP, LAM_AP)], mode: 'markers', marker: { symbol: 'diamond', size: 12, color: PAL.lav }, name: 'máximo' },
+        { x: [l], y: [T2.boxcoxLLF(AP, l)], mode: 'markers', marker: { size: 11, color: PAL.rosa }, name: 'tu λ' }],
+      { height: 300, title: { text: 'Log-verosimilitud de Box–Cox' }, showlegend: false, xaxis: { title: { text: 'λ' } }, yaxis: { title: { text: 'ℓ(λ)' } } });
+      const razon = A[11].sd / A[0].sd;
+      lec.className = 'w-lectura ' + (razon < 1.6 && razon > 0.7 ? 'ok' : '');
+      lec.innerHTML = `La variabilidad de 1960 es <b>${fmt(razon, 2)} veces</b> la de 1949 (con λ = 1 es ${fmt(77.7 / 13.7, 1)} veces). ` +
+        `ℓ(λ) = ${fmt(T2.boxcoxLLF(AP, l), 2)} contra el máximo ${fmt(T2.boxcoxLLF(AP, LAM_AP), 2)} en λ̂ = ${fmt(LAM_AP, 3)}. ` +
+        (razon < 1.6 && razon > 0.7 ? 'La varianza ya casi no depende del nivel.' : razon >= 1.6 ? 'Todavía crece con el nivel: baja λ.' : 'Ahora la variabilidad <b>decrece</b> con el nivel: te pasaste, sube λ.');
+      tab.innerHTML = tablaHTML(['año', 'media', 'desv. estándar', 'desv. / desv. de 1949'], A.map(a => [a.anio, fmt(a.media, 4), fmt(a.sd, 4), fmt(a.sd / A[0].sd, 3)]));
+    }
+    dibujar();
+  });
+
+  R('py2-boxcox', c => {
+    const ctr = lienzo(c);
+    let activo = 'modo';
+    const modo = segmentado(ctr, { etiqueta: 'lmbda', valor: 'auto', opciones: [['auto', 'None (estimar)'], ['fijo', 'fijo']] }, () => { activo = 'modo'; dibujar(); });
+    const s = slider(ctr, { etiqueta: 'valor fijo de λ', min: -1, max: 1.5, paso: 0.05, valor: 0.5, fmt: num }, () => { activo = 'lam'; dibujar(); });
+    const pc = panelCodigo(c), g = lamina(c), lec = lectura(c);
+    const params = panelParametros(c, [
+      { nombre: 'x', que: 'Los datos; deben ser <b>estrictamente positivos</b>.', rec: 'La serie original (sin diferenciar). Si hay ceros, suma una constante o usa Yeo–Johnson.' },
+      { nombre: 'lmbda', que: 'Si es <code>None</code>, estima λ por máxima verosimilitud y devuelve <code>(datos, λ)</code>; si es un número, solo devuelve los datos transformados.', rec: '<code>None</code> para explorar; luego fija un valor redondo cercano (0, 0.5, 1).' },
+      { nombre: 'alpha', que: 'Si lo das (con <code>lmbda=None</code>) devuelve además un intervalo de confianza para λ.', rec: '<code>alpha=0.05</code> si quieres saber si λ = 0 es plausible.' }
+    ]);
+    function dibujar() {
+      const auto = modo.get() === 'auto', l = auto ? LAM_AP : s.get();
+      s.mostrar(!auto);
+      const z = T2.boxcox(AP, l), args = { linea: auto ? 'z, lam = stats.boxcox(datos)          # lmbda=None: estima λ' : `lam = ${num(l)}\nz = stats.boxcox(datos, lmbda=lam)    # λ fijo: devuelve solo los datos` };
+      pc.codigo(codigoPython(`from scipy import stats\nfrom scipy.special import inv_boxcox\n\ndatos = serie.values                     # AirPassengers, 144 meses\n{linea}\nprint("λ:", round(lam, 4))\nprint("log-verosimilitud:", round(stats.boxcox_llf(lam, datos), 3))\nprint("primeros transformados:", np.round(z[:4], 4))\nprint("de regreso:", np.round(inv_boxcox(z[:4], lam), 2))`, args, activo === 'modo' || activo === 'lam' ? 'linea' : null));
+      pc.salida([`λ: ${fmt(l, 4)}`, `log-verosimilitud: ${fmt(T2.boxcoxLLF(AP, l), 3)}`, `primeros transformados: ${npArr(z.slice(0, 4))}`, `de regreso: ${npArr(T2.invBoxcox(z.slice(0, 4), l), 2)}`].join('\n'));
+      graf(g, [lin(FECHAS_AP, z, PAL.lav, 'z', { line: { color: PAL.lav, width: 1.5 } })], { height: 230, title: { text: `stats.boxcox con λ = ${fmt(l, 3)}` }, showlegend: false });
+      params({ x: 'serie.values', lmbda: auto ? 'None' : num(l), alpha: '—' }, activo === 'modo' || activo === 'lam' ? 'lmbda' : null);
+      lec.innerHTML = auto ? `λ̂ = ${fmt(LAM_AP, 4)}: muy cerca de 0, por eso con AirPassengers se usa el logaritmo.` : `Con λ fijo la diferencia de log-verosimilitud respecto al máximo es ${fmt(T2.boxcoxLLF(AP, LAM_AP) - T2.boxcoxLLF(AP, l), 2)} (más de ~2 ya es una diferencia apreciable).`;
+    }
+    dibujar();
+  });
+
+  const PROC_DIF = {
+    rb: { nombre: 'Ruido blanco', gen: s => TS.rng(s).normales(300) },
+    ar: { nombre: 'AR(1), φ = 0.6', gen: s => T2.simularARMA([1, -0.6], [1], 300, { semilla: s }).y },
+    paseo: { nombre: 'Paseo aleatorio', gen: s => TS.cumsum(TS.rng(s).normales(300)) },
+    deriva: { nombre: 'Paseo con deriva 0.2', gen: s => TS.cumsum(TS.rng(s).normales(300).map(v => v + 0.2)) },
+    tend: { nombre: 'Tendencia determinística + AR(1)', gen: s => T2.simularARMA([1, -0.5], [1], 300, { semilla: s }).y.map((v, i) => v + 0.05 * i) },
+    i2: { nombre: 'Integrada dos veces, I(2)', gen: s => TS.cumsum(TS.cumsum(TS.rng(s).normales(300).map(v => 0.2 * v))) }
+  };
+  R('w2-sobrediferenciar', c => {
+    const ctr = lienzo(c);
+    let semilla = 3;
+    const pr = seleccion(ctr, { etiqueta: 'Proceso', valor: 'paseo', opciones: Object.keys(PROC_DIF).map(k => [k, PROC_DIF[k].nombre]) }, dibujar);
+    const d = segmentado(ctr, { etiqueta: 'Diferencias d', valor: '1', opciones: [['0', '0'], ['1', '1'], ['2', '2']] }, dibujar);
+    boton(ctr, 'Otra muestra', () => { semilla += 7; dibujar(); });
+    const g1 = lamina(c), f = fila(c), g2 = lamina(f), g3 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: varianza, ρ̂(1) y ADF para cada d'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const y0 = PROC_DIF[pr.get()].gen(semilla), ys = [y0, TS.diff(y0), TS.diff(TS.diff(y0))], D_ = +d.get(), y = ys[D_];
+      graf(g1, [lin(rango(y.length, D_ + 1), y, PAL.lav, 'serie', { line: { color: PAL.lav, width: 1.2 } })], { height: 220, title: { text: `${PROC_DIF[pr.get()].nombre} con d = ${D_}` }, showlegend: false });
+      const vars = ys.map(v => TS.varianza(v, 1)), mi = vars.indexOf(Math.min(...vars));
+      graf(g2, [{ type: 'bar', x: ['d = 0', 'd = 1', 'd = 2'], y: vars, marker: { color: [0, 1, 2].map(i => i === D_ ? PAL.rosa : i === mi ? PAL.menta : 'rgba(124,105,214,.55)') }, text: vars.map(v => fmt(v, v > 100 ? 0 : 3)), textposition: 'outside', hovertemplate: '%{x}: varianza %{y:.4f}<extra></extra>' }],
+        { height: 280, title: { text: 'Varianza según el número de diferencias' }, yaxis: { type: 'log', exponentformat: 'power', title: { text: 'varianza (escala log)' } }, showlegend: false });
+      graf(g3, trazasACF(TS.acf(y, 20), y.length), layoutACF(`ACF con d = ${D_}`, { height: 280 }));
+      const filas = ys.map((v, i) => {
+        const a = TS.adf(v, { regression: 'c' }), r1 = TS.acf(v, 1)[1];
+        const diag = r1 < -0.4 ? 'sobrediferenciada' : a.p > 0.05 ? 'no estacionaria' : 'estacionaria';
+        return [`d = ${i}`, fmt(vars[i], 4), fmt(r1, 3), fp(a.p), diag];
+      });
+      tab.innerHTML = tablaHTML(['diferencias', 'varianza', 'ρ̂(1)', 'ADF p', 'diagnóstico'], filas, filas.map((_, i) => i === mi ? 'elegido' : i === D_ ? 'resaltado' : ''));
+      const r1 = TS.acf(y, 1)[1];
+      lec.className = 'w-lectura ' + (D_ === mi && r1 > -0.4 ? 'ok' : r1 < -0.4 ? 'mal' : 'aviso');
+      lec.innerHTML = `Regla de la menor varianza: <b>d = ${mi}</b>. Con d = ${D_}: varianza ${fmt(vars[D_], 4)}, ρ̂(1) = ${fmt(r1, 3)}. ` +
+        (r1 < -0.4 ? '⚠️ ρ̂(1) cerca de −0.5: <b>sobrediferenciaste</b>.' : D_ < mi ? 'Todavía le falta diferenciar.' : D_ === mi ? 'Buena elección.' : '') +
+        (pr.get() === 'tend' ? ' 💡 Con tendencia determinística, en lugar de diferenciar conviene incluir la tendencia en el modelo.' : '');
+    }
+    dibujar();
+  });
+
   /* Las demás secciones se agregan abajo */
   U.u2 = { T2, AP, FECHAS_AP, LOGAP, f3, f4, sgn, lin, vline, hline, choques, histograma, curvaNormal, polTexto, DATOS };
 })();

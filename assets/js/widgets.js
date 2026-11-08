@@ -133,8 +133,9 @@
     const i = el('input', { type: 'checkbox' });
     i.checked = valor;
     i.addEventListener('change', alCambiar);
-    padre.append(el('label', { class: 'w-control w-check' }, i, el('span', {}, texto)));
-    return { get: () => i.checked };
+    const lab = el('label', { class: 'w-control w-check' }, i, el('span', {}, texto));
+    padre.append(lab);
+    return { get: () => i.checked, set: v => { i.checked = !!v; }, mostrar: v => { lab.style.display = v ? '' : 'none'; } };
   }
   function lienzo(c) { c.innerHTML = ''; const ctr = el('div', { class: 'w-controles' }); c.append(ctr); return ctr; }
   function lamina(c, estilo) { const d = el('div', { class: 'w-graf', style: estilo || '' }); c.append(d); return d; }
