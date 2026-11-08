@@ -58,6 +58,33 @@ UNIDADES = {
                (r"e_\{t-[0-9a-z]+\}", "e-res-j"), (r"e_t(?![A-Za-z0-9])", "e-res"), (r"e_\{t\}", "e-res"),
                (r"(?<![A-Za-z\\{])L(?![A-Za-z])", "L-op"),
            ]},
+    "u3": {"carpeta": "unidad3", "salida": "unidad3.html", "numero": "III", "nombre": "Unidad III",
+           "titulo_pagina": "Unidad III · Análisis espectral y filtrado — Guía de estudio",
+           "descripcion": "Guía de estudio interactiva de la Unidad III de Análisis de Series de Tiempo: periodicidad y ciclo, dominio de la frecuencia, densidad espectral, transformada de Fourier, periodograma, Welch, estimación paramétrica, espectro cruzado, coherencia y filtros lineales, con demostraciones, ejemplos a mano, Python y gráficas interactivas.",
+           "scripts": ["assets/js/ts2.js", "assets/js/ts3.js", "assets/js/widgets3.js"],
+           # En la Unidad III aparecen la frecuencia, los espectros y los filtros
+           "renombrar": {"alpha": "alfa-sig", "tau": "tau-hp", "chi2": "chi2-esp", "beta": "beta-fourier"},
+           "reglas": [
+               (r"e\^\{\s*-?\s*2\\pi\s*i[^}]*\}", "exp-c"),
+               (r"\\lvert\s*A\(\\omega\)\s*\\rvert\^2", "gan2"), (r"\\lvert\s*A\(\\omega\)\s*\\rvert", "gan"),
+               (r"(?<![A-Za-z\\])A\(\\omega\)", "A-omega"),
+               (r"\\hat\{f\}", "fhat"),
+               (r"(?<![A-Za-z\\])f_\{(?:yx|xy)\}", "f-cruz"),
+               (r"(?<![A-Za-z\\])f_(?:\{(?:xx|yy|x|y|u|w|v|e|z)\}|(?:x|y|u|w|v|e|z)(?![A-Za-z]))", "f-serie"),
+               (r"(?<![A-Za-z\\])f\(\\omega(?:_\{?j\}?)?\)", "f-omega"),
+               (r"(?<![A-Za-z\\])I\(\\omega(?:_\{?j\}?)?\)", "per"), (r"(?<![A-Za-z\\])d\(\\omega(?:_\{?j\}?)?\)", "dft"),
+               (r"\\rho\^2_\{[^}]*\}", "coh"),
+               (r"\\gamma_\{(?:xy|yx)\}", "gamma-cruz"),
+               (r"(?<![A-Za-z\\])c_\{(?:xy|yx)\}", "cospectro"), (r"(?<![A-Za-z\\])q_\{(?:xy|yx)\}", "cuadratura"),
+               (r"\\varphi_\{[^}]*\}|\\varphi(?![A-Za-z])", "fase"),
+               (r"\\omega_\{?j\}?(?![A-Za-z])", "omega-j"), (r"\\omega_\{?c\}?(?![A-Za-z])", "omega-c"),
+               (r"\\omega(?![A-Za-z_])", "omega3"),
+               (r"\\lambda(?![A-Za-z])", "lambda-hp"), (r"\\tau_t", "tau-hp"),
+               (r"\\Delta_(?:\{[^}]+\}|[0-9a-z])", "Delta-s"),
+               (r"(?<![A-Za-z\\])a_\{?[jk]\}?(?![A-Za-z])", "a-imp"), (r"(?<![A-Za-z\\])h_\{?k\}?(?![A-Za-z])", "h-ker"),
+               (r"(?<![A-Za-z\\])x_\{t-[0-9a-zD]+\}", "x-j"),
+               (r"(?<![A-Za-z\\{])L(?![A-Za-z])", "L-op"),
+           ]},
 }
 
 MACROS = {
@@ -75,6 +102,8 @@ MACROS = {
     r"\JB": r"\tip{JB}{\mathrm{JB}}", r"\LM": r"\tip{LM}{\mathrm{LM}}",
     r"\pL": r"\tip{phiL}{\phi(L)}", r"\tL": r"\tip{thetaL}{\theta(L)}",
     r"\PL": r"\tip{PhiL}{\Phi(L^{s})}", r"\TL": r"\tip{ThetaL}{\Theta(L^{s})}",
+    # Unidad III
+    r"\Lsp": r"\tip{L-span}{L}", r"\Bw": r"\tip{B-banda}{B}", r"\Per": r"\tip{P-periodo}{P}", r"\Kseg": r"\tip{K-seg}{K}",
 }
 
 # ----------------------------------------------------------------------------
@@ -830,7 +859,7 @@ def construir(clave, externos):
     plantilla = (AQUI / "plantilla.html").read_text(encoding="utf-8")
     nav = "".join(
         (f'<a class="unidad activa" href="#inicio">{c["nombre"]}</a>' if k == clave else f'<a class="unidad" href="{c["salida"]}">{c["nombre"]}</a>')
-        for k, c in UNIDADES.items()) + '<span class="unidad pronto" title="Próximamente">Unidad III</span>'
+        for k, c in UNIDADES.items())
     scripts = "\n".join(f'<script src="{x}" defer></script>' for x in cfg["scripts"])
     final = (plantilla.replace("{{INDICE}}", "\n".join(toc))
              .replace("{{TITULO_PAGINA}}", cfg["titulo_pagina"]).replace("{{DESCRIPCION}}", cfg["descripcion"])
@@ -858,18 +887,17 @@ def main():
     pedidas = sys.argv[1:] or list(UNIDADES)
     externos = {}
     CACHE.mkdir(exist_ok=True)
-    copia = CACHE / "anclas_u1.json"
     for clave in UNIDADES:
+        copia = CACHE / f"anclas_{clave}.json"
         if clave not in pedidas:
-            if clave == "u1" and copia.exists():
-                externos["u1"] = {"anclas": json.loads(copia.read_text(encoding="utf-8")), "archivo": "index.html", "nombre": "Unidad I"}
+            # Las anclas de las unidades que no se regeneran salen de la caché (para los enlaces ⇠ entre unidades)
+            if copia.exists():
+                externos[clave] = {"anclas": json.loads(copia.read_text(encoding="utf-8")),
+                                   "archivo": UNIDADES[clave]["salida"], "nombre": UNIDADES[clave]["nombre"]}
             continue
         doc = construir(clave, externos)
-        if clave == "u1":
-            copia.write_text(json.dumps(doc.anclas, ensure_ascii=False), encoding="utf-8")
+        copia.write_text(json.dumps(doc.anclas, ensure_ascii=False), encoding="utf-8")
         externos[clave] = {"anclas": doc.anclas, "archivo": UNIDADES[clave]["salida"], "nombre": UNIDADES[clave]["nombre"]}
-        if "u1" not in externos and copia.exists():
-            pass
     return externos
 
 
