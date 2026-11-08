@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Unidad I · Características de series de tiempo — Guía de estudio</title>
-<meta name="description" content="Guía de estudio interactiva de la Unidad I de Análisis de Series de Tiempo: componentes, estacionariedad, raíz unitaria, ADF, KPSS, ACF, PACF y Ljung-Box, con demostraciones paso a paso, ejemplos a mano, código Python y gráficas interactivas.">
+<title>{{TITULO_PAGINA}}</title>
+<meta name="description" content="{{DESCRIPCION}}">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23efeaff'/%3E%3Cpath d='M10 44 L22 30 L32 38 L44 18 L54 26' fill='none' stroke='%237c69d6' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,21 +12,19 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <link rel="stylesheet" href="assets/css/estilos.css">
 </head>
-<body>
+<body data-unidad="{{UNIDAD}}">
 <div id="barra-progreso" aria-hidden="true"><span></span></div>
 <header class="barra">
   <button class="btn-menu" id="btn-menu" type="button" aria-label="Abrir índice" aria-controls="indice" aria-expanded="false">☰</button>
   <a class="marca" href="#inicio"><span class="marca-ico">📈</span><span class="marca-txt">Series de Tiempo <small>Guía de estudio</small></span></a>
   <nav class="unidades" aria-label="Unidades">
-    <a class="unidad activa" href="#inicio">Unidad I</a>
-    <span class="unidad pronto" title="Próximamente">Unidad II</span>
-    <span class="unidad pronto" title="Próximamente">Unidad III</span>
+    {{NAV}}
   </nav>
 </header>
 
 <aside class="indice" id="indice" aria-label="Índice de la unidad">
   <div class="indice-cab">
-    <span>Índice de la Unidad I</span>
+    <span>Índice de la Unidad {{NUMERO}}</span>
     <span class="indice-avance" id="indice-avance"></span>
   </div>
   <ol class="toc">
@@ -40,7 +38,7 @@
 {{CONTENIDO}}
   </div>
   <footer class="pie">
-    <p>Guía de estudio · Análisis de Series de Tiempo · Unidad I. Las gráficas se calculan en tu navegador con las mismas fórmulas que usa <code>statsmodels</code>.</p>
+    <p>Guía de estudio · Análisis de Series de Tiempo · Unidad {{NUMERO}}. Las gráficas se calculan en tu navegador con las mismas fórmulas que usa <code>statsmodels</code>.</p>
   </footer>
 </main>
 
@@ -50,8 +48,10 @@
 
 <script id="glosario" type="application/json">{{GLOSARIO}}</script>
 <script id="macros-katex" type="application/json">{{MACROS}}</script>
+<script id="datos-unidad" type="application/json">{{DATOS}}</script>
 <script src="assets/js/ts.js" defer></script>
 <script src="assets/js/ui.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
+{{SCRIPTS}}
 </body>
 </html>

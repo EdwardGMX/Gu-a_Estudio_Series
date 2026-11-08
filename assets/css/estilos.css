@@ -451,3 +451,26 @@ li.check input:checked + * , li.check label:has(input:checked) { color: var(--te
 .w-extra .w-tabla td, .w-extra .w-tabla th { text-align: center; }
 .tabla-ap th:first-child { position: sticky; left: 0; background: var(--lavanda-f); }
 .w-fila { align-items: start; }
+.ref-unidad { background: var(--menta-f); color: var(--menta-o); border: 1px solid #c6ecdb; }
+a.unidad:not(.activa):hover { background: var(--lavanda-f); color: var(--titulo); }
+
+/* ---------------------------- Unidad II ---------------------------- */
+.ruta { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 20px 0 4px; counter-reset: ruta; }
+.ruta-paso { position: relative; background: #fff; border-radius: 16px; padding: 12px 14px 12px 16px; box-shadow: var(--sombra-2); border-left: 5px solid var(--rosa); }
+.ruta-paso:nth-child(2) { border-left-color: var(--durazno); } .ruta-paso:nth-child(3) { border-left-color: var(--menta); } .ruta-paso:nth-child(4) { border-left-color: var(--celeste); }
+.ruta-paso b { display: block; font-family: var(--fuente-titulo); color: var(--titulo); font-weight: 600; }
+.ruta-paso span { font-size: .86rem; color: var(--texto-suave); line-height: 1.4; }
+.w-tabla tr.resaltado td { background: #fff4c2; }
+.w-tabla tr.tenue td { color: var(--texto-suave); }
+.w-tabla tr.elegido td { background: var(--menta-f); font-weight: 700; }
+.w-tabla tbody tr.clic { cursor: pointer; } .w-tabla tbody tr.clic:hover td { background: var(--lavanda-f); }
+.w-tabla th.ord { cursor: pointer; } .w-tabla th.ord:hover { color: var(--lavanda-o); }
+.resumen-sm { margin-top: 8px; background: #1f1d33; color: #ecebf7; border-radius: 14px; padding: 12px 14px; overflow-x: auto; font-family: var(--fuente-mono); font-size: .76rem; line-height: 1.45; white-space: pre; }
+.resumen-sm .rs-l { display: inline-block; min-width: 100%; border-radius: 4px; cursor: help; }
+.resumen-sm .rs-l:hover, .resumen-sm .rs-l.on { background: rgba(255, 241, 168, .22); }
+.resumen-sm .rs-c { color: #ffd479; } .resumen-sm .rs-a { color: #9fe3c6; } .resumen-sm .rs-m { color: #ff9fc0; }
+.resumen-nota { margin-top: 8px; padding: 10px 14px; border-radius: 12px; background: var(--mantequilla-f); font-size: .92rem; min-height: 3.2em; }
+.w-juego { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.w-juego button { border: 1px solid var(--borde); background: #fff; border-radius: 12px; padding: 8px 12px; font-weight: 700; cursor: pointer; font-family: var(--fuente); color: var(--texto); }
+.w-juego button.bien { background: var(--menta-f); border-color: var(--menta); } .w-juego button.mal { background: var(--coral-f); border-color: var(--coral); }
+.w-marcador { font-family: var(--fuente-titulo); color: var(--lavanda-o); font-weight: 600; margin-left: auto; }

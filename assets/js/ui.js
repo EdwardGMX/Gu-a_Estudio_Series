@@ -89,7 +89,7 @@
   }
   document.addEventListener('click', e => {
     const a = e.target.closest && e.target.closest('a.ref');
-    if (!a) return;
+    if (!a || !a.getAttribute('href').startsWith('#')) return;
     e.preventDefault();
     irA(a.getAttribute('href').slice(1), true);
   });
@@ -154,7 +154,7 @@
   seccionActual();
 
   /* ---------------------- Secciones estudiadas ----------------------- */
-  const estudiadas = new Set(leer('guia-u1-estudiadas', []));
+  const estudiadas = new Set(leer('guia-' + (document.body.dataset.unidad || 'u1') + '-estudiadas', []));
   function pintarEstudiadas() {
     $$('.btn-estudiada').forEach(b => {
       const ok = estudiadas.has(b.dataset.seccion);
@@ -168,7 +168,7 @@
   $$('.btn-estudiada').forEach(b => b.addEventListener('click', () => {
     const s = b.dataset.seccion;
     if (estudiadas.has(s)) estudiadas.delete(s); else estudiadas.add(s);
-    guardar('guia-u1-estudiadas', Array.from(estudiadas));
+    guardar('guia-' + (document.body.dataset.unidad || 'u1') + '-estudiadas', Array.from(estudiadas));
     pintarEstudiadas();
   }));
   pintarEstudiadas();
@@ -328,10 +328,10 @@
   });
 
   /* ---------------------- Checklist del formulario ---------------------- */
-  const marcas = leer('guia-u1-checklist', {});
+  const marcas = leer('guia-' + (document.body.dataset.unidad || 'u1') + '-checklist', {});
   $$('li.check input[type=checkbox]').forEach((c, i) => {
     c.checked = !!marcas[i];
-    c.addEventListener('change', () => { marcas[i] = c.checked; guardar('guia-u1-checklist', marcas); });
+    c.addEventListener('change', () => { marcas[i] = c.checked; guardar('guia-' + (document.body.dataset.unidad || 'u1') + '-checklist', marcas); });
   });
 
   // Si la página se abre con un #ancla, resaltarla

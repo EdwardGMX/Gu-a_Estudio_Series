@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Genera ../index.html a partir de los archivos Markdown de fuente/contenido/.
+Genera index.html (Unidad I) y unidad2.html (Unidad II) a partir de fuente/unidad1/ y fuente/unidad2/.
 
   • Las fórmulas ($...$ y $$...$$) se pre-renderizan con KaTeX (Node.js) y a
     los símbolos se les agrega una explicación que aparece al pasar el cursor.
@@ -12,7 +12,8 @@ Requisitos
   Python 3: markdown-it-py, pygments, numpy, pandas, statsmodels, matplotlib, scipy
   Node.js:  katex@0.16.11   (cd fuente && npm install katex@0.16.11)
 Uso
-  python3 fuente/build.py
+  python3 fuente/build.py          (todas las unidades)
+  python3 fuente/build.py u2       (solo la Unidad II)
 """
 import ast
 import contextlib
@@ -34,8 +35,30 @@ from pygments.lexers import PythonLexer
 
 AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
-CONTENIDO = AQUI / "contenido"
-SALIDA = RAIZ / "index.html"
+CACHE = AQUI / "cache"
+UNIDADES = {
+    "u1": {"carpeta": "unidad1", "salida": "index.html", "numero": "I", "nombre": "Unidad I",
+           "titulo_pagina": "Unidad I · Características de series de tiempo — Guía de estudio",
+           "descripcion": "Guía de estudio interactiva de la Unidad I de Análisis de Series de Tiempo: componentes, estacionariedad, raíz unitaria, ADF, KPSS, ACF, PACF y Ljung-Box, con demostraciones paso a paso, ejemplos a mano, código Python y gráficas interactivas.",
+           "scripts": []},
+    "u2": {"carpeta": "unidad2", "salida": "unidad2.html", "numero": "II", "nombre": "Unidad II",
+           "titulo_pagina": "Unidad II · Procesos lineales: AR, MA, ARMA, ARIMA y SARIMA(X) — Guía de estudio",
+           "descripcion": "Guía de estudio interactiva de la Unidad II de Análisis de Series de Tiempo: operador rezago, AR, MA, ARMA, ARIMA, SARIMA, SARIMAX, máxima verosimilitud, AIC/BIC, diagnóstico de residuos, ARCH, validación temporal y métricas de pronóstico.",
+           "scripts": ["assets/js/ts2.js", "assets/js/widgets2.js"],
+           # En la Unidad II algunos símbolos cambian de significado o aparecen símbolos nuevos
+           "renombrar": {"alpha": "alpha-u2", "beta": "beta-x", "xt": "x-exo", "p": "p-ar"},
+           "reglas": [
+               (r"\\mathcal\{L\}", "verosim"), (r"\\ell(?![A-Za-z])", "ell"),
+               (r"\\Phi(?![A-Za-z])", "Phi-est"), (r"\\Theta(?![A-Za-z])", "Theta-est"),
+               (r"\\psi_\{[^}]*\}", "psi"), (r"\\psi_[0-9a-z]", "psi"), (r"\\psi(?![A-Za-z])", "psi"),
+               (r"\\hat\{y\}", "yhat"), (r"\\hat\{\\theta\}", "thetahat"),
+               (r"\\sigma_t\^2", "sigma2t"), (r"\\sigma_\{t\}\^2", "sigma2t"),
+               (r"\\varepsilon_\{t\+[0-9a-z]+\}", "eps-fut"), (r"y_\{t\+h\}", "y+h"),
+               (r"\\Delta_(?:\{[^}]+\}|[0-9a-z])", "Delta-s"),
+               (r"e_\{t-[0-9a-z]+\}", "e-res-j"), (r"e_t(?![A-Za-z0-9])", "e-res"), (r"e_\{t\}", "e-res"),
+               (r"(?<![A-Za-z\\{])L(?![A-Za-z])", "L-op"),
+           ]},
+}
 
 MACROS = {
     r"\tip": r"\htmlData{tip=#1}{#2}",
@@ -45,6 +68,13 @@ MACROS = {
     r"\Corr": r"\tip{Corr}{\operatorname{Corr}}",
     r"\lrvar": r"\tip{sigma2lr}{\hat{\sigma}^2_{\infty}}",
     r"\ehat": r"\tip{e-kpss}{\hat{e}}",
+    # Unidad II
+    r"\AIC": r"\tip{aic}{\mathrm{AIC}}", r"\BIC": r"\tip{bic}{\mathrm{BIC}}", r"\HQIC": r"\tip{hqic}{\mathrm{HQIC}}",
+    r"\MAE": r"\tip{MAE}{\mathrm{MAE}}", r"\MSE": r"\tip{MSE}{\mathrm{MSE}}", r"\RMSE": r"\tip{RMSE}{\mathrm{RMSE}}",
+    r"\MAPE": r"\tip{MAPE}{\mathrm{MAPE}}", r"\sMAPE": r"\tip{sMAPE}{\mathrm{sMAPE}}", r"\MASE": r"\tip{MASE}{\mathrm{MASE}}",
+    r"\JB": r"\tip{JB}{\mathrm{JB}}", r"\LM": r"\tip{LM}{\mathrm{LM}}",
+    r"\pL": r"\tip{phiL}{\phi(L)}", r"\tL": r"\tip{thetaL}{\theta(L)}",
+    r"\PL": r"\tip{PhiL}{\Phi(L^{s})}", r"\TL": r"\tip{ThetaL}{\Theta(L^{s})}",
 }
 
 # ----------------------------------------------------------------------------
@@ -154,11 +184,13 @@ def segmentar(tex):
     return segs
 
 
-def autotip(tex):
+def autotip(tex, extra=(), renombrar=None):
     # \hat\rho → \hat{\rho} (así la regla del símbolo no rompe el acento)
     tex = re.sub(r"\\(hat|bar|tilde)\s*(\\[A-Za-z]+|[A-Za-z])", r"\\\1{\2}", tex)
     segs = segmentar(envolver_operadores(tex))
-    for patron, clave in REGLAS:
+    renombrar = renombrar or {}
+    for patron, clave in list(extra) + REGLAS:
+        clave = renombrar.get(clave, clave)
         nuevos = []
         for texto, prot in segs:
             if prot:
@@ -217,7 +249,37 @@ class Documento:
         self.n_ejercicio = 0
         self.ns = {"__name__": "__guia__"}
         self.errores = []
+        self.exportados = {}
+        self.ns["exportar"] = self.exportar
         exec("import matplotlib\nmatplotlib.use('Agg')\nimport warnings\n", self.ns)
+
+    def exportar(self, nombre, valor):
+        """Guarda un resultado de Python para que lo usen las gráficas (JSON en la página)."""
+        import math
+        def limpio(v):
+            try:
+                import numpy as np
+                import pandas as pd
+                if isinstance(v, pd.Series):
+                    v = v.to_numpy()
+                if isinstance(v, pd.DataFrame):
+                    return {str(c): limpio(v[c]) for c in v.columns}
+                if isinstance(v, (pd.Timestamp,)):
+                    return str(v.date())
+                if isinstance(v, np.ndarray):
+                    return [limpio(x) for x in v.tolist()]
+                if isinstance(v, np.generic):
+                    v = v.item()
+            except ImportError:
+                pass
+            if isinstance(v, float):
+                return None if math.isnan(v) or math.isinf(v) else round(v, 8)
+            if isinstance(v, dict):
+                return {str(k): limpio(x) for k, x in v.items()}
+            if isinstance(v, (list, tuple)):
+                return [limpio(x) for x in v]
+            return v
+        self.exportados[nombre] = limpio(valor)
 
     # ---------------- protección de matemáticas y referencias --------------
     def proteger(self, texto):
@@ -237,7 +299,7 @@ class Documento:
             self.refs.append((m.group(1), m.group(2), self.orden))
             return f"@@R{len(self.refs) - 1}@@"
 
-        texto = re.sub(r"\[\[([\w-]+)(?:\|([^\]]+))?\]\]", rep_r, texto)
+        texto = re.sub(r"\[\[([\w:-]+)(?:\|([^\]]+))?\]\]", rep_r, texto)
         texto = re.sub(r"\{\{([\w+-]+)\|([^}]+)\}\}",
                        lambda m: f'<span class="termino" data-tip="{m.group(1)}">{m.group(2)}</span>', texto)
         return texto.replace(r"\$", "$")
@@ -409,6 +471,22 @@ class Documento:
         opciones = set(partes[1:])
         if lang != "python":
             return f'<pre class="pre-texto">{html.escape(codigo)}</pre>'
+        if "oculto" in opciones:
+            import hashlib
+            clave = hashlib.sha1(codigo.encode("utf-8")).hexdigest()[:16]
+            archivo = CACHE / f"{clave}.json"
+            if "cache" in opciones and archivo.exists():
+                self.exportados.update(json.loads(archivo.read_text(encoding="utf-8")))
+                return ""
+            antes = set(self.exportados)
+            sal = self.ejecutar(codigo)
+            if sal.strip():
+                print("   [bloque oculto] " + sal.strip().replace("\n", "\n   "))
+            if "cache" in opciones:
+                CACHE.mkdir(exist_ok=True)
+                nuevos = {k: v for k, v in self.exportados.items() if k not in antes}
+                archivo.write_text(json.dumps(nuevos, ensure_ascii=False), encoding="utf-8")
+            return ""
         salida = None
         if "norun" not in opciones:
             salida = self.ejecutar(codigo, esperar_error="error" in opciones)
@@ -652,9 +730,11 @@ def renderizar_katex(items):
     return datos["out"], datos["errores"]
 
 
-def main():
+def construir(clave, externos):
+    cfg = UNIDADES[clave]
+    SALIDA = RAIZ / cfg["salida"]
     doc = Documento()
-    archivos = sorted(CONTENIDO.glob("*.md"))
+    archivos = sorted((AQUI / cfg["carpeta"]).glob("*.md"))
     cuerpo = []
     for a in archivos:
         cuerpo.append(doc.render(doc.parsear(a.read_text(encoding="utf-8").splitlines())))
@@ -664,7 +744,8 @@ def main():
     # ---- glosario de símbolos ----
     glosario = json.loads((AQUI / "glosario.json").read_text(encoding="utf-8"))
     claves = list(glosario)
-    items = [[autotip(t), d] for t, d in doc.math] + [[glosario[k][0], False] for k in claves]
+    extra = [(re.compile(p), k) for p, k in cfg.get("reglas", [])]
+    items = [[autotip(t, extra, cfg.get("renombrar")), d] for t, d in doc.math] + [[glosario[k][0], False] for k in claves]
     rend, errores = renderizar_katex(items)
     for tex, err in errores:
         doc.errores.append(f"KaTeX: {err}\n   en: {tex}")
@@ -680,7 +761,21 @@ def main():
 
     def sust_r(m):
         id_, texto, orden = doc.refs[int(m.group(1))]
+        if ":" in id_:
+            pref, rid = id_.split(":", 1)
+            if pref not in externos or rid not in externos[pref]["anclas"]:
+                doc.errores.append(f"Referencia externa inexistente: {id_}")
+                return f"[[{id_}]]"
+            a = externos[pref]["anclas"][rid]
+            titulo = re.sub(r"^[^\w$¿¡(]+\s*", "", a["titulo"])
+            titulo = re.sub(r"\$([^$]+)\$", r"\1", titulo).replace("`", "")
+            etiqueta = texto or (f'{externos[pref]["nombre"]} · {a["num"]} {titulo}' if a["num"] else f'{externos[pref]["nombre"]} · {titulo}')
+            return (f'<a class="ref ref-unidad" href="{externos[pref]["archivo"]}#{rid}" title="Abre la {externos[pref]["nombre"]}">'
+                    f'<span class="ref-flecha">⇠</span> {html.escape(etiqueta)}</a>')
         if id_ not in doc.anclas:
+            if os.environ.get("GUIA_BORRADOR"):          # mientras se escribe la unidad
+                print(f"  (pendiente: [[{id_}]])")
+                return f'<a class="ref ref-adelante" href="#{id_}"><span class="ref-flecha">↪</span> {html.escape(texto or id_)}</a>'
             doc.errores.append(f"Referencia a id inexistente: {id_}")
             return f"[[{id_}]]"
         a = doc.anclas[id_]
@@ -721,7 +816,15 @@ def main():
         doc.errores.append("Claves de glosario sin definir: " + ", ".join(faltan))
 
     plantilla = (AQUI / "plantilla.html").read_text(encoding="utf-8")
+    nav = "".join(
+        (f'<a class="unidad activa" href="#inicio">{c["nombre"]}</a>' if k == clave else f'<a class="unidad" href="{c["salida"]}">{c["nombre"]}</a>')
+        for k, c in UNIDADES.items()) + '<span class="unidad pronto" title="Próximamente">Unidad III</span>'
+    scripts = "\n".join(f'<script src="{x}" defer></script>' for x in cfg["scripts"])
     final = (plantilla.replace("{{INDICE}}", "\n".join(toc))
+             .replace("{{TITULO_PAGINA}}", cfg["titulo_pagina"]).replace("{{DESCRIPCION}}", cfg["descripcion"])
+             .replace("{{NAV}}", nav).replace("{{UNIDAD}}", clave).replace("{{NUMERO}}", cfg["numero"])
+             .replace("{{SCRIPTS}}", scripts)
+             .replace("{{DATOS}}", json.dumps(doc.exportados, ensure_ascii=False).replace("</", "<\\/"))
              .replace("{{CONTENIDO}}", html_cuerpo)
              .replace("{{GLOSARIO}}", json.dumps(glos_json, ensure_ascii=False).replace("</", "<\\/"))
              .replace("{{MACROS}}", json.dumps(MACROS).replace("</", "<\\/"))
@@ -736,6 +839,26 @@ def main():
     if doc.errores:
         print("\n".join("✗ " + e for e in doc.errores))
         sys.exit(1)
+    return doc
+
+
+def main():
+    pedidas = sys.argv[1:] or list(UNIDADES)
+    externos = {}
+    CACHE.mkdir(exist_ok=True)
+    copia = CACHE / "anclas_u1.json"
+    for clave in UNIDADES:
+        if clave not in pedidas:
+            if clave == "u1" and copia.exists():
+                externos["u1"] = {"anclas": json.loads(copia.read_text(encoding="utf-8")), "archivo": "index.html", "nombre": "Unidad I"}
+            continue
+        doc = construir(clave, externos)
+        if clave == "u1":
+            copia.write_text(json.dumps(doc.anclas, ensure_ascii=False), encoding="utf-8")
+        externos[clave] = {"anclas": doc.anclas, "archivo": UNIDADES[clave]["salida"], "nombre": UNIDADES[clave]["nombre"]}
+        if "u1" not in externos and copia.exists():
+            pass
+    return externos
 
 
 if __name__ == "__main__":

@@ -1486,6 +1486,11 @@
       contenedor.innerHTML = '<div class="w-cargando">No se pudieron cargar las librerías de gráficas. Revisa tu conexión a internet y recarga la página.</div>';
     });
   }
+  window.GUIA_UTIL = { PAL, MESES, el, fmt, fp, num, kpi, ref, tex, mezcla, barajar, fracc, simAR, control, slider, seleccion, segmentado, boton, casilla, lienzo, lamina, fila, lectura,
+    combinar, graf, banda, trazasACF, layoutACF, apilado, tablaHTML, extra, dispersion, codigoPython, pyv, panelCodigo, tablaTexto, panelParametros, tallos,
+    datos: (() => { try { return JSON.parse(document.getElementById('datos-unidad').textContent || '{}'); } catch (e) { return {}; } })() };
+  window.GUIA_REGISTRAR = (nombre, fn) => { W[nombre] = fn; };
+  function arrancar() {
   const widgets = Array.from(document.querySelectorAll('.widget[data-widget]'));
   if ('IntersectionObserver' in window) {
     const obs = new IntersectionObserver(entradas => {
@@ -1496,4 +1501,7 @@
     widgets.forEach(iniciar);
   }
   window.GUIA_WIDGETS = { iniciarTodos: () => widgets.forEach(iniciar), lista: () => Object.keys(W) };
+  }
+  // Se arranca en DOMContentLoaded para que los scripts de cada unidad (widgets2.js…) ya hayan registrado sus gráficas.
+  if (document.readyState === 'complete') arrancar(); else document.addEventListener('DOMContentLoaded', arrancar);
 })();
