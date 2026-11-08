@@ -785,6 +785,212 @@
     dibujar();
   });
 
+  /* ======================= 7 · ARIMA ======================= */
+  const bandaTr = (x, inf, sup, color, nombre) => ({ x: x.concat(x.slice().reverse()), y: sup.concat(inf.slice().reverse()), fill: 'toself', fillcolor: color, line: { width: 0 }, hoverinfo: 'skip', name: nombre, showlegend: !!nombre, mode: 'lines' });
+  U.u2banda = bandaTr;
+  R('w2-deriva', c => {
+    const ctr = lienzo(c);
+    let semilla = 15;
+    const cc = slider(ctr, { etiqueta: 'deriva c', min: -0.5, max: 0.5, paso: 0.05, valor: 0.2, fmt: num }, dibujar);
+    boton(ctr, 'Otra historia', () => { semilla += 4; dibujar(); });
+    const g1 = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: la banda de 95% de cada modelo'), ctr2 = el('div', { class: 'w-controles' }), g2 = lamina(ex);
+    ex.prepend(ctr2);
+    const cual = segmentado(ctr2, { etiqueta: 'Banda de', valor: 'b', opciones: [['a', 'AR(1)'], ['b', 'ARIMA(0,1,0)'], ['c', 'con deriva'], ['e', 'ARIMA(0,2,0)']] }, dibujar);
+    function dibujar() {
+      const n = 80, H = 36, y = TS.cumsum(TS.rng(semilla).normales(n).map(v => v + 0.2)).map(v => v + 20), mu = TS.media(y), dr = cc.get();
+      const mods = {
+        a: { nombre: 'AR(1) estacionario, φ = 0.9', ar: [1, -0.9], c: mu * 0.1, color: PAL.menta },
+        b: { nombre: 'ARIMA(0,1,0) sin constante', ar: [1, -1], c: 0, color: PAL.lav },
+        c: { nombre: `ARIMA(0,1,0) con deriva c = ${num(dr)}`, ar: [1, -1], c: dr, color: PAL.rosa },
+        d: { nombre: 'ARIMA(1,1,0), φ = 0.5', ar: [1, -1.5, 0.5], c: 0, color: PAL.cel },
+        e: { nombre: 'ARIMA(0,2,0)', ar: [1, -2, 1], c: 0, color: PAL.dur }
+      };
+      const xh = rango(n, 1), xf = rango(H, n + 1), tr = [lin(xh, y, '#45397a', 'historia', { line: { color: '#45397a', width: 1.6 } })];
+      const P = {};
+      Object.entries(mods).forEach(([k, m]) => { P[k] = T2.pronosticar(y, m.ar, [1], H, { c: m.c, sigma2: 1 }); tr.push(lin([n].concat(xf), [y[n - 1]].concat(P[k].media), m.color, m.nombre, { line: { color: m.color, width: 2.2, dash: k === 'a' ? 'dot' : 'solid' } })); });
+      graf(g1, tr, { height: 360, title: { text: 'Funciones de pronóstico desde la misma historia' }, xaxis: { title: { text: 't' } }, legend: { orientation: 'h', y: -0.25 } });
+      const k = cual.get(), m = mods[k], p = P[k];
+      graf(g2, [lin(xh, y, '#45397a', 'historia', { line: { color: '#45397a', width: 1.4 } }), bandaTr(xf, p.inf, p.sup, 'rgba(124,105,214,.18)', '95%'), lin(xf, p.media, m.color, 'pronóstico', { line: { color: m.color, width: 2.2 } })],
+        { height: 300, title: { text: `Banda de 95%: ${m.nombre}` }, showlegend: false });
+      lec.innerHTML = `En h = 36: AR(1) → ${fmt(P.a.media[H - 1], 1)} (regresa a la media ${fmt(mu, 1)}) · ARIMA(0,1,0) → ${fmt(P.b.media[H - 1], 1)} (se queda en el último dato) · con deriva → ${fmt(P.c.media[H - 1], 1)} (= ${fmt(y[n - 1], 1)} + 36·${num(dr)}) · ARIMA(0,2,0) → ${fmt(P.e.media[H - 1], 1)} (sigue la última pendiente, ${fmt(y[n - 1] - y[n - 2], 2)} por periodo).`;
+    }
+    dibujar();
+  });
+
+  const MODELOS_PRON = {
+    ar1: { nombre: 'AR(1)', usa: ['phi'], hacer: v => ({ ar: [1, -v.phi], ma: [1], c: 0 }) },
+    arma: { nombre: 'ARMA(1,1)', usa: ['phi', 'theta'], hacer: v => ({ ar: [1, -v.phi], ma: [1, v.theta], c: 0 }) },
+    arima110: { nombre: 'ARIMA(1,1,0)', usa: ['phi'], hacer: v => ({ ar: T2.polMul([1, -v.phi], [1, -1]), ma: [1], c: 0 }) },
+    arima011: { nombre: 'ARIMA(0,1,1)', usa: ['theta'], hacer: v => ({ ar: [1, -1], ma: [1, v.theta], c: 0 }) },
+    paseo: { nombre: 'Paseo aleatorio', usa: [], hacer: () => ({ ar: [1, -1], ma: [1], c: 0 }) },
+    deriva: { nombre: 'Paseo con deriva', usa: ['c'], hacer: v => ({ ar: [1, -1], ma: [1], c: v.c }) }
+  };
+  R('w2-pronostico', c => {
+    const ctr = lienzo(c);
+    let semilla = 22;
+    const m = seleccion(ctr, { etiqueta: 'Modelo', valor: 'arima110', opciones: Object.keys(MODELOS_PRON).map(k => [k, MODELOS_PRON[k].nombre]) }, dibujar);
+    const S = {
+      phi: slider(ctr, { etiqueta: 'φ', min: -0.9, max: 0.95, paso: 0.05, valor: 0.4, fmt: num }, dibujar),
+      theta: slider(ctr, { etiqueta: 'θ', min: -0.9, max: 0.9, paso: 0.05, valor: -0.5, fmt: num }, dibujar),
+      c: slider(ctr, { etiqueta: 'deriva c', min: -0.5, max: 0.5, paso: 0.05, valor: 0.3, fmt: num }, dibujar)
+    };
+    const sg = slider(ctr, { etiqueta: 'σ', min: 0.5, max: 3, paso: 0.25, valor: 1, fmt: num }, dibujar);
+    boton(ctr, 'Otra historia', () => { semilla += 3; dibujar(); });
+    const g = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: pesos ψ y ancho de la banda para cada h'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const M = MODELOS_PRON[m.get()];
+      Object.entries(S).forEach(([k, s]) => s.mostrar(M.usa.includes(k)));
+      const v = { phi: S.phi.get(), theta: S.theta.get(), c: S.c.get() }, P = M.hacer(v), s = sg.get(), n = 80, H = 24;
+      const integrado = Math.abs(P.ar.reduce((a, b) => a + b, 0)) < 1e-9;
+      let y;
+      if (integrado) {
+        const arw = T2.polRecortar(P.ar.length > 2 ? [1, -v.phi] : [1]);
+        y = TS.cumsum(T2.simularARMA(arw, P.ma, n, { semilla, sigma: s, c: P.c, quemado: 200 }).y).map(x => x + 50);
+      } else y = T2.simularARMA(P.ar, P.ma, n, { semilla, sigma: s, quemado: 300 }).y.map(x => x + 50);
+      const cAjust = integrado ? P.c : 50 * P.ar.reduce((a, b) => a + b, 0);
+      const pr = T2.pronosticar(y, P.ar, P.ma, H, { c: cAjust, sigma2: s * s }), z80 = TS.normppf(0.9);
+      const xh = rango(n, 1), xf = rango(H, n + 1), i80 = pr.media.map((mm, i) => mm - z80 * pr.ee[i]), s80 = pr.media.map((mm, i) => mm + z80 * pr.ee[i]);
+      graf(g, [lin(xh, y, '#45397a', 'historia', { line: { color: '#45397a', width: 1.5 } }), bandaTr(xf, pr.inf, pr.sup, 'rgba(124,105,214,.14)', '95%'), bandaTr(xf, i80, s80, 'rgba(124,105,214,.28)', '80%'),
+        lin([n].concat(xf), [y[n - 1]].concat(pr.media), PAL.rosa, 'pronóstico', { line: { color: PAL.rosa, width: 2.4 } })],
+      { height: 340, title: { text: `${M.nombre}: pronóstico a ${H} pasos con bandas de 80% y 95%` }, xaxis: { title: { text: 't' } }, legend: { orientation: 'h', y: -0.22 } });
+      const w = h => 1.96 * pr.ee[h - 1];
+      lec.innerHTML = `Ancho de la banda de 95% (±): h = 1 → <b>${fmt(w(1), 2)}</b> (= 1.96σ) · h = 12 → <b>${fmt(w(12), 2)}</b> · h = 24 → <b>${fmt(w(24), 2)}</b>. ` +
+        (integrado ? 'Modelo integrado: los pesos ψ no se apagan y la banda crece sin límite.' : `Modelo estacionario: la banda se estabiliza cerca de ±1.96·σ<sub>y</sub> = ±${fmt(1.96 * Math.sqrt(T2.acvfTeorica(P.ar, P.ma, 0, s * s)[0]), 2)}.`);
+      let acum = 0;
+      tab.innerHTML = tablaHTML(['h', 'ψ<sub>h−1</sub>', 'Σ ψ²', 'error estándar σ√Σψ²', 'banda 95% (±)'], rango(H).filter(h => h < 8 || (h + 1) % 6 === 0).map(h => { acum = pr.psi.slice(0, h + 1).reduce((a, b) => a + b * b, 0); return [h + 1, fmt(pr.psi[h], 4), fmt(acum, 4), fmt(pr.ee[h], 4), fmt(1.96 * pr.ee[h], 3)]; }));
+    }
+    dibujar();
+  });
+
+  R('py2-arima', c => {
+    const D = DATOS.arima_sim;
+    if (!D) { c.textContent = 'Faltan los datos del simulador.'; return; }
+    const ctr = lienzo(c);
+    let activo = 'order';
+    const p = segmentado(ctr, { etiqueta: 'p', valor: '1', opciones: [['0', '0'], ['1', '1'], ['2', '2']] }, () => { activo = 'order'; dibujar(); });
+    const d = segmentado(ctr, { etiqueta: 'd', valor: '1', opciones: [['0', '0'], ['1', '1']] }, () => { activo = 'order'; dibujar(); });
+    const q = segmentado(ctr, { etiqueta: 'q', valor: '0', opciones: [['0', '0'], ['1', '1'], ['2', '2']] }, () => { activo = 'order'; dibujar(); });
+    const tr = segmentado(ctr, { etiqueta: 'trend', valor: 'c', opciones: [['n', '"n" (sin constante)'], ['c', '"c" / "t" (constante o deriva)']] }, () => { activo = 'trend'; dibujar(); });
+    const pc = panelCodigo(c), g = lamina(c), lec = lectura(c);
+    const params = panelParametros(c, [
+      { nombre: 'order', que: '(p, d, q): rezagos AR, número de diferencias y rezagos MA.', rec: 'd según ADF/KPSS; p y q chicos (0–2) según ACF/PACF; compara candidatos con AIC/BIC.' },
+      { nombre: 'trend', que: '"n" sin término determinístico; "c" constante (solo con d = 0); "t" tendencia lineal, que con d = 1 equivale a una deriva.', rec: '"c" si d = 0 y la media no es 0; "t" si d = 1 y la serie crece; "n" si d = 1 y no hay crecimiento.' },
+      { nombre: 'steps', que: 'Cuántos periodos pronostica <code>get_forecast</code>.', rec: 'El horizonte que necesites; recuerda que la banda crece con h.' },
+      { nombre: 'alpha', que: 'Nivel de significancia del intervalo de <code>conf_int</code>.', rec: '0.05 (95%); 0.2 para bandas de 80%.' }
+    ]);
+    function dibujar() {
+      const dd = d.get(), t = tr.get() === 'n' ? 'n' : (dd === '0' ? 'c' : 't'), clave = `${p.get()}${dd}${q.get()}${t}`, F = D.fits[clave];
+      const args = { p: p.get(), d: dd, q: q.get(), trend: t };
+      pc.codigo(codigoPython(`from statsmodels.tsa.arima.model import ARIMA\n\nmodelo = ARIMA(y, order=({p}, {d}, {q}), trend="{trend}")\najuste = modelo.fit()\nprint(ajuste.summary().tables[1])\nprint("llf:", round(ajuste.llf, 3), "| AIC:", round(ajuste.aic, 3), "| BIC:", round(ajuste.bic, 3))\npron = ajuste.get_forecast(steps=12)\nprint(np.round(pron.predicted_mean[:3], 3))\nprint(np.round(pron.conf_int(alpha=0.05)[:3], 3))`, args, activo === 'order' ? null : 'trend'));
+      const linea = '='.repeat(78), guion = '-'.repeat(78), z = 1.959964;
+      const filas = F.params.map(([nm, co, se, zz, pv]) => nm.padEnd(10) + co.toFixed(4).padStart(11) + se.toFixed(3).padStart(11) + zz.toFixed(3).padStart(11) + pv.toFixed(3).padStart(11) + (co - z * se).toFixed(3).padStart(12) + (co + z * se).toFixed(3).padStart(12));
+      const fcs = rango(3).map(i => F.fc[i].toFixed(3)), cis = rango(3).map(i => ` [${F.inf[i].toFixed(3).padStart(8)} ${F.sup[i].toFixed(3).padStart(8)}]`);
+      pc.salida([linea, '                 coef    std err          z      P>|z|      [0.025      0.975]', guion].concat(filas, [linea,
+        `llf: ${F.llf} | AIC: ${F.aic} | BIC: ${F.bic}`, `[${fcs.join(' ')}]`, '[' + cis.map(s => s.trim()).join('\n ') + ']']).join('\n'));
+      const y = D.y, n = y.length, xh = rango(60, n - 59), xf = rango(12, n + 1);
+      graf(g, [lin(xh, y.slice(-60), '#45397a', 'datos', { line: { color: '#45397a', width: 1.5 } }), bandaTr(xf, F.inf, F.sup, 'rgba(124,105,214,.2)', '95%'), lin([n].concat(xf), [y[n - 1]].concat(F.fc), PAL.rosa, 'pronóstico', { line: { color: PAL.rosa, width: 2.4 } })],
+        { height: 280, title: { text: `ARIMA(${p.get()},${dd},${q.get()}) trend="${t}"` }, showlegend: false });
+      params({ order: `(${p.get()}, ${dd}, ${q.get()})`, trend: `"${t}"`, steps: 12, alpha: 0.05 }, activo === 'order' ? 'order' : 'trend');
+      const mismos = Object.keys(D.fits).filter(k => k[1] === dd), mejorClave = mismos.reduce((a, b) => (D.fits[b].aic < D.fits[a].aic ? b : a)), mejor = D.fits[mejorClave];
+      lec.className = 'w-lectura ' + (clave === mejorClave ? 'ok' : '');
+      lec.innerHTML = `AIC = ${fmt(F.aic, 2)}. Entre los 18 modelos con d = ${dd}, el menor AIC es ${fmt(mejor.aic, 2)}: ARIMA(${mejorClave[0]},${mejorClave[1]},${mejorClave[2]}) con trend="${mejorClave[3]}". ` +
+        (dd === '0' ? '⚠️ Con d = 0 el AR intenta imitar una raíz unitaria: compara su pronóstico con el de d = 1. ' : '') + '<i>Los AIC con d distinto no son comparables entre sí</i> (<a class="ref" href="#comparabilidad">por qué</a>).';
+    }
+    dibujar();
+  });
+
+  /* ======================= 8 · SARIMA ======================= */
+  function barrasEstacionales(vals, s, desde, nombre) {
+    const ks = rango(vals.length - desde, desde);
+    return { type: 'bar', x: ks, y: vals.slice(desde), name: nombre, width: 0.6, marker: { color: ks.map(k => k % s === 0 ? PAL.rosa : (k % s === 1 || k % s === s - 1) && k > 1 ? PAL.dur : 'rgba(124,105,214,.75)') }, hovertemplate: 'k = %{x}<br>%{y:.4f}<extra></extra>' };
+  }
+  U.u2barrasEst = barrasEstacionales;
+  R('w2-sarima-acf', c => {
+    const ctr = lienzo(c);
+    const sp = slider(ctr, { etiqueta: 'φ (AR regular)', min: -0.9, max: 0.9, paso: 0.05, valor: 0, fmt: num }, dibujar);
+    const st = slider(ctr, { etiqueta: 'θ (MA regular)', min: -0.9, max: 0.9, paso: 0.05, valor: -0.4, fmt: num }, dibujar);
+    const sP = slider(ctr, { etiqueta: 'Φ (AR estacional)', min: -0.9, max: 0.9, paso: 0.05, valor: 0, fmt: num }, dibujar);
+    const sT = slider(ctr, { etiqueta: 'Θ (MA estacional)', min: -0.9, max: 0.9, paso: 0.05, valor: -0.6, fmt: num }, dibujar);
+    const ss = segmentado(ctr, { etiqueta: 's', valor: '12', opciones: [['4', '4'], ['7', '7'], ['12', '12']] }, dibujar);
+    boton(ctr, 'Modelo de aerolínea', () => { sp.set(0); st.set(-0.4); sP.set(0); sT.set(-0.6); ss.set ? ss.set('12') : 0; dibujar(); });
+    const gA = lamina(c), gP = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: los polinomios completos, expandidos'), fx = el('div', { class: 'w-lectura' });
+    ex.append(fx);
+    function dibujar() {
+      const s = +ss.get(), K = Math.max(48, 4 * s), M = { phi: sp.get() ? [sp.get()] : [], theta: st.get() ? [st.get()] : [], Phi: sP.get() ? [sP.get()] : [], Theta: sT.get() ? [sT.get()] : [], s };
+      const E = T2.expandir(M), r = T2.acfTeorica(E.ar, E.ma, K), pc = T2.pacfTeorica(E.ar, E.ma, K);
+      const L = t => ({ height: 250, title: { text: t }, xaxis: { title: { text: 'rezago k' }, range: [0.3, K + 0.7], dtick: s }, yaxis: { range: [-1, 1], zeroline: true, zerolinecolor: '#c9c3e6' }, showlegend: false, bargap: 0.2 });
+      graf(gA, [barrasEstacionales(r, s, 1, 'ACF')], L(`ACF teórica (rosa: múltiplos de ${s}; durazno: satélites s ± 1)`));
+      graf(gP, [barrasEstacionales(pc, s, 1, 'PACF')], L('PACF teórica'));
+      lec.innerHTML = `ρ(1) = ${fmt(r[1], 4)} · ρ(${s - 1}) = ${fmt(r[s - 1], 4)} · ρ(${s}) = ${fmt(r[s], 4)} · ρ(${s + 1}) = ${fmt(r[s + 1], 4)} · ρ(${2 * s}) = ${fmt(r[2 * s], 4)}. ` +
+        (M.theta.length && M.Theta.length && !M.phi.length && !M.Phi.length ? `Comprueba: ρ(1)·ρ(${s}) = ${fmt(r[1] * r[s], 4)} = ρ(${s + 1}) ✓.` : '');
+      fx.innerHTML = tex(`\\phi(L)\\Phi(L^{${s}}) = ${polTexto(E.ar)}`, true) + tex(`\\theta(L)\\Theta(L^{${s}}) = ${polTexto(E.ma)}`, true);
+    }
+    dibujar();
+  });
+
+  R('w2-sarima-sim', c => {
+    const ctr = lienzo(c);
+    let semilla = 6;
+    const d = segmentado(ctr, { etiqueta: 'd', valor: '1', opciones: [['0', '0'], ['1', '1']] }, dibujar);
+    const D = segmentado(ctr, { etiqueta: 'D', valor: '1', opciones: [['0', '0'], ['1', '1']] }, dibujar);
+    const st = slider(ctr, { etiqueta: 'θ', min: -0.9, max: 0.9, paso: 0.05, valor: -0.4, fmt: num }, dibujar);
+    const sT = slider(ctr, { etiqueta: 'Θ', min: -0.9, max: 0.9, paso: 0.05, valor: -0.6, fmt: num }, dibujar);
+    const sP = slider(ctr, { etiqueta: 'Φ', min: -0.9, max: 0.9, paso: 0.05, valor: 0, fmt: num }, dibujar);
+    boton(ctr, 'Otra serie', () => { semilla += 5; dibujar(); });
+    const g1 = lamina(c), f = fila(c), gA = lamina(f), gB = lamina(f), lec = lectura(c);
+    const PATRON = [0, 2, 6, 4, 3, 8, 14, 14, 7, 1, -5, 0].map(v => v * 1.5);
+    function dibujar() {
+      const dd = +d.get(), DD = +D.get(), M = { theta: st.get() ? [st.get()] : [], Theta: sT.get() ? [sT.get()] : [], Phi: sP.get() ? [sP.get()] : [], s: 12, d: dd, D: DD };
+      // Valores iniciales de la integración estacional: el patrón (d = 0) o sus cambios mes a mes más un crecimiento (d = 1)
+      const inicio = dd ? PATRON.map((v, i) => v - PATRON[(i + 11) % 12] + 0.8) : PATRON;
+      const n = 144, S = T2.simularSARIMA(M, n, { semilla, sigma: 1, inicioS: DD ? inicio : null, nivel: 100 });
+      const y = S.y;
+      graf(g1, [lin(FECHAS_AP, y, PAL.lav, 'y', { line: { color: PAL.lav, width: 1.6 } })], { height: 240, title: { text: `SARIMA(0,${dd},${M.theta.length})(${M.Phi.length},${DD},${M.Theta.length})₁₂ simulado (12 años)` }, showlegend: false });
+      const w = DD ? TS.diff(dd ? TS.diff(y) : y, 12) : (dd ? TS.diff(y) : y);
+      const wd = dd && DD ? TS.diff(TS.diff(y, 12)) : w;
+      const L = t => layoutACF(t, { height: 260, xaxis: { range: [0.3, 36.7], dtick: 12 } });
+      graf(gA, [barrasEstacionales(TS.acf(y, 36), 12, 1, 'ACF')], L('ACF de y<sub>t</sub>'));
+      graf(gB, [barrasEstacionales(TS.acf(wd, 36), 12, 1, 'ACF')], L(`ACF de la serie diferenciada (d = ${dd}, D = ${DD})`));
+      const rd = TS.acf(wd, 13);
+      lec.innerHTML = `En la serie diferenciada: ρ̂(1) = ${fmt(rd[1], 3)}, ρ̂(12) = ${fmt(rd[12], 3)}, ρ̂(13) = ${fmt(rd[13], 3)}. ` +
+        (DD ? 'La diferencia estacional quitó el patrón anual (que en y<sub>t</sub> se ve como ACF alta en 12, 24, 36).' : 'Sin D, el patrón anual no se repite de forma fija: la parte estacional sale solo de Φ y Θ.');
+    }
+    dibujar();
+  });
+
+  R('w2-aerolinea', c => {
+    const G = DATOS.rejilla_ap;
+    if (!G) { c.textContent = 'Faltan los datos.'; return; }
+    const M = G.modelos.find(m => m.orden.join() === '0,1,1' && m.estacional.join() === '0,1,1');
+    const ctr = lienzo(c);
+    const esc = segmentado(ctr, { etiqueta: 'Escala', valor: 'orig', opciones: [['log', 'logaritmo'], ['orig', 'pasajeros']] }, dibujar);
+    const cerca = casilla(ctr, 'Ver solo desde 1957', true, dibujar);
+    const g = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: el pronóstico mes por mes'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const lg = esc.get() === 'log', T = v => (lg ? v : Math.exp(v)), ini = cerca.get() ? 96 : 0;
+      const xtr = G.fechas_tr.slice(ini), ytr = G.log_tr.slice(ini).map(T), xte = G.fechas_te;
+      const fc = M.fc.map(T), inf = M.fc_inf.map(T), sup = M.fc_sup.map(T), real = G.log_te.map(T);
+      graf(g, [lin(xtr, ytr, '#45397a', 'entrenamiento', { line: { color: '#45397a', width: 1.6 } }), bandaTr(xte, inf, sup, 'rgba(224,112,159,.18)', 'banda 95%'),
+        lin(xte, fc, PAL.rosa, 'pronóstico', { line: { color: PAL.rosa, width: 2.4 } }), { x: xte, y: real, mode: 'markers', marker: { color: PAL.menta, size: 8, line: { color: '#fff', width: 1 } }, name: 'real 1960' }],
+      { height: 340, title: { text: `Aerolínea ajustado con 1949–1959: pronóstico de 1960 (${lg ? 'log' : 'pasajeros'})` }, legend: { orientation: 'h', y: -0.2 } });
+      const dentro = real.filter((v, i) => v >= inf[i] && v <= sup[i]).length;
+      lec.className = 'w-lectura ok';
+      lec.innerHTML = `En pasajeros: MAE = <b>${fmt(M.mae, 1)}</b> miles, RMSE = <b>${fmt(M.rmse, 1)}</b>, MAPE = <b>${fmt(M.mape, 2)}%</b>, MASE = ${fmt(M.mase, 3)}. ${dentro} de 12 meses reales quedaron dentro de la banda de 95%. ` +
+        (lg ? 'En logaritmos la banda es simétrica.' : 'En pasajeros la banda es asimétrica: más larga hacia arriba.');
+      tab.innerHTML = tablaHTML(['mes', 'pronóstico', 'banda 95%', 'real', 'error %'], xte.map((x, i) => {
+        const p = Math.exp(M.fc[i]), r = Math.exp(G.log_te[i]);
+        return [x.slice(0, 7), fmt(p, 1), `[${fmt(Math.exp(M.fc_inf[i]), 1)}, ${fmt(Math.exp(M.fc_sup[i]), 1)}]`, fmt(r, 0), fmt(100 * (r - p) / r, 2) + '%'];
+      }));
+    }
+    dibujar();
+  });
+
   /* Las demás secciones se agregan abajo */
   U.u2 = { T2, AP, FECHAS_AP, LOGAP, f3, f4, sgn, lin, vline, hline, choques, histograma, curvaNormal, polTexto, DATOS };
 })();
