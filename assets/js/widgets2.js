@@ -1559,6 +1559,178 @@
     dibujar();
   });
 
+  /* ======================= 16 · Métricas ======================= */
+  R('w2-metricas', c => {
+    const ctr = lienzo(c);
+    const Y = [100, 110, 120, 130, 125, 140], F = [92, 114, 118, 136, 128, 133], TR = [90, 95, 100, 98, 105, 102];
+    const ss = slider(ctr, { etiqueta: 'Sesgo del pronóstico', min: -20, max: 20, paso: 1, valor: 0, fmt: v => (v > 0 ? '+' : '') + v }, dibujar);
+    const sd = slider(ctr, { etiqueta: 'Acercar la serie a cero', min: 0, max: 95, paso: 5, valor: 0, fmt: v => '−' + v }, dibujar);
+    const at = casilla(ctr, 'Agregar un error atípico (+50 en t = 4)', false, dibujar);
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: el aporte de cada periodo'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const D = sd.get(), y = Y.map(v => v - D), fc = F.map((v, i) => v + ss.get() + (at.get() && i === 3 ? 50 : 0) - D), tr = TR.map(v => v - D);
+      const M = T2.metricas(y, fc, { entrenamiento: tr, m: 1 }), t = rango(6, 1);
+      const seg = []; t.forEach((x, i) => seg.push({ x: [x, x], y: [y[i], fc[i]], mode: 'lines', line: { color: 'rgba(224,112,159,.6)', width: 3 }, hoverinfo: 'skip', showlegend: false }));
+      graf(g1, seg.concat([{ x: t, y, mode: 'markers', marker: { size: 11, color: '#45397a' }, name: 'real' }, { x: t, y: fc, mode: 'markers', marker: { size: 11, symbol: 'diamond', color: PAL.rosa }, name: 'pronóstico' }]),
+        { height: 300, title: { text: 'Real contra pronóstico (segmentos = errores)' }, xaxis: { title: { text: 't' }, dtick: 1 }, legend: { orientation: 'h', y: -0.25 } });
+      const nombres = ['MAE', 'RMSE', 'MAPE %', 'sMAPE %', 'MASE × 10'], vals = [M.mae, M.rmse, M.mape, M.smape, 10 * M.mase];
+      graf(g2, [{ type: 'bar', x: nombres, y: vals, marker: { color: [PAL.lav, PAL.dur, PAL.rosa, PAL.cel, PAL.menta] }, text: [fmt(M.mae, 2), fmt(M.rmse, 2), fmt(M.mape, 2) + '%', fmt(M.smape, 2) + '%', fmt(M.mase, 3)], textposition: 'outside' }],
+        { height: 300, title: { text: 'Las métricas (MASE multiplicado por 10 para que se vea)' }, showlegend: false, yaxis: { rangemode: 'tozero' } });
+      lec.className = 'w-lectura ' + (M.mape > 30 ? 'mal' : '');
+      lec.innerHTML = `MAE = <b>${fmt(M.mae, 2)}</b> · MSE = ${fmt(M.mse, 2)} · RMSE = <b>${fmt(M.rmse, 2)}</b> (RMSE/MAE = ${fmt(M.rmse / M.mae, 2)}) · MAPE = <b>${fmt(M.mape, 2)}%</b> · sMAPE = ${fmt(M.smape, 2)}% · MASE = <b>${fmt(M.mase, 3)}</b> ${M.mase < 1 ? '(mejor que el ingenuo)' : '(peor que el ingenuo)'}. ` +
+        (D >= 80 ? '⚠️ Con la serie cerca de cero el MAPE se dispara aunque los errores absolutos sean los mismos.' : at.get() ? '💡 El atípico infla más el RMSE que el MAE.' : '');
+      tab.innerHTML = tablaHTML(['t', 'y', 'ŷ', 'e', '|e|', 'e²', '|e|/y (%)', 'sMAPE (%)'], t.map((x, i) => { const e = y[i] - fc[i]; return [x, num(y[i]), num(fc[i]), num(e), num(Math.abs(e)), num(e * e), fmt(100 * Math.abs(e / y[i]), 2), fmt(200 * Math.abs(e) / (Math.abs(y[i]) + Math.abs(fc[i])), 2)]; }));
+    }
+    dibujar();
+  });
+
+  function pronosticos1960() {
+    const G = DATOS.rejilla_ap, b = (o, e) => G.modelos.find(m => m.orden.join() === o && m.estacional.join() === e);
+    const trY = G.log_tr.map(Math.exp), real = G.log_te.map(Math.exp);
+    return { trY, real, fechas: G.fechas_te, mods: [
+      { k: 'aero', n: 'aerolínea (0,1,1)(0,1,1)', p: b('0,1,1', '0,1,1').fc.map(Math.exp), c: PAL.rosa },
+      { k: 'v1', n: '(1,1,1)(0,1,1)', p: b('1,1,1', '0,1,1').fc.map(Math.exp), c: PAL.dur },
+      { k: 'v2', n: '(2,1,2)(1,1,1)', p: b('2,1,2', '1,1,1').fc.map(Math.exp), c: PAL.cel },
+      { k: 'ie', n: 'ingenuo estacional', p: trY.slice(-12), c: PAL.menta },
+      { k: 'in', n: 'ingenuo', p: new Array(12).fill(trY[trY.length - 1]), c: PAL.gris }] };
+  }
+  R('w2-metricas-modelos', c => {
+    if (!DATOS.rejilla_ap) { c.textContent = 'Faltan los datos.'; return; }
+    const P = pronosticos1960();
+    const ctr = lienzo(c);
+    const met = segmentado(ctr, { etiqueta: 'Métrica', valor: 'mape', opciones: [['mae', 'MAE'], ['rmse', 'RMSE'], ['mape', 'MAPE'], ['smape', 'sMAPE'], ['mase', 'MASE']] }, dibujar);
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: las seis métricas de cada modelo'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    const M = P.mods.map(m => Object.assign({ M: T2.metricas(P.real, m.p, { entrenamiento: P.trY, m: 12 }) }, m));
+    function dibujar() {
+      graf(g1, [{ x: P.fechas, y: P.real, mode: 'markers', marker: { size: 8, color: '#45397a' }, name: 'real 1960' }].concat(M.map(m => lin(P.fechas, m.p, m.c, m.n, { line: { color: m.c, width: 2 } }))),
+        { height: 320, title: { text: 'Pronósticos de 1960' }, legend: { orientation: 'h', y: -0.3 } });
+      const k = met.get(), v = M.map(m => m.M[k]), orden = M.map((m, i) => i).sort((a, b) => v[a] - v[b]);
+      graf(g2, [{ type: 'bar', x: M.map(m => m.n.split(' (')[0].replace('aerolínea', 'aerolínea')), y: v, marker: { color: M.map(m => m.c) }, text: v.map(x => fmt(x, k === 'mase' ? 3 : 2)), textposition: 'outside' }],
+        { height: 320, title: { text: `${k.toUpperCase()} en 1960` }, showlegend: false, yaxis: { rangemode: 'tozero' } });
+      lec.innerHTML = `Orden según ${k.toUpperCase()}: ` + orden.map(i => M[i].n).join(' → ') + '. ' + (k === 'mase' ? `Escala: MAE del ingenuo estacional en el entrenamiento = ${fmt(M[0].M.escala, 2)}.` : '');
+      tab.innerHTML = tablaHTML(['modelo', 'MAE', 'MSE', 'RMSE', 'MAPE %', 'sMAPE %', 'MASE'], M.map(m => [m.n, fmt(m.M.mae, 2), fmt(m.M.mse, 1), fmt(m.M.rmse, 2), fmt(m.M.mape, 3), fmt(m.M.smape, 3), fmt(m.M.mase, 4)]));
+    }
+    dibujar();
+  });
+
+  R('py2-metricas', c => {
+    if (!DATOS.rejilla_ap) { c.textContent = 'Faltan los datos.'; return; }
+    const P = pronosticos1960();
+    const ctr = lienzo(c);
+    let activo = 'modelo';
+    const mo = segmentado(ctr, { etiqueta: 'Pronóstico', valor: 'aero', opciones: [['aero', 'aerolínea'], ['ie', 'ingenuo estacional']] }, () => { activo = 'modelo'; dibujar(); });
+    const rm = segmentado(ctr, { etiqueta: 'RMSE con', valor: 'root', opciones: [['root', 'root_mean_squared_error'], ['sqrt', 'np.sqrt(MSE)'], ['viejo', 'squared=False']] }, () => { activo = 'rmse'; dibujar(); });
+    const ms = segmentado(ctr, { etiqueta: 'Escala del MASE', valor: '12', opciones: [['1', 'ingenuo simple (m = 1)'], ['12', 'ingenuo estacional (m = 12)']] }, () => { activo = 'm'; dibujar(); });
+    const pc = panelCodigo(c), lec = lectura(c);
+    function dibujar() {
+      const m = P.mods.find(x => x.k === mo.get()), mm = +ms.get(), M = T2.metricas(P.real, m.p, { entrenamiento: P.trY, m: mm });
+      const lineaR = { root: 'rmse = root_mean_squared_error(real, pron)', sqrt: 'rmse = np.sqrt(mean_squared_error(real, pron))', viejo: 'rmse = mean_squared_error(real, pron, squared=False)' }[rm.get()];
+      const args = { pron: mo.get() === 'aero' ? 'np.exp(ajuste_def.get_forecast(12).predicted_mean.values)' : 'serie.iloc[-24:-12].values           # ingenuo estacional', linea: lineaR, m: mm };
+      pc.codigo(codigoPython(`from sklearn.metrics import mean_absolute_error, mean_squared_error, root_mean_squared_error, mean_absolute_percentage_error\n\nreal = serie.iloc[-12:].values\npron = {pron}\nmae = mean_absolute_error(real, pron)\n{linea}\nmape = 100 * mean_absolute_percentage_error(real, pron)\nentrena = serie.iloc[:-12].values\nescala = np.mean(np.abs(entrena[{m}:] - entrena[:-{m}]))\nprint(f"MAE = {mae:.3f} | RMSE = {rmse:.3f} | MAPE = {mape:.3f}% | MASE = {mae / escala:.4f}")`, args, activo === 'modelo' ? 'pron' : activo === 'rmse' ? 'linea' : 'm'));
+      pc.salida(rm.get() === 'viejo' ? "TypeError: got an unexpected keyword argument 'squared'" : `MAE = ${M.mae.toFixed(3)} | RMSE = ${M.rmse.toFixed(3)} | MAPE = ${M.mape.toFixed(3)}% | MASE = ${M.mase.toFixed(4)}`);
+      lec.className = 'w-lectura ' + (rm.get() === 'viejo' ? 'mal' : '');
+      lec.innerHTML = rm.get() === 'viejo' ? 'Con scikit-learn 1.6 o posterior, <code>squared=False</code> ya no existe: usa una de las otras dos formas.' : `Escala del MASE con m = ${mm}: ${fmt(M.escala, 2)}. ${mm === 1 ? 'El ingenuo simple se equivoca mucho en una serie estacional, así que el MASE sale engañosamente bajo.' : 'Con datos estacionales, la escala estacional es la referencia justa.'}`;
+    }
+    dibujar();
+  });
+
+  /* ======================= 17 · Caso AirPassengers ======================= */
+  R('w2-caso-ap', c => {
+    const G = DATOS.rejilla_ap;
+    if (!G) { c.textContent = 'Faltan los datos.'; return; }
+    const ctr = lienzo(c);
+    const paso = segmentado(ctr, { etiqueta: 'Paso', valor: '1', opciones: rango(9, 1).map(i => [String(i), String(i)]) }, dibujar);
+    boton(ctr, 'Siguiente ▶', () => { paso.set(String(Math.min(9, +paso.get() + 1))); dibujar(); });
+    const g = lamina(c), g2 = lamina(c), tab = el('div', { class: 'w-tabla' }), lec = lectura(c);
+    c.insertBefore(tab, lec);
+    const aero = G.modelos.find(m => m.orden.join() === '0,1,1' && m.estacional.join() === '0,1,1');
+    const w = TS.diff(TS.diff(LOGAP, 12)), FW = FECHAS_AP.slice(13);
+    function dibujar() {
+      const p = +paso.get();
+      g2.style.display = 'none'; tab.innerHTML = '';
+      let texto = '';
+      if (p === 1) { graf(g, [lin(FECHAS_AP, AP, PAL.lav, 'pasajeros', { line: { color: PAL.lav, width: 1.8 } })], { height: 300, title: { text: 'Paso 1 · AirPassengers (miles de pasajeros)' }, showlegend: false }); texto = '<b>Cargar y graficar.</b> 144 meses (1949–1960) con frecuencia mensual. Se ven tendencia creciente y estacionalidad de 12 meses cuya amplitud crece con el nivel: patrón multiplicativo.'; }
+      if (p === 2) { graf(g, [lin(FECHAS_AP, LOGAP, PAL.menta, 'log', { line: { color: PAL.menta, width: 1.8 } })], { height: 300, title: { text: 'Paso 2 · ln(pasajeros)' }, showlegend: false }); texto = `<b>Transformar.</b> El logaritmo vuelve parejas las oscilaciones. Box–Cox estima λ̂ = ${fmt(LAM_AP, 3)} ≈ 0, así que se usa el log por interpretabilidad.`; }
+      if (p === 3) {
+        const a = TS.adf(w, { regression: 'c' }), k = TS.kpss(w, { regression: 'c' });
+        graf(g, [lin(FW, w, PAL.cel, 'ΔΔ12 log', { line: { color: PAL.cel, width: 1.4 } })], { height: 300, title: { text: 'Paso 3 · ΔΔ₁₂ ln y_t' }, showlegend: false });
+        texto = `<b>Diferenciar y probar.</b> Con una diferencia regular y una estacional: ADF p = ${fp(a.p)} (rechaza la raíz unitaria) y KPSS p ${k.fueraDeTabla === 'mayor' ? '> 0.10' : '= ' + fp(k.p)} (no rechaza la estacionariedad). Se fija d = 1, D = 1.`;
+      }
+      if (p === 4) {
+        const r = TS.acf(w, 36), pc = TS.pacf(w, 36);
+        graf(g, trazasACF(r, w.length, { resaltar: 12 }), layoutACF('Paso 4 · ACF de ΔΔ₁₂ ln y_t', { height: 260 }));
+        g2.style.display = ''; graf(g2, trazasACF(pc, w.length, { color: PAL.cel }), layoutACF('PACF de ΔΔ₁₂ ln y_t', { height: 240 }));
+        texto = `<b>Identificar.</b> Picos en la ACF en 1 (${fmt(r[1], 3)}) y 12 (${fmt(r[12], 3)}), con satélite en 13 (${fmt(r[13], 3)}): firma de MA(1) regular × MA(1) estacional. Candidatos: (0,1,1)(0,1,1), (1,1,0)(0,1,1), (1,1,1)(0,1,1), (0,1,1)(1,1,1).`;
+      }
+      if (p === 5) {
+        const top = G.modelos.slice().sort((a, b) => a.aic - b.aic).slice(0, 6), m0 = top[0].aic;
+        graf(g, [{ type: 'bar', x: top.map(m => `(${m.orden.join(',')})(${m.estacional.join(',')})`), y: top.map(m => m.aic - m0), marker: { color: top.map((m, i) => i ? 'rgba(124,105,214,.7)' : PAL.rosa) }, text: top.map(m => fmt(m.aic - m0, 2)), textposition: 'outside' }],
+          { height: 300, title: { text: 'Paso 5 · ΔAIC de los 6 mejores modelos' }, showlegend: false, yaxis: { rangemode: 'tozero', title: { text: 'ΔAIC' } } });
+        tab.innerHTML = tablaHTML(['modelo', 'k', 'AIC', 'BIC'], top.map(m => [`(${m.orden.join(',')})(${m.estacional.join(',')})₁₂`, m.k, fmt(m.aic, 2), fmt(m.bic, 2)]), ['elegido']);
+        texto = '<b>Estimar y comparar.</b> El modelo de aerolínea tiene el menor AIC y el menor BIC; los siguientes están a menos de 2 unidades de AIC pero tienen igual o más parámetros.';
+      }
+      if (p === 6) {
+        graf(g, trazasACF(TS.acf(aero.est, 24), aero.est.length), layoutACF('Paso 6 · ACF de los residuos del modelo de aerolínea', { height: 270 }));
+        tab.innerHTML = tablaHTML(['prueba', 'resultado'], [['Ljung–Box h = 12 (model_df = 2)', `p = ${fmt(aero.lb12[1], 3)} ✓`], ['Ljung–Box h = 24', `p = ${fmt(aero.lb24[1], 3)} ✓`], ['Jarque–Bera', `p = ${fmt(aero.jb[1], 3)} ✓`], ['H (varianza)', `p = ${fmt(aero.h[1], 4)} ✗`]]);
+        texto = '<b>Diagnosticar.</b> Residuos sin autocorrelación y normales. La prueba H indica que la varianza bajó con el tiempo: los intervalos de 1960 pueden quedar un poco anchos.';
+      }
+      if (p === 7 || p === 9) {
+        const xs = G.fechas_tr.slice(96), E = v => v.map(Math.exp);
+        graf(g, [lin(xs, E(G.log_tr.slice(96)), '#45397a', 'entrenamiento'), bandaTr(G.fechas_te, E(aero.fc_inf), E(aero.fc_sup), 'rgba(224,112,159,.18)', ''), lin(G.fechas_te, E(aero.fc), PAL.rosa, 'pronóstico', { line: { color: PAL.rosa, width: 2.4 } }), { x: G.fechas_te, y: E(G.log_te), mode: 'markers', marker: { color: PAL.menta, size: 8 }, name: 'real' }],
+          { height: 300, title: { text: p === 7 ? 'Paso 7 · Pronóstico de 1960 en pasajeros' : 'Paso 9 · Conclusión' }, legend: { orientation: 'h', y: -0.2 } });
+        texto = p === 7 ? '<b>Pronosticar.</b> 12 pasos desde diciembre de 1959; se regresa a pasajeros con exp (la banda queda asimétrica).'
+          : `<b>Conclusión.</b> SARIMA(0,1,1)(0,1,1)₁₂ sobre ln y<sub>t</sub>: θ̂ = ${fmt(aero.params[0][1], 3)}, Θ̂ = ${fmt(aero.params[1][1], 3)}; residuos de ruido blanco; MAPE 1960 = ${fmt(aero.mape, 2)}% contra 9.99% del ingenuo estacional. Modelo adecuado para pronosticar (ver la redacción completa abajo).`;
+      }
+      if (p === 8) {
+        const P = pronosticos1960(), M = P.mods.map(m => ({ n: m.n, c: m.c, M: T2.metricas(P.real, m.p, { entrenamiento: P.trY, m: 12 }) }));
+        graf(g, [{ type: 'bar', x: M.map(m => m.n.split(' (')[0]), y: M.map(m => m.M.mape), marker: { color: M.map(m => m.c) }, text: M.map(m => fmt(m.M.mape, 2) + '%'), textposition: 'outside' }], { height: 300, title: { text: 'Paso 8 · MAPE en 1960' }, showlegend: false, yaxis: { rangemode: 'tozero' } });
+        tab.innerHTML = tablaHTML(['modelo', 'MAE', 'RMSE', 'MAPE %', 'MASE'], M.map(m => [m.n, fmt(m.M.mae, 2), fmt(m.M.rmse, 2), fmt(m.M.mape, 2), fmt(m.M.mase, 3)]), ['elegido']);
+        texto = '<b>Evaluar.</b> En pasajeros (no en logaritmos): el modelo de aerolínea reduce el MAPE del ingenuo estacional de casi 10% a menos de 3%, con MASE = 0.44.';
+      }
+      lec.innerHTML = texto;
+    }
+    dibujar();
+  });
+
+  /* ======================= 18 · Caso usuarios ======================= */
+  R('w2-usuarios', c => {
+    const D = DATOS.usuarios;
+    if (!D) { c.textContent = 'Faltan los datos.'; return; }
+    const ctr = lienzo(c);
+    const mo = segmentado(ctr, { etiqueta: 'Modelo', valor: 'B', opciones: [['A', 'A: SARIMA'], ['B', 'B: SARIMAX con festivos'], ['AB', 'los dos']] }, dibujar);
+    const bd = casilla(ctr, 'Mostrar banda de 95%', true, dibujar);
+    const g1 = lamina(c), g2 = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: los coeficientes de los dos modelos'), f = fila(ex), tA = el('div', { class: 'w-tabla' }), tB = el('div', { class: 'w-tabla' });
+    f.append(tA, tB);
+    const n = D.fechas.length, nt = D.n_test, ini = n - nt - 56;
+    function dibujar() {
+      const xs = D.fechas.slice(ini), ys = D.usuarios.slice(ini), xt = D.fechas.slice(n - nt), fe = D.festivo;
+      const tr = [lin(xs, ys, '#45397a', 'usuarios', { line: { color: '#45397a', width: 1.4 } }),
+        { x: xs.filter((_, i) => fe[ini + i]), y: ys.filter((_, i) => fe[ini + i]), mode: 'markers', marker: { color: PAL.rosa, size: 11, symbol: 'star' }, name: 'festivo' }];
+      const usar = mo.get() === 'AB' ? ['A', 'B'] : [mo.get()];
+      usar.forEach(k => {
+        const M = D[k], col = k === 'A' ? PAL.dur : PAL.menta;
+        if (bd.get()) tr.push(bandaTr(xt, M.inf, M.sup, k === 'A' ? 'rgba(232,148,95,.15)' : 'rgba(63,174,138,.16)', ''));
+        tr.push(lin(xt, M.pred, col, k === 'A' ? 'pronóstico A' : 'pronóstico B', { line: { color: col, width: 2.3 } }));
+      });
+      graf(g1, tr, { height: 330, title: { text: 'Últimos 56 días de entrenamiento y 28 de prueba' }, legend: { orientation: 'h', y: -0.22 }, shapes: [{ type: 'line', x0: xt[0], x1: xt[0], yref: 'paper', y0: 0, y1: 1, line: { color: PAL.gris, dash: 'dot' } }] });
+      const k = usar[usar.length - 1], R_ = D[k].resid, off = D[k].burn, fx = D.fechas.slice(off, n - nt), fr = fe.slice(off, n - nt);
+      graf(g2, [lin(fx, R_, k === 'A' ? PAL.dur : PAL.menta, 'residuo', { line: { width: 0.9, color: k === 'A' ? PAL.dur : PAL.menta } }), { x: fx.filter((_, i) => fr[i]), y: R_.filter((_, i) => fr[i]), mode: 'markers', marker: { color: PAL.rosa, size: 9, symbol: 'star' }, name: 'festivo' }],
+        { height: 260, title: { text: `Residuos del entrenamiento, modelo ${k} (estrellas = festivos)` }, showlegend: false });
+      const idxF = rango(nt).filter(i => fe[n - nt + i]), real = D.usuarios.slice(n - nt);
+      const errF = m => idxF.map(i => 100 * (real[i] - D[m].pred[i]) / real[i]);
+      lec.innerHTML = `MAPE de prueba: A = <b>${fmt(D.A.mape, 2)}%</b>, B = <b>${fmt(D.B.mape, 2)}%</b> · AIC: A = ${fmt(D.A.aic, 1)}, B = ${fmt(D.B.aic, 1)}. ` +
+        (idxF.length ? `En los ${idxF.length} festivos de la prueba (${idxF.map(i => xt[i].slice(5)).join(', ')}), el error de A fue ${errF('A').map(v => fmt(v, 1) + '%').join(' y ')}; el de B, ${errF('B').map(v => fmt(v, 1) + '%').join(' y ')}.` : '');
+      const tabla = (M, t) => '<p style="margin:4px 6px;font-weight:700">' + t + '</p>' + tablaHTML(['parámetro', 'coef', 'se', 'z'], M.params.map(p => [p[0], fmt(p[1], 4), fmt(p[2], 4), fmt(p[3], 2)]));
+      tA.innerHTML = tabla(D.A, 'Modelo A (sin festivos)'); tB.innerHTML = tabla(D.B, 'Modelo B (con festivos)');
+    }
+    dibujar();
+  });
+
   /* Las demás secciones se agregan abajo */
   U.u2 = { T2, AP, FECHAS_AP, LOGAP, f3, f4, sgn, lin, vline, hline, choques, histograma, curvaNormal, polTexto, DATOS };
 })();
