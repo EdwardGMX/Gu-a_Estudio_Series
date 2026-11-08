@@ -1153,6 +1153,292 @@
     dibujar();
   });
 
+  /* ======================= 11 · AIC y BIC ======================= */
+  R('w2-penalizacion', c => {
+    const ctr = lienzo(c);
+    let semilla = 50;
+    const sn = slider(ctr, { etiqueta: 'n', min: 30, max: 500, paso: 10, valor: 100 }, dibujar);
+    const s2 = slider(ctr, { etiqueta: 'φ₂ verdadero (φ₁ = 0.5)', min: 0.05, max: 0.45, paso: 0.05, valor: 0.3, fmt: num }, dibujar);
+    boton(ctr, 'Otra muestra', () => { semilla += 1000; dibujar(); });
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: ℓ, AIC y BIC de la muestra actual'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    const P = 10;
+    function evaluar(y) {
+      return rango(P + 1).map(p => T2.ajustarAR(y, p, { holdBack: P }));
+    }
+    function dibujar() {
+      const n = sn.get(), ar = [1, -0.5, -s2.get()];
+      const y = T2.simularARMA(ar, [1], n, { semilla, quemado: 200 }).y, A = evaluar(y);
+      const aic = A.map(a => a.aic), bic = A.map(a => a.bic), m2 = A.map(a => -2 * a.llf);
+      const pa = aic.indexOf(Math.min(...aic)), pb = bic.indexOf(Math.min(...bic)), ps = rango(P + 1);
+      graf(g1, [lin(ps, m2, PAL.gris, '−2ℓ', { mode: 'lines+markers', marker: { size: 5 } }), lin(ps, aic, PAL.lav, 'AIC', { mode: 'lines+markers', marker: { size: 5 } }), lin(ps, bic, PAL.rosa, 'BIC', { mode: 'lines+markers', marker: { size: 5 } }),
+        { x: [pa], y: [aic[pa]], mode: 'markers', marker: { symbol: 'diamond', size: 13, color: PAL.lav, line: { color: '#fff', width: 1.5 } }, name: 'elige AIC' }, { x: [pb], y: [bic[pb]], mode: 'markers', marker: { symbol: 'diamond', size: 13, color: PAL.rosa, line: { color: '#fff', width: 1.5 } }, name: 'elige BIC' }],
+      { height: 320, title: { text: 'Una muestra: −2ℓ, AIC y BIC según p' }, xaxis: { title: { text: 'orden p del AR ajustado' }, dtick: 1 }, legend: { orientation: 'h', y: -0.3 } });
+      const ca = new Array(P + 1).fill(0), cb = new Array(P + 1).fill(0), R_ = 100;
+      for (let r = 0; r < R_; r++) {
+        const yy = T2.simularARMA(ar, [1], n, { semilla: semilla + 7 + r, quemado: 200 }).y, B = evaluar(yy);
+        const a1 = B.map(b => b.aic), b1 = B.map(b => b.bic);
+        ca[a1.indexOf(Math.min(...a1))]++; cb[b1.indexOf(Math.min(...b1))]++;
+      }
+      graf(g2, [{ type: 'bar', x: ps, y: ca, name: 'AIC', marker: { color: PAL.lav } }, { type: 'bar', x: ps, y: cb, name: 'BIC', marker: { color: PAL.rosa } }],
+        { height: 320, title: { text: `${R_} muestras: ¿qué p elige cada criterio?` }, barmode: 'group', xaxis: { title: { text: 'p elegido' }, dtick: 1 }, yaxis: { title: { text: 'veces' } }, legend: { orientation: 'h', y: -0.3 } });
+      lec.innerHTML = `En esta muestra el AIC elige p = <b>${pa}</b> y el BIC p = <b>${pb}</b> (verdadero: 2). En ${R_} repeticiones aciertan p = 2: AIC ${ca[2]} veces, BIC ${cb[2]} veces; eligen p > 2: AIC ${ca.slice(3).reduce((a, b) => a + b, 0)} veces, BIC ${cb.slice(3).reduce((a, b) => a + b, 0)} veces.`;
+      tab.innerHTML = tablaHTML(['p', 'k', 'ℓ', 'AIC', 'BIC'], A.map((a, p) => [p, a.k, fmt(a.llf, 2), fmt(a.aic, 2), fmt(a.bic, 2)]), A.map((_, p) => p === pa && p === pb ? 'elegido' : p === pa || p === pb ? 'resaltado' : ''));
+    }
+    dibujar();
+  });
+
+  R('w2-aic-grid', c => {
+    const G = DATOS.rejilla_ap;
+    if (!G) { c.textContent = 'Faltan los datos.'; return; }
+    const M = G.modelos.map(m => Object.assign({ etiqueta: `(${m.orden.join(',')})(${m.estacional.join(',')})₁₂` }, m));
+    const minA = Math.min(...M.map(m => m.aic)), minB = Math.min(...M.map(m => m.bic));
+    const ctr = lienzo(c);
+    let orden = 'aic', asc = true, sel = M.find(m => m.orden.join() === '0,1,1' && m.estacional.join() === '0,1,1');
+    const filtro = casilla(ctr, 'Solo modelos con ΔAIC < 2', false, dibujar);
+    const g = lamina(c), lec = lectura(c), tab = el('div', { class: 'w-tabla', style: 'max-height:360px;overflow:auto' });
+    c.append(tab);
+    const COLS = [['etiqueta', 'modelo'], ['k', 'k'], ['aic', 'AIC'], ['daic', 'ΔAIC'], ['bic', 'BIC'], ['lb', 'LB p (24)'], ['mape', 'MAPE 1960 %']];
+    function dibujar() {
+      const filas = M.map(m => Object.assign(m, { daic: m.aic - minA, lb: m.lb24[1] })).filter(m => !filtro.get() || m.daic < 2);
+      filas.sort((a, b) => (asc ? 1 : -1) * (a[orden] > b[orden] ? 1 : a[orden] < b[orden] ? -1 : 0));
+      tab.innerHTML = '<table><thead><tr>' + COLS.map(([k, t]) => `<th class="ord" data-k="${k}">${t}${orden === k ? (asc ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr></thead><tbody>' +
+        filas.map((m, i) => `<tr class="clic ${m === sel ? 'elegido' : ''}" data-i="${M.indexOf(m)}"><td>${m.etiqueta}</td><td>${m.k}</td><td>${fmt(m.aic, 2)}</td><td>${fmt(m.daic, 2)}</td><td>${fmt(m.bic, 2)}</td><td>${fmt(m.lb, 3)}</td><td>${fmt(m.mape, 2)}</td></tr>`).join('') + '</tbody></table>';
+      tab.querySelectorAll('th.ord').forEach(th => th.addEventListener('click', () => { const k = th.dataset.k; if (orden === k) asc = !asc; else { orden = k; asc = true; } dibujar(); }));
+      tab.querySelectorAll('tr.clic').forEach(tr => tr.addEventListener('click', () => { sel = M[+tr.dataset.i]; dibujar(); }));
+      const ini = 96, xtr = G.fechas_tr.slice(ini), ytr = G.log_tr.slice(ini).map(Math.exp), xte = G.fechas_te;
+      graf(g, [lin(xtr, ytr, '#45397a', 'entrenamiento', { line: { color: '#45397a', width: 1.5 } }), bandaTr(xte, sel.fc_inf.map(Math.exp), sel.fc_sup.map(Math.exp), 'rgba(224,112,159,.18)', 'banda 95%'),
+        lin(xte, sel.fc.map(Math.exp), PAL.rosa, 'pronóstico', { line: { color: PAL.rosa, width: 2.3 } }), { x: xte, y: G.log_te.map(Math.exp), mode: 'markers', marker: { color: PAL.menta, size: 7 }, name: 'real 1960' }],
+      { height: 300, title: { text: `SARIMA${sel.etiqueta}: pronóstico de 1960` }, legend: { orientation: 'h', y: -0.22 } });
+      const d = sel.aic - minA, apoyo = d < 2 ? 'apoyo parecido al mejor' : d < 4 ? 'algo menos de apoyo' : d <= 7 ? 'mucho menos apoyo' : d > 10 ? 'prácticamente sin apoyo' : 'poco apoyo';
+      lec.innerHTML = `<b>SARIMA${sel.etiqueta}</b>: ΔAIC = ${fmt(d, 2)} (${apoyo}), ΔBIC = ${fmt(sel.bic - minB, 2)}. Coeficientes: ` +
+        sel.params.map(([nm, co, se, z, p]) => `${nm} = ${fmt(co, 4)} (z = ${fmt(z, 2)}${p > 0.05 ? ', <b>no significativo</b>' : ''})`).join(' · ') + '.';
+    }
+    dibujar();
+  });
+
+  /* ======================= 12 · summary() anotado ======================= */
+  R('w2-summary', c => {
+    const G = DATOS.rejilla_ap;
+    if (!G) { c.textContent = 'Faltan los datos.'; return; }
+    const M = G.modelos;
+    const ctr = lienzo(c);
+    const nombre = m => `(${m.orden.join(',')})(${m.estacional.join(',')})12`;
+    const elegir = seleccion(ctr, { etiqueta: 'Modelo', valor: '0,1,1|0,1,1', opciones: M.map(m => [m.orden.join() + '|' + m.estacional.join(), 'SARIMA' + nombre(m)]) }, dibujar);
+    const pre = el('div', { class: 'resumen-sm' }), nota = el('div', { class: 'resumen-nota' });
+    c.append(pre, nota);
+    const r3 = v => v.toFixed(3), r4 = v => v.toFixed(4);
+    function dibujar() {
+      const [o, e] = elegir.get().split('|'), m = M.find(x => x.orden.join() === o && x.estacional.join() === e);
+      const ne = m.nobs - m.burn, k = m.k;
+      const izq = (a, b) => a + String(b).padStart(49 - a.length), der = (a, b) => a + String(b).padStart(38 - a.length);
+      const izqP = (a, b) => a + String(b).padStart(42 - a.length);
+      const mod = `SARIMAX(${m.orden.join(', ')})x(${m.estacional.join(', ')}, 12)`;
+      const L = [];
+      const add = (t, clave, clase) => L.push({ t, clave, clase });
+      add('                                     SARIMAX Results                                      ', 'titulo', 'rs-c');
+      add('='.repeat(90), null);
+      add(izq('Dep. Variable:', 'Passengers') + '   ' + der('No. Observations:', m.nobs), 'nobs', 'rs-c');
+      add(izq('Model:', mod) + '   ' + der('Log Likelihood', r3(m.llf)), 'llf', 'rs-c');
+      add(izq('Date:', 'Sat, 07 Nov 2026') + '   ' + der('AIC', r3(m.aic)), 'aic', 'rs-c');
+      add(izq('Time:', '22:44:53') + '   ' + der('BIC', r3(m.bic)), 'bic', 'rs-c');
+      add(izq('Sample:', '01-01-1949') + '   ' + der('HQIC', r3(m.hqic)), 'hqic', 'rs-c');
+      add(izq('', '- 12-01-1959') + '   ' + ' '.repeat(38), 'sample', 'rs-c');
+      add(izq('Covariance Type:', 'opg') + '   ' + ' '.repeat(38), 'cov', 'rs-c');
+      add('='.repeat(78), null);
+      add('                 coef    std err          z      P>|z|      [0.025      0.975]', 'cabcoef', 'rs-a');
+      add('-'.repeat(78), null);
+      m.params.forEach(([nm, co, se, z, p, lo, hi], i) => add(nm.padEnd(10) + r4(co).padStart(11) + r3(se).padStart(11) + r3(z).padStart(11) + r3(p).padStart(11) + r3(lo).padStart(12) + r3(hi).padStart(12), 'par' + i, 'rs-a'));
+      add('='.repeat(83), null);
+      add(izqP('Ljung-Box (L1) (Q):', m.lb1[0].toFixed(2)) + '   ' + der('Jarque-Bera (JB):', m.jb[0].toFixed(2)), 'lbjb', 'rs-m');
+      add(izqP('Prob(Q):', m.lb1[1].toFixed(2)) + '   ' + der('Prob(JB):', m.jb[1].toFixed(2)), 'probs', 'rs-m');
+      add(izqP('Heteroskedasticity (H):', m.h[0].toFixed(2)) + '   ' + der('Skew:', m.jb[2].toFixed(2)), 'hskew', 'rs-m');
+      add(izqP('Prob(H) (two-sided):', m.h[1].toFixed(2)) + '   ' + der('Kurtosis:', m.jb[3].toFixed(2)), 'probh', 'rs-m');
+      add('='.repeat(83), null);
+      const X = {
+        titulo: 'Reporte de <code>SARIMAXResults.summary()</code>: tres tablas (encabezado, coeficientes y pruebas sobre los residuos).',
+        nobs: `<b>No. Observations = ${m.nobs}</b>: los datos que recibió el modelo, antes de diferenciar. La verosimilitud usa ${m.nobs} − ${m.burn} = <b>${ne}</b> (se pierden d + sD = ${m.burn}).`,
+        llf: `<b>Log Likelihood = ${r3(m.llf)}</b>: ℓ maximizada. Positiva porque la serie está en logaritmos y los choques son pequeños (σ̂ ≈ ${fmt(Math.sqrt(m.params[m.params.length - 1][1]), 3)}).`,
+        aic: `<b>AIC = 2k − 2ℓ</b> = 2(${k}) − 2(${r3(m.llf)}) = ${r3(2 * k - 2 * m.llf)}. k = ${k} parámetros: ${m.params.map(p => p[0]).join(', ')}.`,
+        bic: `<b>BIC = k·ln(n) − 2ℓ</b> = ${k}·ln(${ne}) − 2(${r3(m.llf)}) = ${k}(${fmt(Math.log(ne), 4)}) − ${r3(2 * m.llf)} = ${r3(k * Math.log(ne) - 2 * m.llf)}. Usa las ${ne} observaciones efectivas.`,
+        hqic: `<b>HQIC = 2k·ln(ln n) − 2ℓ</b> = 2(${k})·ln(ln ${ne}) − 2(${r3(m.llf)}) = ${r3(2 * k * Math.log(Math.log(ne)) - 2 * m.llf)}.`,
+        sample: '<b>Sample</b>: primera y última fecha del entrenamiento (enero de 1949 a diciembre de 1959).',
+        cov: '<b>Covariance Type: opg</b>: los errores estándar salen del producto exterior de los gradientes de ℓ (una estimación de la información de Fisher).',
+        cabcoef: '<b>Columnas</b>: coeficiente estimado, error estándar, z = coef/se, p-value de H₀: coef = 0 e intervalo de 95% (coef ± 1.96·se).',
+        lbjb: `<b>Ljung–Box (L1) Q = ${m.lb1[0].toFixed(2)}</b>: autocorrelación de los residuos solo en el rezago 1. <b>Jarque–Bera = ${m.jb[0].toFixed(2)}</b>: (n/6)[S² + (K − 3)²/4] = (${ne}/6)[${fmt(m.jb[2], 4)}² + (${fmt(m.jb[3], 4)} − 3)²/4] ≈ ${fmt(ne / 6 * (m.jb[2] ** 2 + (m.jb[3] - 3) ** 2 / 4), 2)}.`,
+        probs: `<b>Prob(Q) = ${m.lb1[1].toFixed(2)}</b> ${m.lb1[1] > 0.05 ? '> 0.05: no hay autocorrelación en el rezago 1 ✓' : '< 0.05: queda autocorrelación en el rezago 1 ✗'}. <b>Prob(JB) = ${m.jb[1].toFixed(2)}</b> ${m.jb[1] > 0.05 ? '> 0.05: compatibles con normalidad ✓' : '< 0.05: no son normales ✗'}.`,
+        hskew: `<b>H = ${m.h[0].toFixed(2)}</b>: suma de residuos² del último tercio ÷ la del primer tercio (${Math.round(ne / 3)} observaciones cada uno). ${m.h[0] < 1 ? 'Menor que 1: la varianza bajó.' : 'Mayor que 1: la varianza subió.'} <b>Skew = ${m.jb[2].toFixed(2)}</b>: asimetría (0 en la normal).`,
+        probh: `<b>Prob(H) = ${m.h[1].toFixed(2)}</b> ${m.h[1] > 0.05 ? '> 0.05: varianza estable ✓' : '< 0.05: la varianza cambió a lo largo de la muestra ✗ (prueba de dos colas con F(h, h))'}. <b>Kurtosis = ${m.jb[3].toFixed(2)}</b>: 3 en la normal; ${m.jb[3] > 3 ? 'un poco más de colas.' : 'colas ligeras.'}`
+      };
+      m.params.forEach(([nm, co, se, z, p, lo, hi], i) => {
+        X['par' + i] = `<b>${nm}</b>: z = ${r4(co)} / ${fmt(se, 4)} = ${fmt(co / se, 3)}; p = 2(1 − Φ(|z|)) ${p < 0.001 ? '&lt; 0.001' : '= ' + fmt(p, 3)}; IC 95% = ${r4(co)} ± 1.96·${fmt(se, 4)} = [${r3(lo)}, ${r3(hi)}]. ` +
+          (nm === 'sigma2' ? `Es la varianza del choque: σ̂ = √${fmt(co, 6)} = ${fmt(Math.sqrt(co), 4)} (≈ ${fmt(100 * Math.sqrt(co), 1)}% por mes en logaritmos).` : p > 0.05 ? '<b>No significativo</b>: el intervalo contiene al 0; prueba el modelo sin este término.' : 'Significativo al 5%: el intervalo no contiene al 0.');
+      });
+      pre.innerHTML = L.map(l => l.clave ? `<span class="rs-l ${l.clase || ''}" data-k="${l.clave}">${l.t.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>` : l.t).join('\n');
+      const mostrar = k => { nota.innerHTML = X[k] || ''; pre.querySelectorAll('.rs-l').forEach(s => s.classList.toggle('on', s.dataset.k === k)); };
+      pre.querySelectorAll('.rs-l').forEach(s => { s.addEventListener('mouseenter', () => mostrar(s.dataset.k)); s.addEventListener('click', () => mostrar(s.dataset.k)); });
+      mostrar('par0');
+    }
+    dibujar();
+  });
+
+  /* ======================= 13 · Diagnóstico de residuos ======================= */
+  const lbP = (x, h, mdf = 0) => { const r = TS.ljungBox(x, h); return { Q: r.Q, p: TS.chi2sf(r.Q, h - mdf), df: h - mdf }; };
+  function qqTrazas(x, color) {
+    const Q = T2.qq(x);
+    return [{ x: Q.teo, y: Q.obs, mode: 'markers', marker: { size: 5, color: color || PAL.lav, opacity: 0.8 }, name: 'residuos', hovertemplate: 'teórico %{x:.2f}<br>observado %{y:.2f}<extra></extra>' },
+      lin([Q.teo[0], Q.teo[Q.teo.length - 1]], [Q.recta[0], Q.recta[Q.recta.length - 1]], PAL.rosa, 'recta', { line: { color: PAL.rosa, width: 2 } })];
+  }
+  U.u2qq = qqTrazas;
+  function generarResid(tipo, n, semilla) {
+    const r = TS.rng(semilla);
+    if (tipo === 't5') return rango(n).map(() => { const z = r.normal(); let s = 0; for (let i = 0; i < 5; i++) { const u = r.normal(); s += u * u; } return z / Math.sqrt(s / 5); });
+    if (tipo === 't3') return choques('t3', n, semilla).map(v => v * Math.sqrt(3));
+    if (tipo === 'chi') return rango(n).map(() => { let s = 0; for (let i = 0; i < 3; i++) { const u = r.normal(); s += u * u; } return (s - 3) / Math.sqrt(6); });
+    if (tipo === 'unif') return choques('unif', n, semilla);
+    if (tipo === 'atip') return r.normales(n).map((v, i) => (i % 20 === 7 ? v + (i % 40 === 7 ? 5 : -5) : v));
+    return r.normales(n);
+  }
+  R('w2-jb', c => {
+    const ctr = lienzo(c);
+    let semilla = 2;
+    const d = seleccion(ctr, { etiqueta: 'Distribución', valor: 't5', opciones: [['norm', 'Normal'], ['t5', 't de Student, 5 g.l.'], ['t3', 't de Student, 3 g.l.'], ['chi', 'χ² con 3 g.l. (asimétrica)'], ['unif', 'Uniforme'], ['atip', 'Normal con 5% de atípicos']] }, dibujar);
+    const n = slider(ctr, { etiqueta: 'n', min: 20, max: 2000, paso: 20, valor: 200 }, dibujar);
+    boton(ctr, 'Otra muestra', () => { semilla += 3; dibujar(); });
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), g3 = lamina(f), lec = lectura(c);
+    function dibujar() {
+      const x = generarResid(d.get(), n.get(), semilla), J = T2.jarqueBera(x), M = T2.momentos(x), lim = Math.max(4, ...x.map(Math.abs));
+      graf(g1, [histograma(x, null, 30), curvaNormal(M.media, Math.sqrt(M.var), -lim, lim)], { height: 270, title: { text: 'Histograma' }, showlegend: false, bargap: 0.05 });
+      graf(g2, qqTrazas(x), { height: 270, title: { text: 'Q-Q normal' }, showlegend: false, xaxis: { title: { text: 'cuantil teórico' } }, yaxis: { title: { text: 'cuantil observado' } } });
+      graf(g3, [{ type: 'bar', x: ['(n/6)·S²', '(n/24)·(K − 3)²'], y: J.partes, marker: { color: [PAL.dur, PAL.lav] }, text: J.partes.map(v => fmt(v, 2)), textposition: 'outside' }, hline(-0.5, 1.5, 5.99, PAL.rosa, 'dash', '')],
+        { height: 270, title: { text: `JB = ${fmt(J.jb, 2)} (línea: 5.99 = crítico 5%)` }, showlegend: false, yaxis: { rangemode: 'tozero' } });
+      lec.className = 'w-lectura ' + (J.p > 0.05 ? 'ok' : 'mal');
+      lec.innerHTML = `S = ${fmt(J.skew, 3)} · K = ${fmt(J.kurt, 3)} · JB = <b>${fmt(J.jb, 3)}</b>, p = <b>${fp(J.p)}</b> → ${J.p > 0.05 ? 'no se rechaza la normalidad' : 'se rechaza la normalidad'}. ` +
+        `De la asimetría viene el ${fmt(100 * J.partes[0] / Math.max(J.jb, 1e-12), 0)}% del estadístico.`;
+    }
+    dibujar();
+  });
+
+  function casoResiduos(tipo) {
+    const G = DATOS.rejilla_ap;
+    const busca = (o, e) => G.modelos.find(m => m.orden.join() === o && m.estacional.join() === e);
+    if (tipo === 'bueno') { const m = busca('0,1,1', '0,1,1'); return { x: m.est, mdf: 2, nombre: 'Aerolínea (0,1,1)(0,1,1)₁₂' }; }
+    if (tipo === 'incompleto') { const m = busca('0,1,0', '0,1,0'); return { x: m.est, mdf: 0, nombre: 'Incompleto (0,1,0)(0,1,0)₁₂' }; }
+    if (tipo === 'atipicos') return { x: TS.rng(77).normales(119).map((v, i) => [17, 58, 90].includes(i) ? v + (i === 58 ? -5.5 : 4.8) : v), mdf: 0, nombre: 'Simulado con atípicos' };
+    const a = T2.simARCH(240, 0.3, 0.7, { semilla: 21 }), s = TS.desv(a.e, 0);
+    return { x: a.e.map(v => v / s), mdf: 0, nombre: 'Simulado con volatilidad agrupada (ARCH)' };
+  }
+  R('w2-residuos', c => {
+    if (!DATOS.rejilla_ap) { c.textContent = 'Faltan los datos.'; return; }
+    const ctr = lienzo(c);
+    const caso = segmentado(ctr, { etiqueta: 'Caso', valor: 'bueno', opciones: [['bueno', 'modelo bueno'], ['incompleto', 'modelo incompleto'], ['atipicos', 'atípicos'], ['arch', 'volatilidad agrupada']] }, dibujar);
+    const f1 = fila(c), g1 = lamina(f1), g2 = lamina(f1), f2 = fila(c), g3 = lamina(f2), g4 = lamina(f2), tab = el('div', { class: 'w-tabla' }), lec = lectura(c);
+    c.insertBefore(tab, lec);
+    const ex = extra(c, 'Vista extra: la ACF de los residuos al cuadrado'), gx = lamina(ex);
+    function dibujar() {
+      const C = casoResiduos(caso.get()), x = C.x, n = x.length, lim = Math.max(3.5, ...x.map(Math.abs));
+      graf(g1, [lin(rango(n, 1), x, PAL.lav, 'residuo', { line: { width: 1, color: PAL.lav } }), hline(1, n, 0, PAL.gris, 'dot', '')], { height: 240, title: { text: 'Residuos estandarizados' }, showlegend: false });
+      const xs = rango(81).map(i => -lim + 2 * lim * i / 80);
+      graf(g2, [histograma(x, null, 25), lin(xs, T2.kde(x, xs), PAL.dur, 'KDE', { line: { color: PAL.dur, width: 2 } }), lin(xs, xs.map(v => T2.normpdf(v)), PAL.menta, 'N(0,1)', { line: { color: PAL.menta, width: 2, dash: 'dash' } })],
+        { height: 240, title: { text: 'Histograma + KDE + N(0,1)' }, legend: { orientation: 'h', y: -0.25 }, bargap: 0.05 });
+      graf(g3, qqTrazas(x), { height: 260, title: { text: 'Q-Q normal' }, showlegend: false, xaxis: { title: { text: 'cuantil teórico' } } });
+      graf(g4, trazasACF(TS.acf(x, 24), n), layoutACF('Correlograma', { height: 260 }));
+      const lb = lbP(x, 12, C.mdf), lb24 = lbP(x, 24, C.mdf), J = T2.jarqueBera(x), H = T2.hetH(x), A = T2.hetArch(x, 12);
+      const marca = p => p < 0.05 ? `<b style="color:#c0392b">${fp(p)} ✗</b>` : `${fp(p)} ✓`;
+      tab.innerHTML = tablaHTML(['prueba', 'estadístico', 'p-value', 'qué mira'], [
+        [`Ljung–Box h = 12 (model_df = ${C.mdf})`, fmt(lb.Q, 2), marca(lb.p), 'autocorrelación'], [`Ljung–Box h = 24`, fmt(lb24.Q, 2), marca(lb24.p), 'autocorrelación'],
+        ['Jarque–Bera', fmt(J.jb, 2), marca(J.p), 'normalidad'], ['H (dos colas)', fmt(H.H, 3), marca(H.p), 'varianza al inicio vs al final'], ['ARCH-LM (12 rezagos)', fmt(A.lm, 2), marca(A.p), 'volatilidad agrupada']]);
+      const dx = { bueno: 'Todo en orden salvo la prueba H (la varianza bajó con los años, ya lo vimos en el summary).', incompleto: 'Barras grandes en los rezagos 1 y 12: faltan el MA regular y el MA estacional. Ljung–Box rechaza con fuerza.', atipicos: 'Tres puntos enormes en el primer panel: el Q-Q se despega en las puntas y Jarque–Bera rechaza.', arch: 'El correlograma está limpio, pero hay rachas de residuos grandes: ARCH-LM rechaza. Mira la vista extra.' };
+      lec.innerHTML = `<b>${C.nombre}</b> (${n} residuos). ${dx[caso.get()]}`;
+      graf(gx, trazasACF(TS.acf(x.map(v => v * v), 24), n, { color: PAL.cel }), layoutACF('ACF de los residuos al cuadrado', { height: 230 }));
+    }
+    dibujar();
+  });
+
+  R('py2-diagnostics', c => {
+    const G = DATOS.rejilla_ap;
+    if (!G) { c.textContent = 'Faltan los datos.'; return; }
+    const ctr = lienzo(c);
+    let activo = 'modelo';
+    const OPC = [['0,1,1|0,1,1', 'aerolínea (0,1,1)(0,1,1)'], ['0,1,0|0,1,0', 'incompleto (0,1,0)(0,1,0)'], ['0,1,1|0,1,0', 'sin MA estacional (0,1,1)(0,1,0)'], ['1,1,0|1,1,0', '(1,1,0)(1,1,0)'], ['2,1,2|1,1,1', 'sobrado (2,1,2)(1,1,1)']];
+    const mo = seleccion(ctr, { etiqueta: 'Residuos de', valor: OPC[0][0], opciones: OPC }, () => { activo = 'modelo'; dibujar(); });
+    const h = slider(ctr, { etiqueta: 'lags (Ljung–Box)', min: 6, max: 36, paso: 6, valor: 12 }, () => { activo = 'lags'; dibujar(); });
+    const md = segmentado(ctr, { etiqueta: 'model_df', valor: 'auto', opciones: [['auto', 'p + q + P + Q'], ['0', '0']] }, () => { activo = 'model_df'; dibujar(); });
+    const nl = slider(ctr, { etiqueta: 'nlags (ARCH-LM)', min: 1, max: 24, paso: 1, valor: 12 }, () => { activo = 'nlags'; dibujar(); });
+    const pc = panelCodigo(c), lec = lectura(c);
+    const params = panelParametros(c, [
+      { nombre: 'lags', que: 'Hasta qué rezago acumula Ljung–Box las autocorrelaciones.', rec: '12 y 24 con datos mensuales (uno y dos ciclos); 7 y 14 con datos diarios.' },
+      { nombre: 'model_df', que: 'Coeficientes ARMA estimados que se restan a los grados de libertad.', rec: '<code>p + q + P + Q</code> del modelo (sin contar constante ni σ²).' },
+      { nombre: 'nlags', que: 'Rezagos de e² en la regresión de ARCH-LM.', rec: '12 con datos mensuales; 5–10 con datos diarios o financieros.' }
+    ]);
+    function dibujar() {
+      const [o, e] = mo.get().split('|'), m = G.modelos.find(x => x.orden.join() === o && x.estacional.join() === e);
+      const k = m.orden[0] + m.orden[2] + m.estacional[0] + m.estacional[2], mdf = md.get() === 'auto' ? k : 0, H = h.get(), x = m.resid;
+      const args = { order: `(${o.split(',').join(', ')})`, sorder: `(${e.split(',').join(', ')}, 12)`, h: H, mdf, nlags: nl.get() };
+      pc.codigo(codigoPython(`from statsmodels.stats.diagnostic import acorr_ljungbox, het_arch\nfrom statsmodels.stats.stattools import jarque_bera\n\nmodelo = SARIMAX(train, order={order}, seasonal_order={sorder}).fit(disp=False)\nresiduos = modelo.resid.iloc[modelo.loglikelihood_burn:]      # sin los primeros d + sD\nprint(acorr_ljungbox(residuos, lags=[{h}], model_df={mdf}))\njb, jb_p, skew, kurt = jarque_bera(residuos)\nprint("JB:", round(jb, 3), "p:", round(jb_p, 4), "| skew:", round(skew, 3), "kurtosis:", round(kurt, 3))\nlm, lm_p, f, f_p = het_arch(residuos, nlags={nlags})\nprint("ARCH-LM:", round(lm, 3), "p:", round(lm_p, 4))`, args,
+        activo === 'modelo' ? 'order' : activo === 'lags' ? 'h' : activo === 'model_df' ? 'mdf' : 'nlags'));
+      const lb = lbP(x, H, mdf), J = T2.jarqueBera(x), A = T2.hetArch(x, nl.get());
+      pc.salida(H > mdf ? `      lb_stat  lb_pvalue\n${String(H).padStart(2)}  ${lb.Q.toFixed(6).padStart(10)}  ${lb.p.toFixed(6).padStart(9)}\nJB: ${J.jb.toFixed(3)} p: ${J.p.toFixed(4)} | skew: ${J.skew.toFixed(3)} kurtosis: ${J.kurt.toFixed(3)}\nARCH-LM: ${A.lm.toFixed(3)} p: ${A.p.toFixed(4)}`
+        : 'ValueError: lags debe ser mayor que model_df');
+      params({ lags: `[${H}]`, model_df: mdf, nlags: nl.get() }, activo === 'lags' ? 'lags' : activo === 'model_df' ? 'model_df' : activo === 'nlags' ? 'nlags' : null);
+      lec.className = 'w-lectura ' + (lb.p > 0.05 && J.p > 0.05 && A.p > 0.05 ? 'ok' : 'aviso');
+      lec.innerHTML = `Ljung–Box con ${H} rezagos y ${lb.df} grados de libertad: p = <b>${fp(lb.p)}</b> ${lb.p > 0.05 ? '✓' : '✗ queda autocorrelación'} · Jarque–Bera p = ${fp(J.p)} · ARCH-LM p = ${fp(A.p)}. ` + (mdf === 0 && k > 0 ? '💡 Sin <code>model_df</code> la prueba es demasiado benévola.' : '');
+    }
+    dibujar();
+  });
+
+  /* ======================= 14 · ARCH ======================= */
+  const CHI2_95 = [0, 3.841, 5.991, 7.815, 9.488, 11.070, 12.592, 14.067, 15.507, 16.919, 18.307, 19.675, 21.026];
+  R('w2-arch', c => {
+    const ctr = lienzo(c);
+    let semilla = 8;
+    const so = slider(ctr, { etiqueta: 'ω', min: 0.05, max: 1, paso: 0.05, valor: 0.2, fmt: num }, dibujar);
+    const sa = slider(ctr, { etiqueta: 'α', min: 0, max: 0.9, paso: 0.05, valor: 0.5, fmt: num }, dibujar);
+    const sn = slider(ctr, { etiqueta: 'n', min: 200, max: 2000, paso: 100, valor: 500 }, dibujar);
+    boton(ctr, 'Otra muestra', () => { semilla += 3; dibujar(); });
+    const g1 = lamina(c), f = fila(c), g2 = lamina(f), g3 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: el histograma contra la normal de la misma varianza'), gx = lamina(ex);
+    function dibujar() {
+      const w = so.get(), a = sa.get(), n = sn.get(), S = T2.simARCH(n, w, a, { semilla }), e = S.e, sd = S.s2.map(Math.sqrt), x = rango(n, 1);
+      graf(g1, [bandaTr(x, sd.map(v => -2 * v), sd.map(v => 2 * v), 'rgba(224,112,159,.18)', '±2σ_t'), lin(x, e, PAL.lav, 'ε_t', { line: { width: 1, color: PAL.lav } })],
+        { height: 260, title: { text: `ARCH(1) con ω = ${num(w)} y α = ${num(a)}: ε<sub>t</sub> y la banda ±2σ<sub>t</sub>` }, showlegend: false, xaxis: { title: { text: 't' } } });
+      graf(g2, trazasACF(TS.acf(e, 20), n), layoutACF('ACF de ε_t: ruido blanco', { height: 260 }));
+      const r2 = TS.acf(e.map(v => v * v), 20);
+      graf(g3, trazasACF(r2, n, { color: PAL.cel }).concat([teoricoTr(rango(21).map(k => Math.pow(a, k)), 1, 'α^k')]), layoutACF('ACF de ε²_t: memoria en la varianza', { height: 260 }));
+      const M = T2.momentos(e), A = T2.hetArch(e, 5), kt = 3 * a * a < 1 ? 3 * (1 - a * a) / (1 - 3 * a * a) : Infinity;
+      lec.className = 'w-lectura ' + (A.p < 0.05 ? 'aviso' : 'ok');
+      lec.innerHTML = `Varianza muestral ${fmt(M.var, 3)} (teórica ω/(1 − α) = ${fmt(w / (1 - a), 3)}) · curtosis muestral ${fmt(M.kurt, 2)} (teórica ${isFinite(kt) ? fmt(kt, 2) : '∞: 3α² ≥ 1'}) · ARCH-LM (5 rezagos): LM = ${fmt(A.lm, 2)}, p = <b>${fp(A.p)}</b> ${A.p < 0.05 ? '→ hay efectos ARCH' : '→ sin evidencia de efectos ARCH'}.`;
+      const lim = Math.max(...e.map(Math.abs));
+      graf(gx, [histograma(e, null, 50), curvaNormal(0, Math.sqrt(M.var), -lim, lim, PAL.rosa, 'normal')], { height: 260, title: { text: 'ARCH: más valores cerca de 0 y más extremos que la normal' }, showlegend: false, bargap: 0.05 });
+    }
+    dibujar();
+  });
+
+  R('w2-archlm', c => {
+    const ctr = lienzo(c);
+    let semilla = 30;
+    const sa = slider(ctr, { etiqueta: 'α (efecto ARCH)', min: 0, max: 0.8, paso: 0.05, valor: 0.4, fmt: num }, dibujar);
+    const sn = slider(ctr, { etiqueta: 'n', min: 100, max: 1000, paso: 50, valor: 300 }, dibujar);
+    boton(ctr, 'Otra muestra', () => { semilla += 3; dibujar(); });
+    const f = fila(c), g1 = lamina(f), g2 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: la regresión con un rezago'), tab = el('div', { class: 'w-tabla' });
+    ex.append(tab);
+    function dibujar() {
+      const a = sa.get(), n = sn.get(), e = T2.simARCH(n, 1 - a, a, { semilla }).e, e2 = e.map(v => v * v);
+      const xs = e2.slice(0, -1), ys = e2.slice(1), A1 = T2.hetArch(e, 1), x1 = Math.max(...xs);
+      graf(g1, [dispersion(xs, ys, 'rgba(124,105,214,.45)'), lin([0, x1], [A1.beta[0], A1.beta[0] + A1.beta[1] * x1], PAL.rosa, 'recta', { line: { color: PAL.rosa, width: 2.4 } })],
+        { height: 300, title: { text: `e²_t contra e²_(t−1): pendiente ${fmt(A1.beta[1], 3)}, R² = ${fmt(A1.r2, 3)}` }, showlegend: false, xaxis: { title: { text: 'e²_(t−1)' } }, yaxis: { title: { text: 'e²_t' } } });
+      const qs = rango(12, 1), lms = qs.map(q => T2.hetArch(e, q).lm);
+      graf(g2, [{ type: 'bar', x: qs, y: lms, marker: { color: lms.map((v, i) => v > CHI2_95[i + 1] ? PAL.dur : 'rgba(124,105,214,.7)') }, name: 'LM' }, lin(qs, qs.map(q => CHI2_95[q]), PAL.rosa, 'crítico 5%', { line: { dash: 'dash', color: PAL.rosa, width: 2 } })],
+        { height: 300, title: { text: 'LM = n′R² según el número de rezagos q' }, xaxis: { title: { text: 'q' }, dtick: 1 }, legend: { orientation: 'h', y: -0.3 } });
+      lec.className = 'w-lectura ' + (A1.p < 0.05 ? 'aviso' : 'ok');
+      lec.innerHTML = `Con q = 1: LM = ${A1.n}·${fmt(A1.r2, 4)} = <b>${fmt(A1.lm, 2)}</b>, p = <b>${fp(A1.p)}</b>. ` + (a === 0 ? 'Sin efecto ARCH, la nube no tiene inclinación y LM queda bajo la línea crítica casi siempre.' : 'Barras naranjas = se rechaza H₀ (sin efectos ARCH) con ese número de rezagos.');
+      tab.innerHTML = tablaHTML(['cantidad', 'valor'], [['a₀ (constante)', fmt(A1.beta[0], 4)], ['a₁ (pendiente)', fmt(A1.beta[1], 4)], ['R²', fmt(A1.r2, 4)], ["n′ (pares usados)", A1.n], ['LM = n′R²', fmt(A1.lm, 3)], ['p = P(χ²₁ > LM)', fp(A1.p)]]);
+    }
+    dibujar();
+  });
+
   /* Las demás secciones se agregan abajo */
   U.u2 = { T2, AP, FECHAS_AP, LOGAP, f3, f4, sgn, lin, vline, hline, choques, histograma, curvaNormal, polTexto, DATOS };
 })();

@@ -489,7 +489,19 @@ class Documento:
             return ""
         salida = None
         if "norun" not in opciones:
-            salida = self.ejecutar(codigo, esperar_error="error" in opciones)
+            if "cache" in opciones:
+                # Bloque visible caro: su salida se guarda en caché. Úsalo solo si los bloques
+                # siguientes no dependen de las variables que define (en caché no se ejecuta).
+                import hashlib
+                archivo = CACHE / f"vis-{hashlib.sha1(codigo.encode('utf-8')).hexdigest()[:16]}.json"
+                if archivo.exists():
+                    salida = json.loads(archivo.read_text(encoding="utf-8"))["salida"]
+                else:
+                    salida = self.ejecutar(codigo, esperar_error="error" in opciones)
+                    CACHE.mkdir(exist_ok=True)
+                    archivo.write_text(json.dumps({"salida": salida}, ensure_ascii=False), encoding="utf-8")
+            else:
+                salida = self.ejecutar(codigo, esperar_error="error" in opciones)
         h = highlight(codigo, PythonLexer(), FORMATO)
         out = (f'<div class="codigo"><div class="c-cab"><span class="c-lang">🐍 Python</span>'
                f'<button class="c-copiar" type="button">Copiar</button></div>'
