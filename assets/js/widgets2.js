@@ -242,7 +242,9 @@
     const I = T2.ar2Info(p1, p2);
     if (!I.estacionario) return { I, texto: '<b>fuera del triángulo</b>: no es estacionario (una raíz está dentro o sobre el círculo unitario).' };
     if (I.complejas) return { I, texto: `raíces <b>complejas</b>: pseudo-ciclos de periodo ≈ ${fmt(I.periodo, 2)} con amortiguamiento r = ${fmt(I.amortiguamiento, 3)}.` };
+    if (!I.raices.length) return { I, texto: 'con φ₁ = φ₂ = 0 el polinomio es 1: no hay raíces y el proceso es <b>ruido blanco</b> (ACF y PACF valen 0 en todo rezago k ≥ 1).' };
     const l = I.raices.map(z => 1 / z.re), dom = l.reduce((a, b) => Math.abs(b) > Math.abs(a) ? b : a);
+    if (I.raices.length === 1) return { I, texto: `con φ₂ = 0 es un <b>AR(1)</b>: una sola raíz real, la ACF decae ${dom > 0 ? 'sin cambiar de signo' : 'alternando de signo'} como ${fmt(dom, 3)}ᵏ.` };
     return { I, texto: `raíces <b>reales</b>: la ACF decae ${dom > 0 ? 'sin cambiar de signo' : 'alternando de signo'} (raíz inversa dominante ${fmt(dom, 3)}).` };
   }
   function simularSeguro(ar, ma, n, semilla, c = 0) {

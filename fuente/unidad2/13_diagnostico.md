@@ -82,7 +82,7 @@ $$\JB = \frac{n}{6}\left[\tip{S-skew}{S}^2 + \frac{(\tip{K-kurt}{K} - 3)^2}{4}\r
 :::
 
 :::guiado Jarque–Bera con diez residuos {#guia-jb}
-Residuos: $(-1.2,\ 0.3,\ 0.8,\ -0.1,\ 2.5,\ -0.4,\ -0.9,\ 0.2,\ -1.0,\ -0.2)$, con media 0.
+Residuos (con media 0): $-1.2$, $0.3$, $0.8$, $-0.1$, $2.5$, $-0.4$, $-0.9$, $0.2$, $-1.0$ y $-0.2$.
 
 | Cantidad | Valor |
 |---|---|

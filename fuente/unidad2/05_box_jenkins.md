@@ -26,7 +26,7 @@ En la Unidad I viste la tabla básica [[u1:patrones]]. Esta versión agrega los 
 | ARMA($p$, $q$) | decae después de $q$ | decae después de $p$ | empezar con ARMA(1,1) |
 | Raíz unitaria | decae **muy lento**, casi en línea recta | un pico cercano a 1 en el rezago 1 | diferenciar ($d = 1$) [[u1:patrones]] |
 | Sobrediferenciación | $\rho(1) \approx -0.5$ | negativa y decayendo | quitar una diferencia [[sobrediferenciar]] |
-| Estacionalidad AR | picos en $s, 2s, 3s, \dots$ que decaen | un pico en $s$ | $P = 1$ [[sarima-acf]] |
+| Estacionalidad AR | picos en $s, 2s, 3s, \dots$ que decaen | un pico en $s$ | $P = 1$ [[ar-estacional]] |
 | Estacionalidad MA | un pico en $s$ | picos en $s, 2s, \dots$ que decaen | $Q = 1$ |
 
 :::intuicion Otra forma de verlo: la ACF y la PACF son «huellas digitales»

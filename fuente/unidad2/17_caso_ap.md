@@ -15,7 +15,7 @@ Recorre el caso con los botones. Cada paso muestra la gráfica o la tabla que ju
 
 | Paso | Qué se hace | Resultado | Ver |
 |---|---|---|---|
-| 1 · Cargar y graficar | índice mensual, frecuencia `MS`, 144 datos | tendencia creciente y estacionalidad de 12 meses cuya amplitud crece | [[u1:caso-ap]] |
+| 1 · Cargar y graficar | índice mensual, frecuencia `MS`, 144 datos | tendencia creciente y estacionalidad de 12 meses cuya amplitud crece | [[u1:caso-mirar]] |
 | 2 · Transformar | logaritmo (Box–Cox da $\hat\lambda = 0.148 \approx 0$) | varianza más estable | [[boxcox]] |
 | 3 · Diferenciar y probar | $\Delta\Delta_{12}\ln y_t$; ADF p = 0.0002, KPSS p > 0.10 | estacionaria: $d = 1$, $D = 1$ | [[guia-etapas]] |
 

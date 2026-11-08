@@ -9,7 +9,7 @@ Genera index.html (Unidad I) y unidad2.html (Unidad II) a partir de fuente/unida
   • [[id]] crea un enlace a otra sección (↩ si está antes, ↪ si está después).
 
 Requisitos
-  Python 3: markdown-it-py, pygments, numpy, pandas, statsmodels, matplotlib, scipy
+  Python 3: markdown-it-py, pygments, numpy, pandas, statsmodels, matplotlib, scipy, scikit-learn
   Node.js:  katex@0.16.11   (cd fuente && npm install katex@0.16.11)
 Uso
   python3 fuente/build.py          (todas las unidades)

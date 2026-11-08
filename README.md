@@ -1,40 +1,73 @@
 # Guía de estudio · Análisis de Series de Tiempo
 
-Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. Por ahora contiene la **Unidad I: Características de series de tiempo**.
+Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. Tiene dos unidades, cada una en su propia página y con un menú arriba para cambiar de una a otra:
+
+| Página | Unidad |
+|---|---|
+| `index.html` | **Unidad I · Características de series de tiempo** |
+| `unidad2.html` | **Unidad II · Procesos lineales en tiempo discreto: AR, MA, ARMA, ARIMA, SARIMA y SARIMAX** |
 
 ## Qué incluye
+
+### Unidad I
 
 - **12 secciones**: herramientas matemáticas, qué es una serie de tiempo, visualización, componentes y descomposición clásica, estadísticos básicos, estacionariedad (ruido blanco, AR(1), paseo aleatorio, raíz unitaria, tendencia determinística vs. estocástica, diferenciación), pruebas ADF y KPSS, ACF y PACF, Ljung–Box, caso integrador con AirPassengers y formulario.
 - **Demostraciones paso a paso** (cada paso con su justificación) y **17 ejemplos a mano guiados**: con «▶ Recorrer paso a paso» la tabla de datos ilumina en amarillo lo que usa cada paso y en verde lo que calcula.
 - **Tabla interactiva del dataset AirPassengers** enlazada con su gráfica.
 - **Código Python** con su salida real (se ejecuta al generar la página).
 - **35 gráficas interactivas**, calculadas en el navegador con las mismas fórmulas que `statsmodels`, cada una con su sección «Cómo leer esta gráfica» y, en la mayoría, una «vista extra» (gráfica o tabla enlazada) que muestra de dónde salen los números.
-- **8 simuladores de Python** (`rolling`, `seasonal_decompose`, transformaciones, `adfuller`, `kpss`, `plot_acf`/`plot_pacf`, `acf`, `acorr_ljungbox`): el código se reescribe con los parámetros que eliges y muestra su salida, con una tabla de valores recomendados.
-- **Explicación de cada símbolo** al pasar el cursor por las fórmulas, y enlaces ↩ para regresar a temas anteriores (con botón «Volver a donde estabas»).
+- **8 simuladores de Python** (`rolling`, `seasonal_decompose`, transformaciones, `adfuller`, `kpss`, `plot_acf`/`plot_pacf`, `acf`, `acorr_ljungbox`).
 - **43 ejercicios** con botón de respuesta y explicación.
+
+### Unidad II
+
+- **21 secciones**: repaso y herramientas (filtro lineal, números complejos, esperanza condicional), operador rezago y polinomios, AR(p) (media, triángulo de estacionariedad, Yule–Walker, pseudo-ciclos, PACF), MA(q) e invertibilidad, ARMA y pesos ψ, metodología Box–Jenkins, transformaciones (log, Box–Cox, regreso a la escala original, sobrediferenciación), ARIMA (deriva, ARIMA(0,1,1) = suavizamiento exponencial, pronóstico e intervalos), SARIMA y el modelo de aerolínea, variables exógenas (ARMAX contra regresión con errores SARIMA, fuga de información, festivos), máxima verosimilitud, AIC/BIC/HQIC y cuándo se pueden comparar, el `summary()` de SARIMAX renglón por renglón, diagnóstico de residuos (Ljung–Box con `model_df`, Jarque–Bera, prueba H), ARCH/GARCH y ARCH-LM, validación temporal (un paso contra varios pasos, estrategias, origen móvil), métricas (MAE, MSE, RMSE, MAPE, sMAPE, MASE), dos casos integradores (AirPassengers de principio a fin y usuarios diarios con días festivos), formulario y checklist.
+- **Cada proceso explicado de varias formas**: 38 demostraciones paso a paso, **40 ejemplos a mano guiados** con la tabla iluminada, 19 ejemplos resueltos, 12 intuiciones, 20 dudas frecuentes y 19 recuadros de «Cuidado».
+- **40 bloques de código Python** con su salida real (statsmodels, scipy, scikit-learn).
+- **42 gráficas interactivas** (calculadas en el navegador con `assets/js/ts2.js`, verificado contra statsmodels y scipy), todas con «Cómo leer esta gráfica» y vista extra, y **5 simuladores de Python** (`ArmaProcess`, `boxcox`, `ARIMA`, `plot_diagnostics` y `sklearn.metrics`).
+- **61 ejercicios** en 10 bloques (básicos, intermedios y retos), con respuesta explicada y enlace al tema.
+- Enlaces **⇠ Unidad I** a lo que ya se estudió (ruido blanco, estacionariedad, ACF, Ljung–Box…).
+
+### En las dos unidades
+
+- **Explicación de cada símbolo** al pasar el cursor (o tocar) las fórmulas.
+- Enlaces ↩ / ↪ entre temas con botón «Volver a donde estabas».
+- Índice lateral, botón para marcar cada sección como estudiada, checklist y botón para copiar el código; el avance se guarda en el navegador.
+- Diseño adaptable a celular.
 
 ## Cómo verla
 
-- **GitHub Pages**: *Settings → Pages → Build and deployment → Deploy from a branch*, elige la rama (`unidad-1` mientras se revisa, `main` después) y la carpeta `/ (root)`.
-- **En tu computadora**: abre `index.html` en el navegador. Necesita internet para cargar KaTeX y Plotly desde el CDN.
+- **GitHub Pages**: *Settings → Pages → Build and deployment → Deploy from a branch*, elige la rama (`unidad-2` mientras se revisa, `main` después) y la carpeta `/ (root)`. La Unidad I queda en la dirección principal del sitio y la Unidad II en `.../unidad2.html`.
+- **En tu computadora**: abre `index.html` o `unidad2.html` en el navegador. Necesita internet para cargar KaTeX y Plotly desde el CDN.
 
 ## Estructura
 
 ```
-index.html              página generada (no editar a mano)
-assets/css/estilos.css  diseño
-assets/js/ts.js         cálculos de series de tiempo (ACF, PACF, ADF, KPSS, Ljung–Box…)
-assets/js/ui.js         explicación de símbolos, enlaces, índice y ejercicios
-assets/js/widgets.js    gráficas interactivas
-fuente/contenido/*.md   texto de la guía (Markdown + fórmulas)
-fuente/glosario.json    explicación de cada símbolo
-fuente/build.py         genera index.html
+index.html               Unidad I (generada, no editar a mano)
+unidad2.html             Unidad II (generada, no editar a mano)
+assets/css/estilos.css   diseño
+assets/js/ts.js          cálculos de la Unidad I (ACF, PACF, ADF, KPSS, Ljung–Box…)
+assets/js/ts2.js         cálculos de la Unidad II (polinomios y raíces, ACF/PACF teóricas, simulación
+                         ARMA/SARIMA/ARCH, pronóstico con pesos ψ, verosimilitud, Box–Cox, Jarque–Bera,
+                         ARCH-LM, métricas…)
+assets/js/ui.js          explicación de símbolos, enlaces, índice, ejemplos guiados y ejercicios
+assets/js/widgets.js     gráficas de la Unidad I y utilidades comunes
+assets/js/widgets2.js    gráficas y simuladores de la Unidad II
+fuente/unidad1/*.md      texto de la Unidad I (Markdown + fórmulas)
+fuente/unidad2/*.md      texto de la Unidad II
+fuente/glosario.json     explicación de cada símbolo (compartido)
+fuente/plantilla.html    plantilla de las páginas
+fuente/cache/            resultados guardados de los cálculos de Python más lentos
+fuente/build.py          genera las páginas
 ```
 
-## Regenerar la página
+## Regenerar las páginas
 
 ```bash
-pip install markdown-it-py pygments numpy pandas scipy statsmodels matplotlib
+pip install markdown-it-py pygments numpy pandas scipy statsmodels scikit-learn matplotlib
 cd fuente && npm install && cd ..
-python3 fuente/build.py
+python3 fuente/build.py          # las dos unidades
+python3 fuente/build.py u2       # solo la Unidad II
 ```
+
+Los bloques de Python marcados con `cache` (rejillas de modelos, validación con origen móvil, el caso de usuarios) se ejecutan una vez y su resultado se guarda en `fuente/cache/`; si cambias su código se vuelven a ejecutar. Los enlaces ⇠ Unidad I usan `fuente/cache/anclas_u1.json`, que se actualiza cada vez que se genera la Unidad I.

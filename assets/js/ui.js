@@ -76,10 +76,12 @@
     el.classList.add('destello');
     setTimeout(() => el.classList.remove('destello'), 2300);
   }
-  function irA(id, registrar) {
+  function irA(id, origen) {
     const destino = document.getElementById(id);
     if (!destino) return;
-    if (registrar) { pila.push(window.scrollY); actualizarVolver(); }
+    // Se guarda el enlace de origen y su altura en la ventana: así el regreso es exacto
+    // aunque las gráficas que se dibujan al pasar cambien la altura de la página.
+    if (origen) { pila.push({ el: origen, dy: origen.getBoundingClientRect().top, y: window.scrollY }); actualizarVolver(); }
     if (destino.tagName === 'DETAILS') destino.open = true;
     const padreDetalles = destino.closest('details');
     if (padreDetalles) padreDetalles.open = true;
@@ -91,12 +93,16 @@
     const a = e.target.closest && e.target.closest('a.ref');
     if (!a || !a.getAttribute('href').startsWith('#')) return;
     e.preventDefault();
-    irA(a.getAttribute('href').slice(1), true);
+    irA(a.getAttribute('href').slice(1), a);
   });
+  const alturaOrigen = p => (p.el && p.el.isConnected ? p.el.getBoundingClientRect().top + window.scrollY - p.dy : p.y);
   btnVolver.addEventListener('click', () => {
-    const y = pila.pop();
-    window.scrollTo({ top: y, behavior: 'smooth' });
+    const p = pila.pop();
+    if (!p) return;
+    window.scrollTo({ top: alturaOrigen(p), behavior: 'smooth' });
     actualizarVolver();
+    // Corrección final por si algo cambió de tamaño durante el desplazamiento
+    setTimeout(() => { const y = alturaOrigen(p); if (Math.abs(window.scrollY - y) > 30) window.scrollTo({ top: y }); }, 1100);
   });
 
   /* ------------------------------ Índice ------------------------------ */
