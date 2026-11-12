@@ -90,6 +90,11 @@ Elige la transformación y la especificación. Verás la serie, su ACF y los res
 | Modelo aditivo / multiplicativo | $y_t = T_t + S_t + R_t$ / $y_t = T_t \times S_t \times R_t$ | [[aditivo]] |
 | Log del multiplicativo | $\ln y_t = \ln T_t + \ln S_t + \ln R_t$ | [[demo-log]] |
 | Media móvil 2×4 | $\tfrac18 y_{t-2} + \tfrac14(y_{t-1} + y_t + y_{t+1}) + \tfrac18 y_{t+2}$ | [[mm-centrada]] |
+| Peso tricúbico de LOESS | $w_j = (1 - (r/h)^3)^3$ si $r < h$; 0 si no | [[loess]] |
+| Ventana de tendencia de STL | menor impar $\ge \frac{1.5\,s}{1 - 1.5/\text{seasonal}}$ (23 con $s = 12$) | [[demo-stl-trend]] |
+| Peso robusto de STL | $\rho_t = \left(1 - \left(\frac{\lvert R_t\rvert}{6\,\operatorname{mediana}\lvert R\rvert}\right)^2\right)^2$ | [[stl-algoritmo]] |
+| Fuerza de tendencia y estacionalidad | $F_T = \max\big(0, 1 - \frac{\Var(R)}{\Var(T + R)}\big)$, $F_S = \max\big(0, 1 - \frac{\Var(R)}{\Var(S + R)}\big)$ | [[fuerza]] |
+| Pronóstico por descomposición | $\hat{y}_{T+h} = \hat{A}_{T+h} + \hat{S}_{T+h-s}$, $A_t = y_t - \hat{S}_t$ | [[pron-descomp]] |
 | AR(1) | $y_t = c + \phi y_{t-1} + \varepsilon_t$ | [[ar1]] |
 | Media, varianza y ACF del AR(1) | $\mu = \frac{c}{1-\phi}$, $\gamma(0) = \frac{\sigma^2}{1-\phi^2}$, $\rho(k) = \phi^k$ | [[ar1-acf]] |
 | Paseo aleatorio | $y_t = y_0 + \sum_{j=1}^t\varepsilon_j$, $\Var(y_t) = t\sigma^2$ | [[paseo-demo]] |
@@ -115,8 +120,8 @@ Elige la transformación y la especificación. Verás la serie, su ACF y los res
 ### Flujo de análisis de la Unidad I {#flujo}
 
 1. **Construir** la serie correctamente: fecha → índice → orden → frecuencia [[pandas]].
-2. **Graficar**: línea, estacional, lag plot, estadísticas móviles [[visualizacion]].
-3. **Descomponer**: ¿aditiva o multiplicativa? [[descomposicion]]
+2. **Graficar**: línea, estacional, subseries, lag plot, estadísticas móviles [[visualizacion]].
+3. **Descomponer**: ¿aditiva o multiplicativa? Clásica o STL, y la fuerza de cada componente [[descomposicion]] [[stl]].
 4. **Transformar** si la varianza crece: logaritmo [[log]].
 5. **Probar**: ADF + KPSS con la especificación correcta [[conjunta]].
 6. **Diferenciar** lo mínimo necesario ($\Delta$, $\Delta_s$) y volver a probar [[diferenciacion]].
@@ -135,6 +140,8 @@ Elige la transformación y la especificación. Verás la serie, su ACF y los res
 - Barajar los datos o hacer particiones aleatorias [[iid]].
 - Interpretar una barra aislada fuera de la banda en un rezago alto como señal real [[falsas-alarmas]].
 - Olvidar que la ACF muestral divide entre $n$ [[autocov]].
+- Aplicar STL a una serie multiplicativa sin logaritmo, o dar a `seasonal`/`trend` un valor par [[stl-parametros]].
+- Elegir la ventana de la recta del pronóstico por descomposición viendo el error de la prueba [[pron-descomp]].
 :::
 
 ### Checklist: antes del examen debes poder… {#checklist}
@@ -144,6 +151,10 @@ Elige la transformación y la especificación. Verás la serie, su ACF y los res
 - [ ] Distinguir tendencia, estacionalidad, ciclo, ruido y ruptura.
 - [ ] Elegir entre modelo aditivo y multiplicativo viendo una gráfica.
 - [ ] Calcular a mano una media móvil 2×4 y unos índices estacionales.
+- [ ] Leer una gráfica de subseries y decir si la estacionalidad cambia con los años.
+- [ ] Calcular a mano un LOESS en un punto (pesos tricúbicos) y describir los 6 pasos del ciclo interno de STL.
+- [ ] Elegir `seasonal`, `trend` y `robust` en `STL` y explicar qué hace cada uno.
+- [ ] Calcular $F_T$ y $F_S$ y pronosticar con una descomposición (desestacionalizar, extrapolar y devolver la estacionalidad).
 - [ ] Calcular a mano $\bar y$, $\hat\gamma(k)$ y $\hat\rho(k)$ de una serie corta.
 - [ ] Enunciar las 3 condiciones de estacionariedad débil y decir cuál falla en cada caso de la galería.
 - [ ] Deducir la media, la varianza y la ACF del AR(1).

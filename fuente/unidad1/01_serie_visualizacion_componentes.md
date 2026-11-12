@@ -141,7 +141,7 @@ print(limpia.interpolate())
 :::
 
 ## 👀 Visualización de series de tiempo {#visualizacion}
-@mapa Gráfica de línea, gráfica estacional, boxplot por mes, lag plot y estadísticas móviles.
+@mapa Gráfica de línea, gráfica estacional, boxplot por mes, gráfica de subseries, lag plot y estadísticas móviles.
 
 Antes de cualquier prueba, **grafica**. Una buena gráfica responde en segundos lo que una prueba tarda páginas en confirmar.
 
@@ -187,6 +187,47 @@ Alterna entre «una línea por año» y «boxplot por mes». Prueba también con
 - **Vista «boxplot por mes»**: cada caja resume los 12 valores de ese mes. La línea central es la **mediana**, la caja va del primer al tercer **cuartil** (el 50% central), los bigotes llegan a los valores no atípicos y cada punto es un año.
 - **Qué buscar**: forma común entre líneas ⇒ **estacionalidad**; líneas cada vez más arriba ⇒ **tendencia**; distancia pico–valle que crece ⇒ **multiplicativo**.
 - En Python: `pivote.plot()` para las líneas y `sns.boxplot(x=mes, y=valor)` o `tabla.boxplot(column="y", by="mes")` para las cajas.
+:::
+
+### Gráfica de subseries por mes {#subseries}
+
+La gráfica estacional pone **un año por línea**. La gráfica de **subseries** hace lo contrario: junta todos los eneros en un tramo, todos los febreros en el siguiente, y así hasta diciembre. Cada tramo es la **subserie** de ese mes (sus 12 valores, de 1949 a 1960) y lleva una línea horizontal con su promedio.
+
+:::definicion Subserie de ciclo
+Con periodo $s$, la subserie de la temporada $j$ (por ejemplo, $j$ = julio) son los datos
+
+$$y_j,\; y_{j+s},\; y_{j+2s},\; \dots$$
+
+Con datos mensuales hay 12 subseries; con trimestrales, 4. STL suaviza **cada subserie por separado** para estimar la estacionalidad [[stl-algoritmo]].
+:::
+
+Se lee en tres niveles:
+
+| Mira… | Qué te dice | En AirPassengers |
+|---|---|---|
+| La **altura de las líneas de promedio** | el patrón estacional: qué meses son altos y cuáles bajos | julio y agosto (≈ 351) arriba; noviembre (≈ 233) abajo |
+| La **pendiente dentro de cada tramo** | la tendencia: si todos suben, la serie crece | todos los meses suben |
+| Si **unos tramos suben más que otros** | si la estacionalidad **cambia** con los años | julio creció 474 mil pasajeros entre 1949 y 1960; noviembre solo 286 |
+
+Ese tercer punto es la razón para usar STL: la descomposición clásica supone que el patrón es idéntico cada año [[descomposicion]], y aquí cada mes crece a su propio ritmo.
+
+```python
+from statsmodels.graphics.tsaplots import month_plot
+
+fig, ax = plt.subplots(figsize=(10, 3.5))
+month_plot(serie, ax=ax)                  # una subserie por mes y la línea de su promedio
+ax.set_title("Subseries por mes de AirPassengers")
+plt.show()
+print(pivote.mean(axis=1).round(1).to_string())     # el promedio de cada mes (la altura de cada línea)
+```
+
+:::interactivo subseries | Gráfica de subseries de AirPassengers {#w-subseries}
+Cada tramo es un mes con sus 12 años; la línea horizontal es su promedio. Cambia a logaritmos o quita la tendencia para ver qué queda.
+@@@
+- **Eje horizontal**: los meses; dentro de cada mes, los años de 1949 a 1960 de izquierda a derecha.
+- **Línea gruesa horizontal**: el promedio del mes. Su altura es el perfil estacional.
+- **Qué buscar**: con los datos originales, julio y agosto suben mucho más rápido que noviembre (la estacionalidad crece). En logaritmos los tramos se parecen más, aunque julio sigue subiendo más. Al **quitar la tendencia** (restando la media móvil 2×12) los tramos quedan casi planos y solo se ven las diferencias entre meses.
+- **Vista extra**: la tabla con el promedio de cada mes y cuánto creció entre el primer año y el último.
 :::
 
 ### Gráfica de rezagos (lag plot) {#lagplot}
@@ -690,7 +731,7 @@ print(pd.DataFrame({"sin extrapolar": dec_12.trend, "extrapolada": dec_ext.trend
 - Supone que el patrón estacional es **idéntico** todos los años.
 - Es sensible a valores atípicos (un promedio se mueve mucho con un dato extremo).
 
-Métodos más modernos (STL, X-13) relajan estas suposiciones, pero la lógica es la misma.
+Métodos más modernos (STL, X-13) relajan estas suposiciones, pero la lógica es la misma. STL se estudia a fondo en la sección siguiente [[stl]].
 :::
 
 :::resumen Lo esencial de la sección 3

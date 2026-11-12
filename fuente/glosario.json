@@ -189,5 +189,12 @@
   "T-obs": ["T", "Número de observaciones del entrenamiento", "El último dato observado es y_T; los pronósticos son para T + 1, T + 2, …"],
   "m-est": ["m", "Periodo estacional (season_length)", "Cada cuántos periodos se repite el patrón: 12 en datos mensuales, 4 en trimestrales, 7 en diarios con patrón semanal."],
   "k-temp": ["k", "Temporadas completas antes del horizonte", "k = ⌊(h − 1)/m⌋: cuántos años completos se ‘saltan’ al copiar el mismo mes. Vale 0 en el primer año de pronóstico."],
-  "b-deriva": ["b", "Pendiente de la deriva", "b = (y_T − y_1)/(T − 1): el cambio promedio por periodo, igual a la media de las primeras diferencias."]
+  "b-deriva": ["b", "Pendiente de la deriva", "b = (y_T − y_1)/(T − 1): el cambio promedio por periodo, igual a la media de las primeras diferencias."],
+  "q-loess": ["q", "Tamaño de la ventana de LOESS", "Cuántos datos vecinos entran a cada ajuste local. En STL son los parámetros seasonal, trend y low_pass (siempre impares)."],
+  "w-loess": ["w_j", "Peso tricúbico", "w_j = (1 − (r/h)³)³ con r la distancia al punto que se suaviza: 1 en el propio punto, cerca de 1 en los vecinos y 0 en el extremo de la ventana."],
+  "h-loess": ["h", "Distancia al dato más lejano de la ventana", "Escala de los pesos de LOESS: un dato a distancia h o más recibe peso 0."],
+  "rho-rob": ["\\rho_t", "Peso de robustez", "Peso bicuadrado del dato t en STL robusto: (1 − (|R_t| / (6·mediana|R|))²)². Vale 0 para un atípico, que deja de influir en la tendencia y la estacionalidad."],
+  "FT": ["F_T", "Fuerza de la tendencia", "1 − Var(R)/Var(T + R), acotada a [0, 1]. Cerca de 1: tendencia fuerte; cerca de 0: no hay tendencia."],
+  "FS": ["F_S", "Fuerza de la estacionalidad", "1 − Var(R)/Var(S + R), acotada a [0, 1]. Cerca de 1: estacionalidad fuerte; cerca de 0: no hay estacionalidad."],
+  "A-desest": ["A_t", "Serie desestacionalizada", "A_t = y_t − S_t = T_t + R_t: la serie sin su patrón estacional. En el pronóstico por descomposición es lo que se extrapola."]
 }

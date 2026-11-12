@@ -479,6 +479,124 @@
   };
 
   /* ------------------------------ Datos ----------------------------- */
+  /* --------------------------------- STL ---------------------------------
+     Traducción directa del Fortran de Cleveland et al. (1990), igual que
+     statsmodels.tsa.seasonal.STL (saltos = 1). Índices internos desde 1. */
+  TS.stlConfig = (period, { seasonal = 7, trend = null, low_pass = null } = {}) => {
+    if (trend === null) { trend = Math.ceil(1.5 * period / (1 - 1.5 / seasonal)); trend += (trend % 2 === 0) ? 1 : 0; }
+    if (low_pass === null) { low_pass = period + 1; low_pass += (low_pass % 2 === 0) ? 1 : 0; }
+    return { period, seasonal, trend, low_pass };
+  };
+  TS.loessPunto = (y, n, len, ideg, xs, nleft, nright, w, userw, rw) => {
+    // stlest: estimación LOESS en xs con los datos nleft..nright (índices 1..n)
+    const rango = n - 1;
+    let h = Math.max(xs - nleft, nright - xs);
+    if (len > n) h += Math.floor((len - n) / 2);
+    const h9 = 0.999 * h, h1 = 0.001 * h;
+    let a = 0;
+    for (let j = nleft; j <= nright; j++) {
+      w[j] = 0;
+      const r = Math.abs(j - xs);
+      if (r <= h9) {
+        w[j] = r <= h1 ? 1 : Math.pow(1 - Math.pow(r / h, 3), 3);
+        if (userw) w[j] *= rw[j];
+        a += w[j];
+      }
+    }
+    if (a <= 0) return null;
+    for (let j = nleft; j <= nright; j++) w[j] /= a;
+    if (h > 0 && ideg > 0) {
+      let m = 0;
+      for (let j = nleft; j <= nright; j++) m += w[j] * j;
+      let b = xs - m, c = 0;
+      for (let j = nleft; j <= nright; j++) c += w[j] * (j - m) * (j - m);
+      if (Math.sqrt(c) > 0.001 * rango) {
+        b /= c;
+        for (let j = nleft; j <= nright; j++) w[j] *= b * (j - m) + 1;
+      }
+    }
+    let ys = 0;
+    for (let j = nleft; j <= nright; j++) ys += w[j] * y[j];
+    return ys;
+  };
+  function stless(y, n, len, ideg, userw, rw, ys) {
+    // y, rw, ys con índice desde 1; salto = 1
+    const w = new Array(n + 2).fill(0);
+    if (n < 2) { ys[1] = y[1]; return; }
+    if (len >= n) {
+      for (let i = 1; i <= n; i++) { const v = TS.loessPunto(y, n, len, ideg, i, 1, n, w, userw, rw); ys[i] = v === null ? y[i] : v; }
+      return;
+    }
+    const nsh = Math.floor((len + 1) / 2);
+    let nleft = 1, nright = len;
+    for (let i = 1; i <= n; i++) {
+      if (i > nsh && nright !== n) { nleft++; nright++; }
+      const v = TS.loessPunto(y, n, len, ideg, i, nleft, nright, w, userw, rw);
+      ys[i] = v === null ? y[i] : v;
+    }
+  }
+  function stlma(x, n, len) {
+    // media móvil de longitud len sobre x[1..n] → resultado con n − len + 1 valores (índice desde 1)
+    const nn = n - len + 1, ave = new Array(nn + 1);
+    let v = 0;
+    for (let i = 1; i <= len; i++) v += x[i];
+    ave[1] = v / len;
+    for (let j = 2; j <= nn; j++) { v += x[len + j - 1] - x[j - 1]; ave[j] = v / len; }
+    return ave;
+  }
+  TS.stl = (serie, period, o = {}) => {
+    const C = TS.stlConfig(period, o), robust = !!o.robust;
+    const sdeg = o.seasonal_deg ?? 1, tdeg = o.trend_deg ?? 1, ldeg = o.low_pass_deg ?? 1;
+    const ni = o.inner_iter ?? (robust ? 2 : 5), no = o.outer_iter ?? (robust ? 15 : 0);
+    const n = serie.length, np = C.period, ns = C.seasonal, nt = C.trend, nl = C.low_pass;
+    const y = [0].concat(serie), trend = new Array(n + 1).fill(0), season = new Array(n + 1).fill(0);
+    let rw = new Array(n + 1).fill(1), userw = false;
+    const paso = () => {
+      for (let it = 0; it < ni; it++) {
+        const w1 = new Array(n + 1);
+        for (let i = 1; i <= n; i++) w1[i] = y[i] - trend[i];
+        // stlss: suavizar cada subserie de ciclo y extenderla un periodo a cada lado
+        const C2 = new Array(n + 2 * np + 1).fill(0);
+        for (let j = 1; j <= np; j++) {
+          const k = Math.floor((n - j) / np) + 1, sub = new Array(k + 1), rws = new Array(k + 1), lis = new Array(k + 3).fill(0);
+          for (let i = 1; i <= k; i++) { sub[i] = w1[(i - 1) * np + j]; rws[i] = rw[(i - 1) * np + j]; }
+          const ys = new Array(k + 1);
+          stless(sub, k, ns, sdeg, userw, rws, ys);
+          for (let i = 1; i <= k; i++) lis[i + 1] = ys[i];
+          const w = new Array(k + 2).fill(0);
+          let v = TS.loessPunto(sub, k, ns, sdeg, 0, 1, Math.min(ns, k), w, userw, rws);
+          lis[1] = v === null ? lis[2] : v;
+          v = TS.loessPunto(sub, k, ns, sdeg, k + 1, Math.max(1, k - ns + 1), k, w, userw, rws);
+          lis[k + 2] = v === null ? lis[k + 1] : v;
+          for (let m = 1; m <= k + 2; m++) C2[(m - 1) * np + j] = lis[m];
+        }
+        // stlfts: tres medias móviles (np, np, 3) y después LOESS de paso bajo
+        const a1 = stlma(C2, n + 2 * np, np), a2 = stlma(a1, n + np + 1, np), a3 = stlma(a2, n + 2, 3);
+        const L = new Array(n + 1);
+        stless(a3, n, nl, ldeg, false, rw, L);
+        for (let i = 1; i <= n; i++) season[i] = C2[np + i] - L[i];
+        const des = new Array(n + 1);
+        for (let i = 1; i <= n; i++) des[i] = y[i] - season[i];
+        stless(des, n, nt, tdeg, userw, rw, trend);
+      }
+    };
+    for (let k = 0; ; ) {
+      paso();
+      k++;
+      if (k > no) break;
+      // stlrwt: pesos robustos bicuadrados con 6 · mediana de |residuo|
+      const r = [];
+      for (let i = 1; i <= n; i++) r.push(Math.abs(y[i] - trend[i] - season[i]));
+      const ord = r.slice().sort((a, b) => a - b), m1 = Math.floor(n / 2) + 1, m2 = n - m1 + 1;
+      const cmad = 3 * (ord[m1 - 1] + ord[m2 - 1]), c9 = 0.999 * cmad, c1 = 0.001 * cmad;
+      for (let i = 1; i <= n; i++) { const v = r[i - 1]; rw[i] = v <= c1 ? 1 : v <= c9 ? Math.pow(1 - Math.pow(v / cmad, 2), 2) : 0; }
+      userw = true;
+    }
+    if (no <= 0) rw = new Array(n + 1).fill(1);
+    const T = trend.slice(1), S = season.slice(1), R = serie.map((v, i) => v - T[i] - S[i]);
+    return { trend: T, seasonal: S, resid: R, weights: rw.slice(1), config: Object.assign({}, C, { robust, inner_iter: ni, outer_iter: no }) };
+  };
+
   TS.datos = {
     airpassengers: [
       112, 118, 132, 129, 121, 135, 148, 148, 136, 119, 104, 118,

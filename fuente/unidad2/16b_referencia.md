@@ -7,7 +7,7 @@ Antes de ajustar un ARIMA hay que saber **cuánto vale pronosticar sin pensar**.
 
 1. **Poner la vara.** Un modelo complicado solo vale la pena si le gana a la mejor referencia. Si tu SARIMA tiene un MAPE de 12% y el ingenuo estacional de 10%, el SARIMA no aporta nada [[metricas]].
 2. **Escalar el error.** El MASE divide el MAE del modelo entre el del ingenuo: es literalmente «cuántas veces el error de la referencia» [[metricas-def]].
-3. **Practicar el flujo completo.** Ajustar, pronosticar, calcular residuales, construir intervalos y evaluar es igual para un modelo de una línea que para un SARIMAX. En clase este flujo se hace con la librería `statsforecast`, y es lo que reproduce esta sección.
+3. **Practicar el flujo completo.** Ajustar, pronosticar, calcular residuales, construir intervalos y evaluar es igual para un modelo de una línea que para un SARIMAX. Esta sección hace todo el flujo con la librería `statsforecast`.
 
 :::intuicion Otra forma de verlo: el examen de diagnóstico del pronóstico
 Piensa en un médico que estrena un aparato de diagnóstico carísimo. Lo primero que pregunta es si acierta **más que la regla de dedo** que ya usaba. Los modelos de referencia son esa regla de dedo. Si el aparato no le gana, no importa lo sofisticado que sea.
@@ -132,7 +132,7 @@ Elige una serie y cuántos periodos dejar para la prueba. Las cuatro reglas se c
 :::
 
 :::ejemplo Qué referencia gana en cada tipo de serie
-En la práctica de clase con la **producción trimestral de soda** (`eng_soda_production.csv`, 80% para entrenar y 20% para probar), el ingenuo estacional fue claramente superior al ingenuo: RMSE de 19.45 contra 60.75, MAE de 14.95 contra 47.41 y MAPE de 3.39% contra 10.36%. El error es unas **tres veces menor** porque la serie tiene una estacionalidad trimestral marcada que el ingenuo no puede ver.
+En la **producción trimestral** de la gráfica de arriba (40 trimestres, los últimos 8 para probar), el ingenuo estacional tiene un MAE de 3.02 contra 11.53 del ingenuo, 10.61 del promedio y 11.22 de la deriva. El error es casi **cuatro veces menor** porque la serie tiene una estacionalidad trimestral marcada que los otros tres no pueden ver.
 
 La regla general:
 
@@ -142,7 +142,7 @@ La regla general:
 | se mueve como un paseo aleatorio | el ingenuo | lo mejor que se sabe del futuro es el presente |
 | tiene un patrón estacional estable | el ingenuo estacional | el mismo mes del año pasado ya trae el patrón |
 | tiene tendencia persistente | la deriva | prolonga el crecimiento promedio |
-| tiene tendencia **y** estacionalidad | ninguna basta | se necesita un SARIMA (o compararlas todas y reportar la mejor) |
+| tiene tendencia **y** estacionalidad | ninguna basta | se necesita un SARIMA o un pronóstico por descomposición [[u1:pron-descomp]] (y compararlo contra la mejor referencia) |
 :::
 
 ### El flujo de statsforecast {#ref-statsforecast}
@@ -202,7 +202,7 @@ Elige los modelos, el `season_length`, la frecuencia, el horizonte y los niveles
 - Cambia `freq` a `"ME"` o `"D"` y mira cómo se mueven las fechas de `ds`.
 - Con `season_length=4` el ingenuo estacional copia los **últimos cuatro meses** y no el mismo mes del año pasado: un error silencioso, no aparece ningún mensaje.
 - Con `level=None` no aparecen columnas `-lo-` ni `-hi-`.
-- El modo `fitted=False` + `forecast_fitted_values()` reproduce el error real que ves en clase si olvidas el argumento.
+- El modo «olvidar fitted=True» reproduce el error real que aparece si llamas a `forecast_fitted_values()` sin haber pedido los ajustados.
 :::
 
 :::duda ¿Por qué `forecast_fitted_values()` dice que use `fitted=True`?
@@ -210,7 +210,7 @@ Porque los valores ajustados solo se guardan si los pides al pronosticar. Si lla
 :::
 
 :::duda ¿`forecast` o `fit` + `predict`?
-Dan los mismos números. `fit` guarda los modelos ajustados (útil si vas a pronosticar varias veces o quieres inspeccionarlos con `sf.fitted_`), y `predict` pronostica con ellos. `forecast` hace todo en un solo paso sin guardarlos y es más eficiente cuando tienes miles de series. En la clase se usan los dos; para el examen basta con saber que son equivalentes.
+Dan los mismos números. `fit` guarda los modelos ajustados (útil si vas a pronosticar varias veces o quieres inspeccionarlos con `sf.fitted_`), y `predict` pronostica con ellos. `forecast` hace todo en un solo paso sin guardarlos y es más eficiente cuando tienes miles de series. Para el examen basta con saber que son equivalentes.
 :::
 
 ### Valores ajustados y residuales {#ref-residuos}
@@ -377,7 +377,7 @@ statsforecast calcula $\hat{\sigma}$ con $\sqrt{\sum e_t^2 / (T - 1)}$ en el pro
 Los mismos números con statsforecast:
 
 ```python
-chica = pd.DataFrame({"unique_id": "soda", "ds": pd.date_range("2020-01-01", periods=8, freq="QS"),
+chica = pd.DataFrame({"unique_id": "refresco", "ds": pd.date_range("2020-01-01", periods=8, freq="QS"),
                       "y": [10, 14, 8, 12, 13, 17, 9, 15]})
 sf_chica = StatsForecast(models=[Naive(), SeasonalNaive(season_length=4), HistoricAverage()], freq="QS")
 fc_chica = sf_chica.forecast(df=chica, h=4, level=[80, 90]).set_index("ds")
@@ -446,7 +446,7 @@ print(ev_sf.drop(columns="unique_id").set_index("metric").round(2))
 La mejor referencia es el ingenuo estacional, y el modelo de aerolínea reduce su error a menos de la tercera parte. Esa es la frase que justifica el SARIMA en una conclusión [[caso-ap-conclusion]].
 
 :::cuidado `mape` de utilsforecast devuelve una proporción
-Igual que en scikit-learn [[metricas-python]], `utilsforecast.losses.mape` devuelve 0.0999, no 9.99. Por eso en clase se multiplica por 100 la fila de `mape`. Y `mase` necesita el argumento `seasonality` (con `functools.partial`) y el `train_df` para calcular la escala; sin ellos lanza `TypeError`.
+Igual que en scikit-learn [[metricas-python]], `utilsforecast.losses.mape` devuelve 0.0999, no 9.99. Por eso se multiplica por 100 la fila de `mape`. Y `mase` necesita el argumento `seasonality` (con `functools.partial`) y el `train_df` para calcular la escala; sin ellos lanza `TypeError`.
 :::
 
 Un solo año de prueba puede engañar. La validación con origen móvil [[rolling-origin]] se hace en statsforecast con `cross_validation`: `n_windows` cortes, cada uno con `h` periodos de prueba, separados `step_size` periodos.
@@ -470,7 +470,7 @@ Reproduce `cross_validation(df, h, n_windows, step_size)` con los cuatro método
 - **Vista extra**: la tabla del MAE por ventana, como la que imprime el código de arriba.
 :::
 
-:::duda En clase siempre se usa 80/20. ¿Está mal?
+:::duda Una sola partición 80/20, ¿está mal?
 No está mal: es la validación con **una sola** partición, respetando el orden [[particion]]. Su problema es que el resultado depende de qué pasó en ese 20% (en AirPassengers, la ventana de 1958 favorece mucho al estacional y la de 1959 no tanto). La validación cruzada con origen móvil promedia varios cortes y da una estimación más estable del error esperado. Si el examen pide 80/20, hazlo así; si pide comparar modelos con más rigor, agrega `cross_validation`.
 :::
 

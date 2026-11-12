@@ -1487,6 +1487,209 @@
       contenedor.innerHTML = '<div class="w-cargando">No se pudieron cargar las librerías de gráficas. Revisa tu conexión a internet y recarga la página.</div>';
     });
   }
+  const lin = (x, y, color, nombre, extra) => Object.assign({ x, y, mode: 'lines', line: { color, width: 1.8 }, name: nombre }, extra || {});
+  /* ===================== 2.x · Gráfica de subseries ===================== */
+  W.subseries = c => {
+    const ctr = lienzo(c);
+    const modo = segmentado(ctr, { etiqueta: 'Datos', valor: 'orig', opciones: [['orig', 'originales'], ['log', 'logaritmo'], ['sint', 'sin tendencia']] }, dibujar);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: el promedio de cada mes y cuánto creció'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
+    function dibujar() {
+      const ap = TS.datos.airpassengers, md = modo.get();
+      let y = md === 'log' ? LOGAP.slice() : ap.slice();
+      if (md === 'sint') { const T = TS.mediaMovilCentrada(ap, 12); y = ap.map((v, i) => (T[i] === null ? null : v - T[i])); }
+      const tr = [], prom = [], primero = [], ultimo = [];
+      for (let m = 0; m < 12; m++) {
+        const xs = [], ys = [], et = [];
+        for (let a = 0; a < 12; a++) { const v = y[12 * a + m]; if (v !== null) { xs.push(m * 14 + a); ys.push(v); et.push(String(1949 + a)); } }
+        const mu = TS.media(ys);
+        prom.push(mu); primero.push(ys[0]); ultimo.push(ys[ys.length - 1]);
+        const col = mezcla('#7c69d6', '#e0709f', m / 11);
+        tr.push({ x: xs, y: ys, text: et, mode: 'lines+markers', line: { color: col, width: 1.6 }, marker: { size: 4, color: col }, name: MESES[m], hovertemplate: MESES[m] + ' %{text}: %{y:.2f}<extra></extra>' });
+        tr.push({ x: [m * 14 - 0.5, m * 14 + 11.5], y: [mu, mu], mode: 'lines', line: { color: '#3b3a52', width: 3 }, hoverinfo: 'skip', showlegend: false });
+      }
+      const dec = md === 'log' ? 3 : 1;
+      graf(g, tr, { height: 340, showlegend: false, title: { text: md === 'sint' ? 'Subseries sin tendencia (y − media móvil 2×12)' : md === 'log' ? 'Subseries de ln(pasajeros)' : 'Subseries por mes (1949 → 1960 en cada tramo)' },
+        xaxis: { tickvals: MESES.map((_, m) => m * 14 + 5.5), ticktext: MESES, showgrid: false }, yaxis: { title: { text: md === 'log' ? 'ln(pasajeros)' : md === 'sint' ? 'pasajeros − tendencia' : 'pasajeros' } } });
+      const crec = ultimo.map((v, i) => v - primero[i]), mx = prom.indexOf(Math.max(...prom)), mn = prom.indexOf(Math.min(...prom));
+      lec.innerHTML = `Mes más alto en promedio: <b>${MESES[mx]}</b> (${fmt(prom[mx], dec)}); más bajo: <b>${MESES[mn]}</b> (${fmt(prom[mn], dec)}). ` +
+        (md === 'orig' ? `Todos los tramos suben (tendencia), pero no al mismo ritmo: julio crece ${fmt(crec[6], 0)} y noviembre ${fmt(crec[10], 0)}. La estacionalidad <b>se agranda</b> con los años: la descomposición clásica no puede capturarlo y STL sí.`
+          : md === 'log' ? `En logaritmos los ritmos se parecen más (julio ${fmt(crec[6], 3)}, noviembre ${fmt(crec[10], 3)}): buena parte del crecimiento era proporcional. Aun así julio sigue creciendo más, así que la estacionalidad en logaritmos tampoco es idéntica cada año.`
+            : 'Sin tendencia los tramos quedan casi planos y lo que se ve es el perfil estacional. Los tramos de verano todavía se abren hacia la derecha: el pico estacional crece.');
+      tx.innerHTML = tablaHTML(['mes', 'promedio', 'primer año', 'último año', 'cambio'], MESES.map((m, i) => [m, fmt(prom[i], dec), fmt(primero[i], dec), fmt(ultimo[i], dec), (crec[i] >= 0 ? '+' : '') + fmt(crec[i], dec)]), MESES.map((_, i) => (i === mx ? 'elegido' : '')));
+    }
+    dibujar();
+  };
+
+  /* ===================== 4 · LOESS, STL y pronóstico ===================== */
+  const DATOS_LOESS = (() => { const r = TS.rng(77).normales(25, 0.9); return TS.rango(25, 1).map((t, i) => 10 + 3 * Math.sin(t / 3.5) + 0.12 * t + r[i]); })();
+  function ventanaLoess(n, q, i) { const nsh = Math.floor((q + 1) / 2); if (q >= n) return [1, n]; const nl = Math.min(Math.max(1, i - nsh + 1), n - q + 1); return [nl, nl + q - 1]; }
+  W.loess = c => {
+    const ctr = lienzo(c), n = DATOS_LOESS.length, y1 = [0].concat(DATOS_LOESS);
+    const x0 = slider(ctr, { etiqueta: 'Punto x₀', min: 1, max: n, paso: 1, valor: 12 }, dibujar);
+    const qq = slider(ctr, { etiqueta: 'Ventana q', min: 3, max: 25, paso: 2, valor: 9 }, dibujar);
+    const gr = segmentado(ctr, { etiqueta: 'Grado', valor: '1', opciones: [['0', '0 (promedio)'], ['1', '1 (recta)']] }, dibujar);
+    const g = lamina(c), lec = lectura(c), ex = extra(c, 'Vista extra: distancias, pesos y aportes en el punto elegido'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
+    function dibujar() {
+      const i0 = x0.get(), q = qq.get(), deg = +gr.get(), [nl, nr] = ventanaLoess(n, q, i0);
+      const w = new Array(n + 2).fill(0), curva = TS.rango(n, 1).map(i => { const [a, b] = ventanaLoess(n, q, i); return TS.loessPunto(y1, n, q, deg, i, a, b, w, false, null); });
+      const yhat = TS.loessPunto(y1, n, q, deg, i0, nl, nr, w, false, null);
+      let h = Math.max(i0 - nl, nr - i0);
+      if (q > n) h += Math.floor((q - n) / 2);
+      const pesos = TS.rango(n, 1).map(j => { if (j < nl || j > nr) return 0; const r = Math.abs(j - i0); return r <= 0.999 * h ? (r <= 0.001 * h ? 1 : Math.pow(1 - Math.pow(r / h, 3), 3)) : 0; });
+      // recta local por mínimos cuadrados ponderados (para dibujarla)
+      const sw = TS.suma(pesos), xm = TS.suma(pesos.map((p, j) => p * (j + 1))) / sw, ym = TS.suma(pesos.map((p, j) => p * DATOS_LOESS[j])) / sw;
+      const sxx = TS.suma(pesos.map((p, j) => p * (j + 1 - xm) ** 2)), b = deg ? TS.suma(pesos.map((p, j) => p * (j + 1 - xm) * (DATOS_LOESS[j] - ym))) / sxx : 0;
+      const xsL = [nl, nr], ysL = deg ? xsL.map(x => ym + b * (x - xm)) : [ym, ym];
+      graf(g, [{ x: TS.rango(n, 1), y: DATOS_LOESS, mode: 'markers', marker: { size: pesos.map(p => 6 + 16 * p), color: pesos.map(p => (p > 0 ? `rgba(224,112,159,${0.35 + 0.65 * p})` : 'rgba(169,165,194,.55)')), line: { color: '#fff', width: 1 } }, name: 'datos (tamaño = peso)', hovertemplate: 'j = %{x}<br>y = %{y:.2f}<extra></extra>' },
+        lin(TS.rango(n, 1), curva, PAL.lav, 'curva LOESS completa', { line: { color: PAL.lav, width: 2 } }),
+        lin(xsL, ysL, PAL.rosa, deg ? 'recta local ponderada' : 'promedio ponderado', { line: { color: PAL.rosa, width: 2.5, dash: 'dash' } }),
+        { x: [i0], y: [yhat], mode: 'markers', marker: { size: 15, color: PAL.rosa, symbol: 'diamond', line: { color: '#fff', width: 2 } }, name: 'valor suavizado', hovertemplate: 'ŷ = %{y:.3f}<extra></extra>' }],
+      { height: 340, title: { text: `LOESS en x₀ = ${i0} con q = ${q} y grado ${deg}` }, xaxis: { title: { text: 'j' } }, legend: { orientation: 'h', y: -0.2 } });
+      const usados = pesos.filter(p => p > 0).length, borde = nl === 1 && i0 - nl < nr - i0 || nr === n && nr - i0 < i0 - nl;
+      lec.innerHTML = `Ventana: datos ${nl} a ${nr}, h = ${h}. Con peso mayor que 0: <b>${usados}</b> de ${nr - nl + 1} (los extremos de la ventana pesan 0). ` +
+        `Valor suavizado ŷ<sub>${i0}</sub> = <b>${fmt(yhat, 3)}</b> contra el dato y<sub>${i0}</sub> = ${fmt(DATOS_LOESS[i0 - 1], 3)}. ` +
+        (borde ? (deg ? '💡 La ventana es asimétrica (estás cerca de un extremo): la recta compensa con su pendiente.' : '⚠️ En el extremo el promedio ponderado se va hacia los datos interiores; prueba con grado 1.') : 'La ventana es simétrica: la recta evaluada en su centro coincide con el promedio ponderado.');
+      tx.innerHTML = tablaHTML(['j', 'y<sub>j</sub>', 'r = |j − x₀|', 'w<sub>j</sub>', 'w<sub>j</sub> y<sub>j</sub>'], TS.rango(nr - nl + 1, nl).map(j => [j, fmt(DATOS_LOESS[j - 1], 3), Math.abs(j - i0), fmt(pesos[j - 1], 4), fmt(pesos[j - 1] * DATOS_LOESS[j - 1], 4)])
+        .concat([['suma', '', '', fmt(sw, 4), fmt(sw * ym, 4)]]), TS.rango(nr - nl + 1, nl).map(j => (j === i0 ? 'elegido' : ''))) +
+        `<p style="font-size:.86rem;margin:6px 2px">Promedio ponderado: ${fmt(ym, 3)}${deg ? ` · recta: pendiente ${fmt(b, 4)}, evaluada en x₀ = ${fmt(ym + b * (i0 - xm), 3)}` : ''}.</p>`;
+    }
+    dibujar();
+  };
+
+  const AP_ATIPICO = (() => { const a = TS.datos.airpassengers.slice(); a[60] *= 1.6; return a; })();
+  const TRIM_STL = (() => { const r = TS.rng(91).normales(48, 1.2); return TS.rango(48).map(i => 50 + 0.4 * i + (6 + 0.25 * i) * [1, -0.3, -1.2, 0.5][i % 4] + r[i]); })();
+  const FECHAS_TRIM = TS.rango(48).map(i => `${2013 + Math.floor(i / 4)}-T${i % 4 + 1}`);
+  const fuerzaSTL = d => {
+    const v = a => TS.varianza(a), R = d.resid;
+    return { FT: Math.max(0, 1 - v(R) / v(d.trend.map((t, i) => t + R[i]))), FS: Math.max(0, 1 - v(R) / v(d.seasonal.map((s, i) => s + R[i]))) };
+  };
+  W.stl = c => {
+    const ctr = lienzo(c);
+    const se = seleccion(ctr, { etiqueta: 'Serie', valor: 'log', opciones: [['log', 'ln(AirPassengers)'], ['orig', 'AirPassengers (original)'], ['atip', 'ln(AirPassengers) con un atípico en ene-1954'], ['trim', 'Trimestral con estacionalidad que crece']] }, dibujar);
+    const ss = segmentado(ctr, { etiqueta: 'seasonal', valor: '7', opciones: [['3', '3'], ['7', '7'], ['13', '13'], ['35', '35'], ['fija', 'fija']] }, dibujar);
+    const tt = segmentado(ctr, { etiqueta: 'trend', valor: 'auto', opciones: [['auto', 'por omisión'], ['13', '13'], ['35', '35'], ['61', '61']] }, dibujar);
+    const rb = casilla(ctr, 'robust=True', false, dibujar);
+    const g = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: el efecto estacional de un mes, año por año (STL contra clásica)'), cx = el('div', { class: 'w-controles' });
+    ex.append(cx);
+    const mes = seleccion(cx, { etiqueta: 'Temporada', valor: '6', opciones: MESES.map((m, i) => [String(i), m]) }, dibujar);
+    const gx = lamina(ex), lx = lectura(ex);
+    function dibujar() {
+      const k = se.get(), trim = k === 'trim', y = trim ? TRIM_STL : k === 'orig' ? TS.datos.airpassengers : k === 'atip' ? AP_ATIPICO.map(Math.log) : LOGAP;
+      const P = trim ? 4 : 12, x = trim ? FECHAS_TRIM : fechasAP, fija = ss.get() === 'fija';
+      const o = { seasonal: fija ? 999 : +ss.get(), robust: rb.get() };
+      if (fija) o.seasonal_deg = 0;
+      if (tt.get() !== 'auto') o.trend = +tt.get();
+      const d = TS.stl(y, P, o), F = fuerzaSTL(d), C = d.config;
+      const { tr, L } = apilado([
+        { x, y, nombre: 'Observada', color: PAL.lav },
+        { x, y: d.trend, nombre: 'Tendencia', color: PAL.rosa },
+        { x, y: d.seasonal, nombre: 'Estacional', color: PAL.cel },
+        { x, y: d.resid, nombre: 'Residuo', color: PAL.dur, modo: 'markers' }
+      ], 520, { title: { text: 'res.plot()' }, margin: { t: 36 } });
+      if (k === 'atip') tr.push({ x: [x[60]], y: [d.resid[60]], mode: 'markers', marker: { size: 12, color: 'rgba(0,0,0,0)', line: { color: PAL.rosa, width: 2.5 } }, xaxis: 'x', yaxis: 'y4', hovertemplate: 'atípico: residuo %{y:.3f}<extra></extra>' });
+      L.shapes = [{ type: 'line', xref: 'paper', x0: 0, x1: 1, yref: 'y4', y0: 0, y1: 0, line: { color: PAL.gris, dash: 'dot' } }];
+      graf(g, tr, L);
+      const r12 = TS.acf(d.resid, P)[P];
+      lec.innerHTML = `Configuración: period = ${C.period}, seasonal = ${fija ? '999 con seasonal_deg = 0' : C.seasonal}, trend = <b>${C.trend}</b>${tt.get() === 'auto' ? ' (regla por omisión)' : ''}, low_pass = ${C.low_pass}, ${C.robust ? 'robust (2 internas × 15 externas)' : '5 iteraciones internas'}. ` +
+        `Fuerza: F<sub>T</sub> = <b>${fmt(F.FT, 4)}</b>, F<sub>S</sub> = <b>${fmt(F.FS, 4)}</b>. ρ̂(${P}) del residuo = ${fmt(r12, 3)}. ` +
+        (k === 'atip' ? (C.robust ? `Peso robusto del atípico: <b>${fmt(d.weights[60], 3)}</b>: queda en el residuo (${fmt(d.resid[60], 3)}) y no deforma los eneros.` : `Sin robust el atípico se reparte: su residuo es solo ${fmt(d.resid[60], 3)} y el resto se fue a la tendencia y a la estacionalidad de los eneros. Activa robust.`) :
+          k === 'orig' ? ' ⚠️ STL es aditiva: en la serie original el panel estacional se agranda con los años y el residuo crece al final. Para AirPassengers conviene el logaritmo.' :
+            fija ? ' Con «fija» la estacionalidad es idéntica cada año, como en la descomposición clásica.' : +ss.get() === 3 ? ' Con seasonal = 3 la estacionalidad cambia mucho de un año a otro y absorbe parte del ruido.' : '');
+      // vista extra: efecto de un mes por año
+      const m = Math.min(+mes.get(), P - 1), anos = Math.floor(y.length / P), clas = TS.descomponer(y, P).indices[m];
+      const ef = TS.rango(anos).map(a => d.seasonal[a * P + m]), etiqueta = trim ? 'T' + (m + 1) : MESES[m], xa = TS.rango(anos).map(a => (trim ? 2013 : 1949) + a);
+      graf(gx, [lin(xa, ef, PAL.cel, 'STL', { mode: 'lines+markers', line: { color: PAL.cel, width: 2.4 } }), lin(xa, xa.map(() => clas), PAL.gris, 'clásica', { line: { color: PAL.gris, width: 2, dash: 'dash' } })],
+        { height: 250, title: { text: `Efecto estacional de ${etiqueta} cada año` }, legend: { orientation: 'h', y: -0.25 } });
+      lx.innerHTML = `Según STL, el efecto de ${etiqueta} pasa de ${fmt(ef[0], 3)} a ${fmt(ef[anos - 1], 3)}; la clásica usa ${fmt(clas, 3)} todos los años.` + (trim ? ' Para la trimestral se usa la temporada T1–T4 (elige ene a abr).' : '');
+    }
+    dibujar();
+  };
+
+  W['py-stl'] = c => {
+    const ctr = lienzo(c);
+    let activo = 'seasonal';
+    const cb = k => () => { activo = k; dibujar(); };
+    const pe = segmentado(ctr, { etiqueta: 'period', valor: '12', opciones: [['12', '12'], ['6', '6']] }, cb('period'));
+    const ss = segmentado(ctr, { etiqueta: 'seasonal', valor: '7', opciones: [['7', '7'], ['13', '13'], ['999', '999']] }, cb('seasonal'));
+    const sd = segmentado(ctr, { etiqueta: 'seasonal_deg', valor: '1', opciones: [['1', '1'], ['0', '0']] }, cb('seasonal_deg'));
+    const tt = segmentado(ctr, { etiqueta: 'trend', valor: 'None', opciones: [['None', 'None'], ['23', '23'], ['24', '24'], ['35', '35']] }, cb('trend'));
+    const rb = casilla(ctr, 'robust=True', false, cb('robust'));
+    const pc = panelCodigo(c), lec = lectura(c);
+    const params = panelParametros(c, [
+      { nombre: 'period', que: 'Periodo estacional s.', rec: '<b>El real</b>: 12 en mensual.' },
+      { nombre: 'seasonal', que: 'Ventana (en años) del LOESS de cada subserie. Impar ≥ 3.', rec: '<b>7</b>; más grande si el patrón es estable.' },
+      { nombre: 'seasonal_deg', que: 'Grado del LOESS estacional: 1 = recta, 0 = promedio.', rec: '1; <b>0 con seasonal grande</b> para un patrón fijo.' },
+      { nombre: 'trend', que: 'Ventana del LOESS de la tendencia. Impar y mayor que period.', rec: '<b>None</b> (regla de Cleveland: 23 con s = 12).' },
+      { nombre: 'robust', que: 'Pesos bicuadrados que ignoran atípicos.', rec: 'True si hay atípicos.' }
+    ]);
+    function dibujar() {
+      const P = +pe.get(), s = +ss.get(), deg = +sd.get(), trTxt = tt.get(), robust = rb.get();
+      const args = { period: P, seasonal: s, trend: trTxt, seasonal_deg: deg, robust: pyv(robust) };
+      pc.codigo(codigoPython(`from statsmodels.tsa.seasonal import STL\nfrom statsmodels.tsa.stattools import acf\n\nstl = STL(np.log(serie), period={period}, seasonal={seasonal}, trend={trend},\n          seasonal_deg={seasonal_deg}, robust={robust})\nprint(stl.config)\nres = stl.fit()\nprint(pd.DataFrame({"tendencia": res.trend, "estacional": res.seasonal, "residuo": res.resid}).head(5))\nprint("pesos < 1:", (res.weights < 1).sum(), "| rho(12) del residuo:", round(acf(res.resid, nlags=12)[12], 3))`, args, activo));
+      params({ period: P, seasonal: s, seasonal_deg: deg, trend: trTxt, robust: pyv(robust) }, activo);
+      const trn = trTxt === 'None' ? null : +trTxt;
+      if (trn !== null && (trn % 2 === 0 || trn <= P)) {
+        pc.salida('ValueError: trend must be an odd positive integer >= 3 where trend > period');
+        lec.className = 'w-lectura mal';
+        lec.innerHTML = `trend = ${trn} no sirve: debe ser <b>impar</b> y mayor que period. Usa ${trn + 1} o deja None.`;
+        return;
+      }
+      const o = { seasonal: s, seasonal_deg: deg, robust };
+      if (trn !== null) o.trend = trn;
+      const d = TS.stl(LOGAP, P, o), C = d.config;
+      const conf = `{'period': ${P}, 'seasonal': ${s}, 'seasonal_deg': ${deg}, 'seasonal_jump': 1, 'trend': ${C.trend}, 'trend_deg': 1, 'trend_jump': 1, 'low_pass': ${C.low_pass}, 'low_pass_deg': 1, 'low_pass_jump': 1, 'robust': ${robust ? 'True' : 'False'}}`;
+      const menos = d.weights.filter(v => v < 1).length, r12 = TS.acf(d.resid, 12)[12];
+      pc.salida(conf + '\n' + tablaTexto(['tendencia', 'estacional', 'residuo'], TS.rango(5).map(i => [d.trend[i], d.seasonal[i], d.resid[i]]), fechasAP.slice(0, 5)) + `\npesos < 1: ${menos} | rho(12) del residuo: ${fmt(r12, 3)}`);
+      const notas = [];
+      if (trn === null) notas.push(`Con trend = None la ventana sale de la regla: ⌈1.5·${P}/(1 − 1.5/${s})⌉ → <b>${C.trend}</b>.`);
+      if (P === 6) notas.push(`⚠️ Con period = 6 el residuo conserva el ciclo anual: ρ̂(12) = ${fmt(r12, 3)}.`);
+      if (s === 999 && deg === 1) notas.push('⚠️ seasonal = 999 con seasonal_deg = 1 ajusta una recta a cada mes: el patrón todavía puede cambiar. Para fijarlo usa seasonal_deg = 0.');
+      if (s === 999 && deg === 0) notas.push('Estacionalidad fija: el mismo efecto para cada mes todos los años.');
+      if (robust) notas.push(`Robust: ${menos} de 144 pesos quedaron por debajo de 1 (los meses que más se alejan del patrón).`);
+      lec.className = 'w-lectura ' + (notas.some(t => t.startsWith('⚠️')) ? 'mal' : 'ok');
+      lec.innerHTML = notas.join(' ') || 'Configuración razonable para ln(AirPassengers).';
+    }
+    dibujar();
+  };
+
+  W['pron-descomp'] = c => {
+    const ctr = lienzo(c);
+    const de = segmentado(ctr, { etiqueta: 'Descomposición', valor: 'stl', opciones: [['stl', 'STL'], ['clas', 'clásica']] }, dibujar);
+    const me = segmentado(ctr, { etiqueta: 'Método para A_t', valor: 'deriva', opciones: [['ingenuo', 'ingenuo'], ['deriva', 'deriva'], ['todo', 'recta (todo)'], ['ult', 'recta (últimos años)']] }, dibujar);
+    const ka = slider(ctr, { etiqueta: 'Años para la recta', min: 2, max: 10, paso: 1, valor: 5 }, dibujar);
+    const g = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: la serie desestacionalizada A_t y lo que se extrapola'), gx = lamina(ex);
+    const ytr = LOGAP.slice(0, 132), real = TS.datos.airpassengers.slice(132), FTR = fechasAP.slice(0, 132), FTE = fechasAP.slice(132);
+    const SN = TS.datos.airpassengers.slice(120, 132), mape = p => 100 * TS.media(real.map((v, i) => Math.abs((v - p[i]) / v)));
+    function recta(A, desde) { const xs = TS.rango(A.length - desde, desde), ys = A.slice(desde), xm = TS.media(xs), ym = TS.media(ys); let sxy = 0, sxx = 0; xs.forEach((x, i) => { sxy += (x - xm) * (ys[i] - ym); sxx += (x - xm) ** 2; }); const b = sxy / sxx; return { a: ym - b * xm, b }; }
+    function dibujar() {
+      const S = de.get() === 'stl' ? TS.stl(ytr, 12).seasonal : TS.descomponer(ytr, 12).S, A = ytr.map((v, i) => v - S[i]), T = A.length, Sf = S.slice(T - 12), m = me.get();
+      ka.mostrar(m === 'ult');
+      let Af, linea = null;
+      if (m === 'ingenuo') Af = TS.rango(12).map(() => A[T - 1]);
+      else if (m === 'deriva') { const b = (A[T - 1] - A[0]) / (T - 1); Af = TS.rango(12, 1).map(h => A[T - 1] + h * b); linea = { x0: 0, b, a: A[0] }; }
+      else { const desde = m === 'todo' ? 0 : T - 12 * ka.get(), R = recta(A, desde); Af = TS.rango(12, T).map(t => R.a + R.b * t); linea = { x0: desde, b: R.b, a: R.a }; }
+      const pron = Af.map((v, i) => Math.exp(v + Sf[i])), mp = mape(pron), sesgo = 100 * TS.media(pron.map((p, i) => p / real[i] - 1));
+      graf(g, [lin(FTR.slice(84), TS.datos.airpassengers.slice(84, 132), '#45397a', 'entrenamiento', { line: { color: '#45397a', width: 1.6 } }),
+        lin(FTE, SN, PAL.gris, 'ingenuo estacional', { line: { color: PAL.gris, width: 2, dash: 'dot' } }),
+        lin(FTE, pron, PAL.rosa, 'pronóstico por descomposición', { line: { color: PAL.rosa, width: 2.6 } }),
+        { x: FTE, y: real, mode: 'markers', marker: { color: PAL.menta, size: 8, line: { color: '#fff', width: 1 } }, name: '1960 real' }],
+      { height: 330, title: { text: `${de.get() === 'stl' ? 'STL' : 'Clásica'} + ${{ ingenuo: 'ingenuo', deriva: 'deriva', todo: 'recta con toda la muestra', ult: `recta con los últimos ${ka.get()} años` }[m]}` }, legend: { orientation: 'h', y: -0.2 } });
+      lec.className = 'w-lectura ' + (mp < 9.99 ? 'ok' : 'mal');
+      lec.innerHTML = `MAPE en 1960: <b>${fmt(mp, 2)}%</b> (sesgo medio ${sesgo >= 0 ? '+' : ''}${fmt(sesgo, 2)}%: ${sesgo >= 0 ? 'se pasa' : 'se queda corto'}). Ingenuo estacional: 9.99%; SARIMA de aerolínea: 2.90%. ` +
+        (mp < 2.9 ? '¡Le gana al SARIMA en este año! Pero cuidado: si elegiste la ventana viendo 1960, el resultado es optimista.' : mp < 9.99 ? 'Le gana con claridad al ingenuo estacional porque separa el crecimiento del patrón.' : 'No mejora al ingenuo estacional.') +
+        (m === 'todo' ? ' La recta global mezcla el crecimiento rápido de los primeros años con el más lento del final y se pasa.' : '');
+      const xsA = FTR, tr = [lin(xsA, A, PAL.lav, 'A_t = ln y − S (entrenamiento)', { line: { color: PAL.lav, width: 1.6 } }), lin(FTE, Af, PAL.rosa, 'Â para 1960', { line: { color: PAL.rosa, width: 2.6 } })];
+      if (linea) { const x0 = linea.x0, xs = [x0, T - 1]; tr.push(lin(xs.map(i => FTR[i]), m === 'deriva' ? [A[0], A[T - 1]] : xs.map(t => linea.a + linea.b * t), PAL.dur, m === 'deriva' ? 'deriva (primer y último dato)' : 'recta ajustada', { line: { color: PAL.dur, width: 2, dash: 'dash' } })); }
+      tr.push({ x: FTE, y: real.map((v, i) => Math.log(v) - Sf[i]), mode: 'markers', marker: { color: PAL.menta, size: 6 }, name: 'ln(1960 real) − S' });
+      graf(gx, tr, { height: 280, title: { text: 'Serie desestacionalizada (en logaritmos)' }, legend: { orientation: 'h', y: -0.22 } });
+    }
+    dibujar();
+  };
+
   window.GUIA_UTIL = { PAL, MESES, el, fmt, fp, num, kpi, ref, tex, mezcla, barajar, fracc, simAR, control, slider, seleccion, segmentado, boton, casilla, lienzo, lamina, fila, lectura,
     combinar, graf, banda, trazasACF, layoutACF, apilado, tablaHTML, extra, dispersion, codigoPython, pyv, panelCodigo, tablaTexto, panelParametros, tallos,
     datos: (() => { try { return JSON.parse(document.getElementById('datos-unidad').textContent || '{}'); } catch (e) { return {}; } })() };

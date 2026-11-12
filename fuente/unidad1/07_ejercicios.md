@@ -1,5 +1,5 @@
 ## 🧩 Ejercicios de la Unidad I {#ejercicios}
-@mapa 43 ejercicios de opción múltiple, cálculo y lectura de gráficas, cada uno con su respuesta explicada.
+@mapa 54 ejercicios de opción múltiple, cálculo y lectura de gráficas, cada uno con su respuesta explicada.
 
 Elige una opción y presiona **Ver respuesta**: se marca la correcta, se explica por qué y hay un enlace a la sección donde se estudia el tema. Los ejercicios de cálculo abierto tienen **Ver solución paso a paso**. Intenta resolverlos en papel antes de abrir la solución.
 
@@ -497,4 +497,123 @@ Cada barra tiene 5% de probabilidad de salir por azar: $40 \times 0.05 = 2$ en p
 
 :::resumen ¿Cómo te fue?
 Si fallaste algún ejercicio, usa el enlace ↩ de su encabezado para repasar esa sección y regresa con el botón **⤺ Volver**. Cuando domines todo, revisa la lista de [[checklist]].
+:::
+
+### Bloque F · Subseries, STL y pronóstico por descomposición {#ej-f}
+
+:::ejercicio Básico | [[subseries]]
+En una gráfica de subseries mensual, el tramo de julio sube mucho más rápido que el de noviembre. ¿Qué indica?
+- [ ] Que no hay tendencia.
+- [ ] Que la serie es estacionaria.
+- [x] Que el patrón estacional cambia con los años (el pico crece).
+- [ ] Que el periodo estacional no es 12.
+---
+Si cada mes creciera al mismo ritmo, la estacionalidad sería constante y todos los tramos tendrían la misma pendiente. Que julio suba más rápido significa que la diferencia entre julio y noviembre se agranda: justo lo que la descomposición clásica no puede capturar y STL sí [[stl-por-que]].
+:::
+
+:::ejercicio Básico | [[stl-por-que]]
+¿Cuál de estas afirmaciones sobre STL es **falsa**?
+- [ ] No deja `NaN` en los extremos de la tendencia.
+- [ ] Permite que la estacionalidad cambie de un año a otro.
+- [x] Puede aplicarse directamente con un modelo multiplicativo.
+- [ ] Tiene una versión robusta ante atípicos.
+---
+STL solo es **aditiva**. Para una serie multiplicativa como AirPassengers se aplica al logaritmo, donde el patrón se vuelve aditivo [[log]], y se regresa con la exponencial.
+:::
+
+:::ejercicio Intermedio | [[guia-loess]]
+En LOESS con una ventana de 5 datos centrada en $x_0$ (distancias $2, 1, 0, 1, 2$, así que $h = 2$), ¿cuánto pesa un vecino a distancia 1?
+- [ ] 0.5
+- [x] 0.6699
+- [ ] 0.8750
+- [ ] 1
+---
+$w = \left(1 - (1/2)^3\right)^3 = (7/8)^3 = 0.6699$. Los extremos, a distancia $h = 2$, pesan 0, así que la ventana de 5 usa en realidad 3 datos.
+:::
+
+:::ejercicio Intermedio | [[guia-loess]]
+Con los pesos del ejercicio anterior ($0,\ 0.6699,\ 1,\ 0.6699,\ 0$) y los datos $y = (4,\ 6,\ 7,\ 10,\ 12)$, ¿cuánto vale el LOESS de grado 1 en el centro?
+- [ ] 7
+- [x] 7.6
+- [ ] 7.8
+- [ ] 8
+---
+La ventana es simétrica, así que la recta ponderada en el centro es el promedio ponderado: $\frac{0.6699(6) + 7 + 0.6699(10)}{0.6699 + 1 + 0.6699} = \frac{17.718}{2.3398} = 7.57 \approx 7.6$. El 12 del extremo no cuenta (peso 0).
+:::
+
+:::ejercicio Básico | [[stl-parametros]]
+¿Qué ventana de tendencia usa `STL(serie, period=12)` si no se especifica `trend`?
+- [ ] 12
+- [ ] 13
+- [x] 23
+- [ ] 25
+---
+La regla es el menor impar mayor o igual que $\frac{1.5 \cdot 12}{1 - 1.5/7} = 22.91$, es decir 23 [[demo-stl-trend]]. El 13 es la ventana del paso bajo (`low_pass`).
+:::
+
+:::ejercicio Intermedio | [[stl-parametros]]
+Quieres que STL dé exactamente el mismo patrón estacional todos los años. ¿Qué escribes?
+- [ ] `STL(y, period=12, seasonal=7)`
+- [ ] `STL(y, period=12, seasonal=999)`
+- [x] `STL(y, period=12, seasonal=999, seasonal_deg=0)`
+- [ ] `STL(y, period=12, robust=True)`
+---
+Con `seasonal_deg=1` (el valor por omisión) una ventana enorme ajusta una **recta** a cada subserie: el efecto de cada mes todavía puede crecer o bajar. Con grado 0 es un promedio, y el patrón queda fijo.
+:::
+
+:::ejercicio Intermedio | [[stl-robusto]]
+Con `robust=True`, el peso de robustez de un dato cuyo residuo es 3 veces la mediana de $\lvert R \rvert$ es…
+- [ ] 0
+- [x] 0.5625
+- [ ] 0.75
+- [ ] 1
+---
+$\rho = \left(1 - \left(\frac{3\,\text{mediana}}{6\,\text{mediana}}\right)^2\right)^2 = (1 - 0.25)^2 = 0.5625$. A partir de 6 veces la mediana, el peso es 0.
+:::
+
+:::ejercicio Intermedio | [[fuerza]]
+Una descomposición da $\Var(R) = 2$, $\Var(T + R) = 2.5$ y $\Var(S + R) = 40$. ¿Qué concluyes?
+- [ ] Tendencia y estacionalidad fuertes.
+- [x] Estacionalidad fuerte ($F_S = 0.95$) y tendencia débil ($F_T = 0.2$).
+- [ ] Tendencia fuerte ($F_T = 0.8$) y estacionalidad débil.
+- [ ] Ninguna de las dos.
+---
+$F_T = 1 - 2/2.5 = 0.2$ y $F_S = 1 - 2/40 = 0.95$. Casi toda la variación de la serie sin estacionalidad es ruido, mientras que la estacionalidad domina la serie sin tendencia.
+:::
+
+:::ejercicio Reto | [[guia-pron-descomp]]
+Una serie trimestral desestacionalizada se ajusta con la recta $\hat{A}_t = 50 + 2t$ ($t = 1, \dots, 20$) y los índices estacionales son $(5,\ -1,\ -6,\ 2)$ para Q1 a Q4. ¿Cuál es el pronóstico para $t = 23$, el tercer trimestre del año siguiente?
+- [ ] 96
+- [x] 90
+- [ ] 102
+- [ ] 92
+---
+:::pasos
+= \hat{A}_{23} = 50 + 2(23) = 96
+> La recta extrapolada al periodo 23.
+= t = 23 \;\Rightarrow\; \text{trimestre } ((23 - 1) \bmod 4) + 1 = 3 \;\Rightarrow\; \hat{S} = -6
+> El periodo 23 cae en Q3 (los periodos 3, 7, 11, 15, 19 y 23 son terceros trimestres).
+= \hat{y}_{23} = 96 - 6 = 90
+> Se devuelve la estacionalidad.
+:::
+:::
+
+:::ejercicio Intermedio | [[pron-descomp]]
+Descompones $\ln y_t$ con STL y pronosticas $\hat{A}_{T+h} = 6.1$ con $\hat{S}_{T+h} = 0.2$. ¿Cuál es el pronóstico en la escala original?
+- [ ] 6.3
+- [ ] $e^{6.1} + 0.2$
+- [x] $e^{6.3} \approx 544.6$
+- [ ] $e^{6.1} \cdot 0.2$
+---
+En logaritmos la descomposición es aditiva: $\ln\hat{y} = 6.1 + 0.2 = 6.3$, así que $\hat{y} = e^{6.3} = 544.6$. En la escala original la estacionalidad actúa como un **factor**: $e^{0.2} = 1.22$, es decir, 22% arriba del nivel.
+:::
+
+:::ejercicio Reto | [[pron-descomp]]
+En AirPassengers, STL + recta con los 11 años da MAPE de 7.7% en 1960 y STL + recta con los últimos 5 años da 2.5%. ¿Qué conclusión es correcta?
+- [ ] Siempre hay que usar los últimos 5 años.
+- [ ] La recta con toda la muestra está mal calculada.
+- [x] La ventana es una decisión de modelado que debe elegirse con validación, no viendo el error de 1960.
+- [ ] El pronóstico por descomposición es peor que el ingenuo estacional.
+---
+Con 2 años el MAPE es 2.68% y con 3 años 4.64%: no hay una regla monótona. Si eliges la ventana mirando 1960, ese error deja de ser una medida honesta [[iid]]. Las cuatro variantes le ganan al ingenuo estacional (9.99%).
 :::
