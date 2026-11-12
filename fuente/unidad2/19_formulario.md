@@ -34,6 +34,9 @@
 | ARCH(1) | $\sigma_t^2 = \omega + \alpha\varepsilon_{t-1}^2$; $\Var = \frac{\omega}{1 - \alpha}$; $K = \frac{3(1 - \alpha^2)}{1 - 3\alpha^2}$ | [[arch1]] |
 | ARCH-LM | $\LM = n'R^2 \sim \chi^2_q$ | [[arch-lm]] |
 | Métricas | $\MAE$, $\RMSE = \sqrt{\MSE}$, $\MAPE$, $\sMAPE$, $\MASE = \MAE/\MAE_{\text{ingenuo}}$ | [[metricas-def]] |
+| Referencias | promedio $\bar{y}$; ingenuo $y_T$; estacional $y_{T+h-m(k+1)}$, $k = \lfloor (h-1)/m \rfloor$; deriva $y_T + h\frac{y_T - y_1}{T - 1}$ | [[ref-metodos]] |
+| Bandas de las referencias | $\hat{y} \pm c\,\hat{\sigma}_h$: $\hat{\sigma}\sqrt{1 + 1/T}$, $\hat{\sigma}\sqrt{h}$, $\hat{\sigma}\sqrt{k + 1}$, $\hat{\sigma}\sqrt{h(1 + h/(T-1))}$; $c = 1.28,\ 1.645,\ 1.96$ | [[ref-intervalos]] |
+| Residuales del ingenuo | $e_t = \Delta y_t$, $\bar{e} = \frac{y_T - y_1}{T - 1} = b$ | [[demo-ref-media-res]] |
 
 ### Tabla de pruebas sobre los residuos {#tabla-pruebas2}
 
@@ -57,7 +60,7 @@ La guía oficial propone este flujo:
 6. **Leer** la ACF y la PACF de la serie estacionaria y proponer candidatos [[box-jenkins]].
 7. **Estimar** los candidatos y compararlos con AIC/BIC (mismos $d$, $D$ y configuración) [[aic-bic]].
 8. **Diagnosticar** los residuos: Ljung–Box, Jarque–Bera, H, ARCH-LM y gráficas [[diagnostico]].
-9. **Pronosticar**, regresar a la escala original y evaluar con MAE, RMSE, MAPE y MASE contra un ingenuo [[metricas]].
+9. **Pronosticar**, regresar a la escala original y evaluar con MAE, RMSE, MAPE y MASE contra la mejor referencia (ingenuo, estacional, deriva o promedio) [[metricas]] [[referencia]].
 10. **Concluir** por escrito con números [[caso-ap-conclusion]].
 
 ### Errores comunes que restan puntos {#errores2}
@@ -72,6 +75,8 @@ La guía oficial propone este flujo:
 - Calcular las métricas en logaritmos en lugar de la escala original [[regresar-escala]].
 - Usar `mean_squared_error(..., squared=False)` en scikit-learn reciente [[metricas-python]].
 - Validar con una partición aleatoria o con exógenas que no se conocen a futuro [[particion]].
+- En statsforecast: usar una `freq` que no coincide con las fechas (`"ME"` con datos al inicio de mes), buscar la columna `RandomWalkWithDrift` (se llama `RWD`) u olvidar `fitted=True` antes de `forecast_fitted_values()` [[ref-statsforecast]].
+- Calcular residuales o Ljung–Box sin quitar los `NaN` iniciales de los ajustados [[ref-residuos]].
 - Pronosticar un SARIMAX sin pasar la exógena futura [[requisitos-exog]].
 :::
 
@@ -97,4 +102,7 @@ La guía oficial propone este flujo:
 - [ ] Calcular Jarque–Bera y ARCH-LM a mano y decidir con la $\chi^2$.
 - [ ] Explicar entrenamiento/validación/prueba, un paso contra varios pasos y el origen móvil.
 - [ ] Calcular a mano MAE, RMSE, MAPE, sMAPE y MASE y saber cuál conviene.
+- [ ] Calcular a mano los pronósticos del promedio, el ingenuo, el estacional y la deriva, y decir qué ARIMA es cada uno.
+- [ ] Calcular los residuales y las bandas de 80% y 95% de una referencia, y explicar por qué crecen con $h$ (o no).
+- [ ] Escribir el flujo de statsforecast: formato `unique_id, ds, y`, `forecast` con `level` y `fitted=True`, `forecast_fitted_values`, `evaluate` y `cross_validation`.
 - [ ] Redactar la conclusión completa de un caso práctico.

@@ -22,11 +22,11 @@ Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. T
 
 ### Unidad II
 
-- **21 secciones**: repaso y herramientas (filtro lineal, números complejos, esperanza condicional), operador rezago y polinomios, AR(p) (media, triángulo de estacionariedad, Yule–Walker, pseudo-ciclos, PACF), MA(q) e invertibilidad, ARMA y pesos ψ, metodología Box–Jenkins, transformaciones (log, Box–Cox, regreso a la escala original, sobrediferenciación), ARIMA (deriva, ARIMA(0,1,1) = suavizamiento exponencial, pronóstico e intervalos), SARIMA y el modelo de aerolínea, variables exógenas (ARMAX contra regresión con errores SARIMA, fuga de información, festivos), máxima verosimilitud, AIC/BIC/HQIC y cuándo se pueden comparar, el `summary()` de SARIMAX renglón por renglón, diagnóstico de residuos (Ljung–Box con `model_df`, Jarque–Bera, prueba H), ARCH/GARCH y ARCH-LM, validación temporal (un paso contra varios pasos, estrategias, origen móvil), métricas (MAE, MSE, RMSE, MAPE, sMAPE, MASE), dos casos integradores (AirPassengers de principio a fin y usuarios diarios con días festivos), formulario y checklist.
-- **Cada proceso explicado de varias formas**: 38 demostraciones paso a paso, **40 ejemplos a mano guiados** con la tabla iluminada, 19 ejemplos resueltos, 12 intuiciones, 20 dudas frecuentes y 19 recuadros de «Cuidado».
-- **40 bloques de código Python** con su salida real (statsmodels, scipy, scikit-learn).
-- **42 gráficas interactivas** (calculadas en el navegador con `assets/js/ts2.js`, verificado contra statsmodels y scipy), todas con «Cómo leer esta gráfica» y vista extra, y **5 simuladores de Python** (`ArmaProcess`, `boxcox`, `ARIMA`, `plot_diagnostics` y `sklearn.metrics`).
-- **61 ejercicios** en 10 bloques (básicos, intermedios y retos), con respuesta explicada y enlace al tema.
+- **22 secciones**: repaso y herramientas (filtro lineal, números complejos, esperanza condicional), operador rezago y polinomios, AR(p) (media, triángulo de estacionariedad, Yule–Walker, pseudo-ciclos, PACF), MA(q) e invertibilidad, ARMA y pesos ψ, metodología Box–Jenkins, transformaciones (log, Box–Cox, regreso a la escala original, sobrediferenciación), ARIMA (deriva, ARIMA(0,1,1) = suavizamiento exponencial, pronóstico e intervalos), SARIMA y el modelo de aerolínea, variables exógenas (ARMAX contra regresión con errores SARIMA, fuga de información, festivos), máxima verosimilitud, AIC/BIC/HQIC y cuándo se pueden comparar, el `summary()` de SARIMAX renglón por renglón, diagnóstico de residuos (Ljung–Box con `model_df`, Jarque–Bera, prueba H), ARCH/GARCH y ARCH-LM, validación temporal (un paso contra varios pasos, estrategias, origen móvil), métricas (MAE, MSE, RMSE, MAPE, sMAPE, MASE), modelos de referencia con `statsforecast` (`HistoricAverage`, `Naive`, `SeasonalNaive`, `RandomWalkWithDrift`: fórmulas, equivalencia con ARIMA, residuales, intervalos de predicción, `evaluate` y `cross_validation`), dos casos integradores (AirPassengers de principio a fin y usuarios diarios con días festivos), formulario y checklist.
+- **Cada proceso explicado de varias formas**: 42 demostraciones paso a paso, **43 ejemplos a mano guiados** con la tabla iluminada, 21 ejemplos resueltos, 13 intuiciones, 25 dudas frecuentes y 24 recuadros de «Cuidado».
+- **46 bloques de código Python** con su salida real (statsmodels, scipy, scikit-learn, statsforecast y utilsforecast).
+- **46 gráficas interactivas** (calculadas en el navegador con `assets/js/ts2.js`, verificado contra statsmodels, scipy y statsforecast), todas con «Cómo leer esta gráfica» y vista extra, y **6 simuladores de Python** (`ArmaProcess`, `boxcox`, `ARIMA`, `plot_diagnostics`, `sklearn.metrics` y `StatsForecast`).
+- **73 ejercicios** en 11 bloques (básicos, intermedios y retos), con respuesta explicada y enlace al tema.
 - Enlaces **⇠ Unidad I** a lo que ya se estudió (ruido blanco, estacionariedad, ACF, Ljung–Box…).
 
 ### Unidad III
@@ -80,7 +80,7 @@ fuente/build.py          genera las páginas
 ## Regenerar las páginas
 
 ```bash
-pip install markdown-it-py pygments numpy pandas scipy statsmodels scikit-learn matplotlib
+pip install markdown-it-py pygments numpy pandas scipy statsmodels scikit-learn matplotlib arch statsforecast utilsforecast
 cd fuente && npm install && cd ..
 python3 fuente/build.py          # las tres unidades
 python3 fuente/build.py u3       # solo la Unidad III (u1, u2 o u3)

@@ -70,5 +70,5 @@ print(f"Ingenuo estacional: MAPE = {100 * np.mean(np.abs((real.values - ingenuo_
 - Usar los primeros 13 residuos (los de la inicialización) en las pruebas.
 - Comparar el AIC de modelos con distinto $d$ o $D$, o de un modelo en log con otro en niveles.
 - Reportar solo el `summary()` sin decir qué significa cada número.
-- Olvidar comparar contra un pronóstico ingenuo.
+- Olvidar comparar contra un pronóstico ingenuo [[ref-evaluar]].
 :::

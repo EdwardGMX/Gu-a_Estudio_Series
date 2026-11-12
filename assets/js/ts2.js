@@ -502,6 +502,52 @@
     return { prono, nivel: l };
   };
 
+  /* --------------------- Modelos de referencia (benchmarks) --------------------
+     Las mismas fórmulas de statsforecast: HistoricAverage, Naive, SeasonalNaive y
+     RandomWalkWithDrift. Ajustados, residuales, σ̂ y bandas normales. */
+  T2.REF_NOMBRES = { ha: 'HistoricAverage', n: 'Naive', sn: 'SeasonalNaive', rwd: 'RWD' };
+  T2.refAjustar = (y, m = 1) => {
+    const T = y.length, mu = y.reduce((a, b) => a + b, 0) / T, b = (y[T - 1] - y[0]) / (T - 1);
+    const fit = {
+      ha: y.map(() => mu),
+      n: y.map((v, i) => (i < 1 ? NaN : y[i - 1])),
+      sn: y.map((v, i) => (i < m ? NaN : y[i - m])),
+      rwd: y.map((v, i) => (i < 1 ? NaN : y[i - 1] + b))
+    };
+    const res = {}, sig = {}, ss = {};
+    for (const k of Object.keys(fit)) {
+      res[k] = y.map((v, i) => v - fit[k][i]);
+      ss[k] = res[k].filter(Number.isFinite).reduce((a, e) => a + e * e, 0);
+    }
+    // Divisores de statsforecast: T−1 (media, ingenuo y deriva) y T−m (estacional)
+    sig.ha = Math.sqrt(ss.ha / (T - 1));
+    sig.n = Math.sqrt(ss.n / (T - 1));
+    sig.sn = Math.sqrt(ss.sn / (T - m));
+    sig.rwd = Math.sqrt(ss.rwd / (T - 1));
+    return { T, m, mu, b, fit, res, sig, ss };
+  };
+  // Factor que multiplica a σ̂ en el horizonte h (σ̂_h = σ̂ · factor)
+  T2.refFactor = (k, h, T, m) => k === 'ha' ? Math.sqrt(1 + 1 / T) : k === 'n' ? Math.sqrt(h)
+    : k === 'sn' ? Math.sqrt(Math.floor((h - 1) / m) + 1) : Math.sqrt(h * (1 + h / (T - 1)));
+  T2.refPronostico = (y, h, { m = 1, niveles = [], A = null } = {}) => {
+    A = A || T2.refAjustar(y, m);
+    const T = A.T, out = {};
+    for (const k of ['ha', 'n', 'sn', 'rwd']) {
+      const media = [], sd = [];
+      for (let j = 1; j <= h; j++) {
+        media.push(k === 'ha' ? A.mu : k === 'n' ? y[T - 1] : k === 'sn' ? y[T - m + ((j - 1) % m)] : y[T - 1] + j * A.b);
+        sd.push(A.sig[k] * T2.refFactor(k, j, T, m));
+      }
+      const bandas = {};
+      for (const nv of niveles) {
+        const z = TS.normppf(0.5 + nv / 200);
+        bandas[nv] = { lo: media.map((v, i) => v - z * sd[i]), hi: media.map((v, i) => v + z * sd[i]), z };
+      }
+      out[k] = { media, sd, bandas };
+    }
+    return { A, ...out };
+  };
+
   if (typeof module !== 'undefined' && module.exports) module.exports = T2;
   else global.TS2 = T2;
 })(typeof window !== 'undefined' ? window : globalThis);

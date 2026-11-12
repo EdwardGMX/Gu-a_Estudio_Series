@@ -1,5 +1,5 @@
 ## 🧩 Ejercicios de la Unidad II {#ejercicios2}
-@mapa 61 ejercicios de opción múltiple, cálculo e interpretación de salidas de Python, cada uno con su respuesta explicada.
+@mapa 73 ejercicios de opción múltiple, cálculo e interpretación de salidas de Python, cada uno con su respuesta explicada.
 
 Elige una opción y presiona **Ver respuesta**: se marca la correcta, se explica por qué y hay un enlace a la sección donde se estudia el tema. Los ejercicios de cálculo abierto tienen **Ver solución paso a paso**. Intenta resolverlos en papel antes de abrir la solución.
 
@@ -663,4 +663,131 @@ El MAPE divide entre el valor real: con ceros no existe y con valores cercanos a
 - [ ] Usar el último dato observado para los 12 meses.
 ---
 Aplicar 12 veces un modelo de un paso es la estrategia **recursiva**, y un solo modelo que entrega los 12 valores a la vez es la **MIMO**. La directa es más robusta cuando el modelo de un paso está mal especificado [[guia-estrategias]].
+:::
+
+### Bloque K · Modelos de referencia y statsforecast {#ej2-k}
+
+:::ejercicio Básico | [[ref-metodos]]
+Con $y = (20,\ 24,\ 22,\ 30)$, ¿cuánto vale el pronóstico de la **deriva** a dos pasos, $\hat{y}_{T+2 \mid T}$?
+- [ ] 30
+- [ ] 32
+- [ ] 33.33
+- [x] 36.67
+---
+$b = \frac{y_T - y_1}{T - 1} = \frac{30 - 20}{3} = 3.333$ y $\hat{y}_{T+2 \mid T} = 30 + 2(3.333) = 36.67$. El ingenuo daría 30 y el promedio 24.
+:::
+
+:::ejercicio Básico | [[ref-metodos]]
+Con datos mensuales y `SeasonalNaive(season_length=12)`, el último dato es diciembre de 2024. ¿Qué valor se usa como pronóstico para $h = 14$ (febrero de 2026)?
+- [ ] Febrero de 2025
+- [x] Febrero de 2024
+- [ ] Diciembre de 2024
+- [ ] El promedio de todos los febreros
+---
+Con $h = 14$, $k = \lfloor 13/12 \rfloor = 1$ y $\hat{y}_{T+14} = y_{T+14-24} = y_{T-10}$: el febrero del **último año observado**, 2024. El estacional nunca usa pronósticos previos: vuelve a copiar la última temporada real.
+:::
+
+:::ejercicio Básico | [[demo-ref-arima]]
+¿Qué modelo ARIMA produce exactamente los pronósticos de `RandomWalkWithDrift()`?
+- [ ] ARIMA(0,0,0) con constante
+- [ ] ARIMA(0,1,0) sin constante
+- [x] ARIMA(0,1,0) con constante
+- [ ] ARIMA(0,1,1)
+---
+$y_t = c + y_{t-1} + \varepsilon_t$: con $d = 1$ la constante es una pendiente y su estimación es el promedio de las diferencias, $b$. Sin constante es el ingenuo; ARIMA(0,0,0) con constante es el promedio, y ARIMA(0,1,1) es el suavizamiento exponencial simple [[demo-ses]].
+:::
+
+:::ejercicio Intermedio | [[demo-ref-media-res]]
+Los residuales del pronóstico ingenuo de una serie con 101 datos tienen media 1.8. ¿Cuánto vale $y_{101} - y_1$?
+- [ ] 1.8
+- [ ] 18
+- [x] 180
+- [ ] No se puede saber.
+---
+La media de los residuales del ingenuo es $\frac{y_T - y_1}{T - 1} = b$. Con $T - 1 = 100$: $y_{101} - y_1 = 1.8 \times 100 = 180$. Esa media es también la pendiente que usaría la deriva.
+:::
+
+:::ejercicio Intermedio | [[guia-ref-intervalos]]
+El ingenuo pronostica 50 con $\hat{\sigma} = 4$. ¿Cuál es el intervalo de 95% a cuatro pasos?
+- [ ] $(42.16,\ 57.84)$
+- [x] $(34.32,\ 65.68)$
+- [ ] $(18.64,\ 81.36)$
+- [ ] $(46,\ 54)$
+---
+$\hat{\sigma}_4 = 4\sqrt{4} = 8$ y $1.96 \times 8 = 15.68$, así que $50 \pm 15.68 = (34.32,\ 65.68)$. La primera opción olvida el $\sqrt{h}$ (es la banda a un paso); la tercera usa $h$ en lugar de $\sqrt{h}$.
+:::
+
+:::ejercicio Intermedio | [[ref-intervalos]]
+En un `SeasonalNaive(season_length=12)`, ¿en qué horizonte se ensancha **por primera vez** la banda de predicción?
+- [ ] $h = 2$
+- [ ] $h = 12$
+- [x] $h = 13$
+- [ ] Nunca: tiene el mismo ancho para todo $h$.
+---
+$\hat{\sigma}_h = \hat{\sigma}\sqrt{k + 1}$ con $k = \lfloor (h - 1)/12 \rfloor$. Para $h = 1, \dots, 12$, $k = 0$; en $h = 13$ pasa a $k = 1$ y la banda se multiplica por $\sqrt{2}$. El que nunca se ensancha es el promedio.
+:::
+
+:::ejercicio Reto | [[demo-ref-varianza]]
+Con $T = 51$ datos y $\hat{\sigma} = 2$ en ambos métodos, ¿cuánto valen $\hat{\sigma}_{10}$ del ingenuo y de la deriva?
+- [ ] 6.32 y 6.32
+- [x] 6.32 y 6.93
+- [ ] 2 y 2.19
+- [ ] 20 y 24
+---
+:::pasos
+= \text{Ingenuo: } \hat{\sigma}_{10} = 2\sqrt{10} = 6.32
+> El error acumula diez choques.
+= \text{Deriva: } \hat{\sigma}_{10} = 2\sqrt{10\left(1 + \tfrac{10}{50}\right)} = 2\sqrt{12} = 6.93
+> El término extra $h/(T - 1)$ viene de estimar la pendiente; su error se multiplica por $h$ [[demo-ref-varianza]].
+:::
+:::
+
+:::ejercicio Básico | [[ref-statsforecast]]
+Ajustas `StatsForecast(models=[Naive(), RandomWalkWithDrift()], freq="MS")`. ¿Cómo se llama la columna con el pronóstico de la deriva?
+- [ ] `RandomWalkWithDrift`
+- [ ] `Drift`
+- [x] `RWD`
+- [ ] `Naive-drift`
+---
+`RandomWalkWithDrift()` escribe su pronóstico en `RWD` (y sus bandas en `RWD-lo-80`, `RWD-hi-80`, …). Las otras clases usan su propio nombre: `Naive`, `SeasonalNaive`, `HistoricAverage`.
+:::
+
+:::ejercicio Intermedio | [[ref-statsforecast]]
+Tus datos mensuales están fechados el **primer día** de cada mes y escribes `freq="ME"`. ¿Qué pasa?
+- [ ] statsforecast lanza un error de frecuencia.
+- [ ] Nada: `"ME"` y `"MS"` son equivalentes.
+- [x] Los pronósticos quedan fechados el último día de cada mes y al unirlos con la prueba por `ds` no coincide ninguna fecha.
+- [ ] Los pronósticos se vuelven diarios.
+---
+statsforecast no valida que la frecuencia coincida con los datos: genera las fechas futuras con la que le diste (`1959-12-31`, `1960-01-31`, …). El `merge` con la prueba queda vacío y las métricas salen `NaN`. Con `"D"` sí se volverían diarias.
+:::
+
+:::ejercicio Intermedio | [[ref-evaluar]]
+`evaluate(..., metrics=[mape])` de utilsforecast devuelve 0.0999 para el ingenuo estacional. ¿Qué significa?
+- [ ] El error porcentual es 0.0999%.
+- [x] El error porcentual es 9.99%.
+- [ ] El ingenuo estacional tiene un error de 0.0999 pasajeros.
+- [ ] El modelo explica el 99.9% de la variación.
+---
+`mape` devuelve una **proporción**; hay que multiplicar por 100 para leerla como porcentaje, igual que `mean_absolute_percentage_error` de scikit-learn [[metricas-python]].
+:::
+
+:::ejercicio Reto | [[ref-residuos]]
+Los residuales del ingenuo estacional de AirPassengers tienen media 30.2 y Ljung–Box da $p \approx 10^{-35}$. ¿Qué conclusión es correcta?
+- [ ] La referencia es adecuada porque su MAPE es el menor de las cuatro.
+- [x] El pronóstico está sesgado hacia abajo y deja autocorrelación: un modelo que capture la tendencia y la memoria (un SARIMA) puede mejorarlo.
+- [ ] Hay que usar `model_df = 1` para que la prueba no rechace.
+- [ ] Los residuales son ruido blanco con media distinta de cero.
+---
+Media positiva: cada mes es en promedio 30 mil pasajeros mayor que el mismo mes del año anterior, así que copiar el año pasado se queda corto. Y la autocorrelación significa que queda información útil. Ser la mejor de las referencias no la hace adecuada; por eso el modelo de aerolínea baja el MAPE de 9.99% a 2.90% [[ref-evaluar]].
+:::
+
+:::ejercicio Intermedio | [[ref-residuos]]
+¿Por qué los residuales de `HistoricAverage` suman exactamente cero, sea cual sea la serie?
+- [ ] Porque statsforecast los centra antes de devolverlos.
+- [x] Porque el ajustado es la media de toda la muestra, y la suma de las desviaciones respecto a la media es cero.
+- [ ] Porque el promedio es un pronóstico insesgado del futuro.
+- [ ] Porque el primer residual es `NaN`.
+---
+$\sum (y_t - \bar{y}) = T\bar{y} - T\bar{y} = 0$. Es una propiedad algebraica, no una virtud del modelo: además usa datos del «futuro» de cada $t$, por eso no es un pronóstico honesto dentro de la muestra [[demo-ref-media-res]].
 :::

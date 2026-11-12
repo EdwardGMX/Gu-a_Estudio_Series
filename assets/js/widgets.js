@@ -1108,14 +1108,14 @@
     });
   }
   const pyv = v => v === null || v === undefined ? 'None' : typeof v === 'boolean' ? (v ? 'True' : 'False') : typeof v === 'string' && !/^[\[\d-]/.test(v) && v !== 'None' ? `"${v}"` : String(v);
-  function panelCodigo(c) {
+  function panelCodigo(c, o) {
     const caja = el('div', { class: 'codigo sim-codigo' });
     const cab = el('div', { class: 'c-cab' }, el('span', { class: 'c-lang' }, '🐍 Python · el código cambia con tus parámetros'));
     const copiar = el('button', { type: 'button', class: 'c-copiar' }, 'Copiar');
     cab.append(copiar);
     const pre = el('pre', { class: 'c-fuente' }), code = el('code');
     pre.append(code);
-    const sal = el('div', { class: 'c-salida' }, el('div', { class: 'c-salida-cab' }, 'Salida (calculada en tu navegador con las mismas fórmulas de statsmodels)'));
+    const sal = el('div', { class: 'c-salida' }, el('div', { class: 'c-salida-cab' }, 'Salida (calculada en tu navegador con las mismas fórmulas de ' + ((o && o.fuente) || 'statsmodels') + ')'));
     const spre = el('pre');
     sal.append(spre);
     caja.append(cab, pre, sal);

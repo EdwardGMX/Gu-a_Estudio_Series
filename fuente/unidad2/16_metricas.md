@@ -88,7 +88,7 @@ El sMAPE corrige el primero solo en parte y queda acotado entre 0% y 200%, pero 
 - **MAPE** si los valores reales no están cerca de cero y quieres un porcentaje.
 - **MASE** si quieres comparar contra una referencia ingenua, o comparar series de escalas distintas.
 
-Reporta siempre **más de una** métrica y la del pronóstico ingenuo como punto de comparación.
+Reporta siempre **más de una** métrica y la del pronóstico ingenuo como punto de comparación. Las referencias y cómo se calculan con statsforecast están en [[referencia]].
 :::
 
 :::interactivo w2-metricas | Cómo reacciona cada métrica {#w-metricas}

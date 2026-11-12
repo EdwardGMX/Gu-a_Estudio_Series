@@ -182,5 +182,12 @@
   "tau-hp": ["\\tau_t", "Tendencia de Hodrick–Prescott", "Componente suave que estima el filtro HP; el ciclo es y_t − τ_t."],
   "x-j": ["x_{t-j}", "Entrada rezagada", "El valor de la entrada del filtro j periodos antes de t."],
   "beta-fourier": ["\\beta", "Coeficiente de regresión", "Peso de una variable explicativa. En la regresión de Fourier, la amplitud del coseno o del seno de una frecuencia; en el espectro cruzado, cuánto responde y a x."],
-  "lambda-ang": ["\\lambda", "Frecuencia angular", "La frecuencia medida en radianes por observación: λ = 2πω. Es la convención de Brockwell–Davis y Hamilton; el periodo es 2π/λ."]
+  "lambda-ang": ["\\lambda", "Frecuencia angular", "La frecuencia medida en radianes por observación: λ = 2πω. Es la convención de Brockwell–Davis y Hamilton; el periodo es 2π/λ."],
+  "sigma-h": ["\\hat{\\sigma}_h", "Desviación del error de pronóstico a h pasos", "σ̂ por un factor que depende del método: √(1 + 1/T) en el promedio, √h en el ingenuo, √(k + 1) en el estacional y √(h(1 + h/(T − 1))) en la deriva."],
+  "sigma-ref": ["\\hat{\\sigma}", "Desviación estándar de los residuales", "Raíz de la suma de los residuales al cuadrado entre los residuales disponibles (en statsforecast: T − 1, o T − m en el estacional). Mide el error a un paso."],
+  "c-nivel": ["c", "Cuantil normal del nivel", "Cuántas desviaciones se abre la banda: 1.28 para 80%, 1.645 para 90%, 1.96 para 95% y 2.58 para 99%."],
+  "T-obs": ["T", "Número de observaciones del entrenamiento", "El último dato observado es y_T; los pronósticos son para T + 1, T + 2, …"],
+  "m-est": ["m", "Periodo estacional (season_length)", "Cada cuántos periodos se repite el patrón: 12 en datos mensuales, 4 en trimestrales, 7 en diarios con patrón semanal."],
+  "k-temp": ["k", "Temporadas completas antes del horizonte", "k = ⌊(h − 1)/m⌋: cuántos años completos se ‘saltan’ al copiar el mismo mes. Vale 0 en el primer año de pronóstico."],
+  "b-deriva": ["b", "Pendiente de la deriva", "b = (y_T − y_1)/(T − 1): el cambio promedio por periodo, igual a la media de las primeras diferencias."]
 }

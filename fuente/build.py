@@ -43,7 +43,7 @@ UNIDADES = {
            "scripts": []},
     "u2": {"carpeta": "unidad2", "salida": "unidad2.html", "numero": "II", "nombre": "Unidad II",
            "titulo_pagina": "Unidad II · Procesos lineales: AR, MA, ARMA, ARIMA y SARIMA(X) — Guía de estudio",
-           "descripcion": "Guía de estudio interactiva de la Unidad II de Análisis de Series de Tiempo: operador rezago, AR, MA, ARMA, ARIMA, SARIMA, SARIMAX, máxima verosimilitud, AIC/BIC, diagnóstico de residuos, ARCH, validación temporal y métricas de pronóstico.",
+           "descripcion": "Guía de estudio interactiva de la Unidad II de Análisis de Series de Tiempo: operador rezago, AR, MA, ARMA, ARIMA, SARIMA, SARIMAX, máxima verosimilitud, AIC/BIC, diagnóstico de residuos, ARCH, validación temporal, métricas de pronóstico y modelos de referencia con statsforecast.",
            "scripts": ["assets/js/ts2.js", "assets/js/widgets2.js"],
            # En la Unidad II algunos símbolos cambian de significado o aparecen símbolos nuevos
            "renombrar": {"alpha": "alpha-u2", "beta": "beta-x", "xt": "x-exo", "p": "p-ar"},
@@ -856,8 +856,9 @@ def construir(clave, externos):
         return f'<a class="{clase}" href="#{id_}"><span class="ref-flecha">{flecha}</span> {titulo_html(etiqueta)}</a>'
 
     html_cuerpo = re.sub(r"@@R(\d+)@@", sust_r, html_cuerpo)
-    html_cuerpo = html_cuerpo.replace("<li>[ ] ", '<li class="check"><label><input type="checkbox"> ')
-    html_cuerpo = re.sub(r'(<li class="check"><label><input type="checkbox"> .*?)</li>', r"\1</label></li>", html_cuerpo)
+    # El texto va en un <span> para que el flex de la etiqueta no separe cada <code> en su propia columna
+    html_cuerpo = html_cuerpo.replace("<li>[ ] ", '<li class="check"><label><input type="checkbox"> <span>')
+    html_cuerpo = re.sub(r'(<li class="check"><label><input type="checkbox"> <span>.*?)</li>', r"\1</span></label></li>", html_cuerpo)
     html_cuerpo = re.sub(r"<table>(.*?)</table>", r'<div class="tabla"><table>\1</table></div>', html_cuerpo, flags=re.S)
 
     # ---- índice lateral y mapa ----

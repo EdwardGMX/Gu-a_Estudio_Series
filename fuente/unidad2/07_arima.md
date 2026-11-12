@@ -47,7 +47,7 @@ Con ARIMA(0,1,0), $y_{t+h} = y_t + \varepsilon_{t+1} + \dots + \varepsilon_{t+h}
 
 $$\hat{y}_{t+h \mid t} = y_t \quad \text{para todo } h$$
 
-El mejor pronóstico es **el último valor observado**. Es el famoso **pronóstico ingenuo** (*naive*), que sirve de referencia para cualquier modelo: si tu modelo no le gana al ingenuo, no está aportando nada [[metricas]].
+El mejor pronóstico es **el último valor observado**. Es el famoso **pronóstico ingenuo** (*naive*), que sirve de referencia para cualquier modelo: si tu modelo no le gana al ingenuo, no está aportando nada [[metricas]]. Las cuatro referencias (promedio, ingenuo, estacional y deriva) se estudian a fondo en [[referencia]].
 
 #### ARIMA(0,1,1) = suavizamiento exponencial simple
 

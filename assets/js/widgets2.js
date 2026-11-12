@@ -1640,6 +1640,244 @@
     dibujar();
   });
 
+  /* ======================= 16b · Modelos de referencia ======================= */
+  const REF_K = ['ha', 'n', 'sn', 'rwd'];
+  const REF_ES = { ha: 'Promedio', n: 'Ingenuo', sn: 'Estacional', rwd: 'Deriva' };
+  const REF_COL = { ha: PAL.cel, n: PAL.dur, sn: PAL.rosa, rwd: PAL.menta };
+  const rgba = (hex, a) => { const v = parseInt(hex.slice(1), 16); return `rgba(${v >> 16},${(v >> 8) & 255},${v & 255},${a})`; };
+  const SERIES_REF = (() => {
+    const r1 = TS.rng(423).normales(250, 2.2); let p = 150; const accion = r1.map(e => (p += e));
+    const r2 = TS.rng(402).normales(40, 3), e4 = [12, -4, -15, 7]; const trim = r2.map((e, i) => 100 + e4[i % 4] + e);
+    const r3 = TS.rng(401).normales(120, 1.2); let q = 50; const tend = r3.map(e => (q += 0.8 + e));
+    const estable = TS.rng(402).normales(120, 8).map(e => 200 + e);
+    return {
+      ap: { nombre: 'AirPassengers (mensual)', y: AP, x: FECHAS_AP, m: 12, h: 12, hMax: 36, ganador: 'sn' },
+      accion: { nombre: 'Precio de una acción (días hábiles)', y: accion, x: rango(250, 1), m: 5, h: 20, hMax: 60, ganador: 'n' },
+      trim: { nombre: 'Producción trimestral (estacional)', y: trim, x: rango(40, 1), m: 4, h: 8, hMax: 12, ganador: 'sn' },
+      tend: { nombre: 'Serie con tendencia', y: tend, x: rango(120, 1), m: 12, h: 12, hMax: 36, ganador: 'rwd' },
+      estable: { nombre: 'Ventas estables (ruido alrededor de una media)', y: estable, x: rango(120, 1), m: 12, h: 12, hMax: 36, ganador: 'ha' }
+    };
+  })();
+  const opcionesSerieRef = () => Object.keys(SERIES_REF).map(k => [k, SERIES_REF[k].nombre]);
+  const COMENTARIO_REF = {
+    ap: 'AirPassengers tiene tendencia <b>y</b> estacionalidad: el estacional copia bien la forma, pero 1960 queda por arriba porque la serie siguió creciendo. Ninguna referencia basta; el SARIMA de aerolínea baja el MAPE a 2.9%.',
+    accion: 'En un paseo aleatorio lo mejor que se sabe del futuro es el último precio: el ingenuo es el modelo correcto. Con otra muestra podría ganar la deriva por azar, pero no de forma sistemática.',
+    trim: 'Con una estacionalidad fuerte y sin tendencia, copiar el mismo trimestre del año anterior es casi imbatible.',
+    tend: 'La serie sube de forma persistente: la deriva prolonga esa subida y el ingenuo se queda atrás cada vez más.',
+    estable: 'Sin tendencia ni memoria, el mejor pronóstico es la media: el ingenuo y la deriva persiguen el ruido del último dato.'
+  };
+
+  R('w2-ref-metodos', c => {
+    const ctr = lienzo(c);
+    const se = seleccion(ctr, { etiqueta: 'Serie', valor: 'ap', opciones: opcionesSerieRef() }, () => { const S = SERIES_REF[se.get()]; hs.config({ min: 2, max: S.hMax, paso: 1, valor: S.h }); dibujar(); });
+    const hs = slider(ctr, { etiqueta: 'Periodos de prueba', min: 2, max: 36, paso: 1, valor: 12 }, dibujar);
+    const rs = seleccion(ctr, { etiqueta: 'Resaltar', valor: 'todos', opciones: [['todos', 'ninguno (todos iguales)']].concat(REF_K.map(k => [k, REF_ES[k]])) }, dibujar);
+    const g = lamina(c), tab = el('div', { class: 'w-tabla' }), lec = lectura(c);
+    c.insertBefore(tab, lec);
+    const ex = extra(c, 'Vista extra: los primeros pronósticos, como los devuelve sf.forecast()'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
+    function dibujar() {
+      const S = SERIES_REF[se.get()], h = hs.get(), n = S.y.length, tr = S.y.slice(0, n - h), te = S.y.slice(n - h);
+      const P = T2.refPronostico(tr, h, { m: S.m }), xt = S.x.slice(0, n - h), xf = S.x.slice(n - h), r = rs.get();
+      const M = {};
+      REF_K.forEach(k => { M[k] = T2.metricas(te, P[k].media, { entrenamiento: tr, m: S.m }); });
+      const orden = REF_K.slice().sort((a, b) => M[a].mae - M[b].mae), mejor = orden[0];
+      const trazas = [lin(xt, tr, '#45397a', 'entrenamiento', { line: { color: '#45397a', width: 1.4 } }),
+        { x: xf, y: te, mode: 'markers', marker: { color: PAL.menta, size: 7, line: { color: '#fff', width: 1 } }, name: 'prueba (real)' }];
+      REF_K.forEach(k => {
+        const fuerte = r === k, tenue = r !== 'todos' && !fuerte;
+        trazas.push(lin([xt[xt.length - 1]].concat(xf), [tr[tr.length - 1]].concat(P[k].media), REF_COL[k], REF_ES[k],
+          { line: { color: REF_COL[k], width: fuerte ? 3.4 : 2, dash: k === 'ha' ? 'dot' : 'solid' }, opacity: tenue ? 0.3 : 1 }));
+      });
+      graf(g, trazas, { height: 330, title: { text: S.nombre + ': cuatro pronósticos' }, legend: { orientation: 'h', y: -0.18 } });
+      tab.innerHTML = tablaHTML(['método', 'MAE', 'RMSE', 'MAPE %', 'MASE'], orden.map(k => [REF_ES[k], fmt(M[k].mae, 2), fmt(M[k].rmse, 2), fmt(M[k].mape, 2), fmt(M[k].mase, 3)]), orden.map((k, i) => i === 0 ? 'elegido' : ''));
+      lec.className = 'w-lectura ok';
+      lec.innerHTML = `Con ${h} periodos de prueba gana <b>${REF_ES[mejor]}</b> (MAE ${fmt(M[mejor].mae, 2)}, ${fmt(M[orden[1]].mae / M[mejor].mae, 2)} veces menos error que el segundo, ${REF_ES[orden[1]]}). ` +
+        (mejor === S.ganador ? COMENTARIO_REF[se.get()] : `Con este horizonte no gana la referencia «natural» de la serie (${REF_ES[S.ganador]}): con pocos periodos de prueba el azar pesa mucho. Prueba con el horizonte original (${S.h}).`);
+      const filas = rango(Math.min(h, 6)).map(i => [String(xf[i]), fmt(P.ha.media[i], 2), fmt(P.n.media[i], 2), fmt(P.sn.media[i], 2), fmt(P.rwd.media[i], 2)]);
+      tx.innerHTML = tablaHTML(['ds', 'HistoricAverage', 'Naive', 'SeasonalNaive', 'RWD'], filas) +
+        `<p style="font-size:.86rem;margin:6px 2px">Último dato y<sub>T</sub> = ${fmt(tr[tr.length - 1], 2)} · ȳ = ${fmt(P.A.mu, 2)} · b = (y<sub>T</sub> − y<sub>1</sub>)/(T − 1) = ${fmt(P.A.b, 4)} · m = ${S.m}.</p>`;
+    }
+    dibujar();
+  });
+
+  R('w2-ref-residuos', c => {
+    const ctr = lienzo(c);
+    const se = seleccion(ctr, { etiqueta: 'Serie', valor: 'ap', opciones: opcionesSerieRef() }, dibujar);
+    const me = segmentado(ctr, { etiqueta: 'Método', valor: 'n', opciones: REF_K.map(k => [k, REF_ES[k]]) }, dibujar);
+    const g1 = lamina(c), f = fila(c), g2 = lamina(f), g3 = lamina(f), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: la media de los residuales de cada método y la pendiente b'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
+    function dibujar() {
+      const S = SERIES_REF[se.get()], k = me.get(), ytr = S.y.slice(0, S.y.length - S.h), A = T2.refAjustar(ytr, S.m);
+      const xs = [], e = [];
+      A.res[k].forEach((v, i) => { if (Number.isFinite(v)) { xs.push(S.x[i]); e.push(v); } });
+      const n = e.length, Mo = T2.momentos(e), media = Mo.media, sd = Math.sqrt(Mo.var * n / (n - 1));
+      const H = Math.min(40, Math.max(2 * S.m, 10)), lb = TS.ljungBoxTabla(e, [H], { model_df: 0 })[0];
+      const tmed = media / (sd / Math.sqrt(n)), jb = T2.jarqueBera(e), het = T2.hetH(e.map(v => v - media));
+      graf(g1, [lin(xs, e, REF_COL[k], 'residual', { line: { color: REF_COL[k], width: 1.2 } }),
+        hline(xs[0], xs[n - 1], 0, PAL.gris, 'solid'), hline(xs[0], xs[n - 1], media, PAL.rosa, 'dash', 'media = ' + fmt(media, 3))],
+      { height: 240, title: { text: `Residuales de ${REF_ES[k]} en el entrenamiento (${n} datos; faltan ${ytr.length - n} al inicio)` }, legend: { orientation: 'h', y: -0.22 } });
+      const lim = Math.max(...e.map(Math.abs)) * 1.05;
+      graf(g2, [histograma(e, rgba(REF_COL[k], 0.45)), curvaNormal(media, sd, -lim, lim, PAL.lav, 'normal')], { height: 240, title: { text: 'Histograma' }, showlegend: false, bargap: 0.05 });
+      graf(g3, trazasACF(TS.acf(e, H), n), layoutACF('ACF de los residuales', { height: 240 }));
+      const ok = v => (v ? '✓' : '✗');
+      const c1 = lb.lb_pvalue > 0.05, c2 = Math.abs(tmed) < 2, c3 = het.p > 0.05, c4 = jb.p > 0.05;
+      lec.className = 'w-lectura ' + (c1 && c2 ? 'ok' : 'mal');
+      lec.innerHTML = `${ok(c1)} <b>Sin autocorrelación</b>: Ljung–Box(${H}) Q = ${fmt(lb.lb_stat, 1)}, ${pq(lb.lb_pvalue)}. ` +
+        `${ok(c2)} <b>Media cero</b>: media ${fmt(media, 3)}, t = ${fmt(tmed, 2)}${c2 ? '' : ' (sesgo: el pronóstico se queda corto o se pasa de forma sistemática)'}. ` +
+        `${ok(c3)} <b>Varianza constante</b>: H = ${fmt(het.H, 2)}, ${pq(het.p)}. ` +
+        `${ok(c4)} <b>Normalidad</b>: Jarque–Bera ${pq(jb.p)}. ` +
+        (c1 && c2 ? '💡 Los residuales parecen ruido blanco: esta referencia ya captura lo predecible de la serie.' : '💡 Queda estructura sin usar: un modelo mejor puede ganarle a esta referencia.') +
+        ` σ̂ = ${fmt(A.sig[k], 3)} (statsforecast).`;
+      tx.innerHTML = tablaHTML(['método', 'media de los residuales', 'σ̂', 'residuales'], REF_K.map(j => {
+        const v = A.res[j].filter(Number.isFinite); return [REF_ES[j], fmt(TS.media(v), 4), fmt(A.sig[j], 3), v.length];
+      }), REF_K.map(j => (j === k ? 'elegido' : ''))) +
+        `<p style="font-size:.86rem;margin:6px 2px">Pendiente de la deriva b = (y<sub>T</sub> − y<sub>1</sub>)/(T − 1) = <b>${fmt(A.b, 4)}</b>: coincide con la media de los residuales del ingenuo. Los del promedio y la deriva tienen media 0 exacta; los del estacional miden el crecimiento promedio de una temporada a la siguiente.</p>`;
+    }
+    dibujar();
+  });
+
+  R('w2-ref-intervalos', c => {
+    const ctr = lienzo(c);
+    const se = seleccion(ctr, { etiqueta: 'Serie', valor: 'ap', opciones: opcionesSerieRef() }, () => { const S = SERIES_REF[se.get()]; hs.config({ min: 1, max: S.hMax, paso: 1, valor: S.h }); dibujar(); });
+    const me = segmentado(ctr, { etiqueta: 'Método', valor: 'sn', opciones: REF_K.map(k => [k, REF_ES[k]]) }, dibujar);
+    const nv = segmentado(ctr, { etiqueta: 'Nivel', valor: '80', opciones: [['80', '80%'], ['90', '90%'], ['95', '95%'], ['99', '99%']] }, dibujar);
+    const hs = slider(ctr, { etiqueta: 'Horizonte h', min: 1, max: 36, paso: 1, valor: 12 }, dibujar);
+    const g = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: cómo se abre la banda con el horizonte en cada método'), gx = lamina(ex), lx = lectura(ex);
+    function dibujar() {
+      const S = SERIES_REF[se.get()], k = me.get(), nivel = +nv.get(), h = hs.get(), n = S.y.length;
+      const tr = S.y.slice(0, n - h), te = S.y.slice(n - h), xt = S.x.slice(0, n - h), xf = S.x.slice(n - h);
+      const P = T2.refPronostico(tr, h, { m: S.m, niveles: [nivel, 95] }), F = P[k], Bn = F.bandas[nivel], B95 = F.bandas[95];
+      const desde = Math.max(0, tr.length - Math.max(3 * h, 3 * S.m, 30));
+      const trazas = [bandaTr(xf, B95.lo, B95.hi, rgba(REF_COL[k], 0.12), '95%'), bandaTr(xf, Bn.lo, Bn.hi, rgba(REF_COL[k], 0.3), nivel + '%'),
+        lin(xt.slice(desde), tr.slice(desde), '#45397a', 'entrenamiento', { line: { color: '#45397a', width: 1.5 } }),
+        lin(xf, F.media, REF_COL[k], 'pronóstico ' + REF_ES[k], { line: { color: REF_COL[k], width: 2.6 } }),
+        { x: xf, y: te, mode: 'markers', marker: { color: PAL.menta, size: 7, line: { color: '#fff', width: 1 } }, name: 'real' }];
+      graf(g, trazas, { height: 330, title: { text: `${REF_ES[k]} con banda de ${nivel}% (y 95%)` }, legend: { orientation: 'h', y: -0.18 } });
+      const dentro = te.filter((v, i) => v >= Bn.lo[i] && v <= Bn.hi[i]).length, z = Bn.z;
+      const formula = { ha: 'σ̂·√(1 + 1/T)', n: 'σ̂·√h', sn: 'σ̂·√(k + 1), k = ⌊(h − 1)/m⌋', rwd: 'σ̂·√(h(1 + h/(T − 1)))' }[k];
+      const cubre = dentro / h * 100;
+      lec.className = 'w-lectura ' + (Math.abs(cubre - nivel) <= 20 ? 'ok' : 'mal');
+      lec.innerHTML = `σ̂ = ${fmt(P.A.sig[k], 3)} · σ̂<sub>h</sub> = ${formula} · c = ${fmt(z, 3)}. Media anchura: <b>${fmt(z * F.sd[0], 2)}</b> en h = 1 y <b>${fmt(z * F.sd[h - 1], 2)}</b> en h = ${h}. ` +
+        `Cobertura observada: <b>${dentro} de ${h}</b> datos reales dentro de la banda (${fmt(cubre, 0)}% contra ${nivel}% prometido). ` +
+        (Math.abs(cubre - nivel) <= 20 ? 'La banda cumple razonablemente lo que promete.' : cubre < nivel ? '⚠ La banda promete más de lo que cumple: los residuales tienen sesgo o autocorrelación, y la fórmula normal ya no aplica.' : 'La banda quedó más ancha de lo necesario en esta prueba.');
+      const T = tr.length, H = S.hMax, hh = rango(H, 1);
+      graf(gx, REF_K.map(j => lin(hh, hh.map(v => T2.refFactor(j, v, T, S.m)), REF_COL[j], REF_ES[j], { line: { color: REF_COL[j], width: j === k ? 3.2 : 1.8, shape: j === 'sn' ? 'hv' : 'linear' } })),
+        { height: 260, title: { text: 'Factor σ̂<sub>h</sub> / σ̂' }, xaxis: { title: { text: 'h' } }, legend: { orientation: 'h', y: -0.25 } });
+      lx.innerHTML = `Con T = ${T} y m = ${S.m}: en h = ${H} el factor vale ${REF_K.map(j => REF_ES[j] + ' ' + fmt(T2.refFactor(j, H, T, S.m), 2)).join(', ')}. El estacional solo sube al empezar cada temporada nueva; la deriva se separa del ingenuo por el error de estimar la pendiente.`;
+    }
+    dibujar();
+  });
+
+  R('w2-ref-cv', c => {
+    const ctr = lienzo(c);
+    const se = seleccion(ctr, { etiqueta: 'Serie', valor: 'ap', opciones: opcionesSerieRef() }, () => { const S = SERIES_REF[se.get()]; hs.config({ min: 1, max: Math.min(24, S.hMax), paso: 1, valor: Math.min(S.h, 24) }); st.config({ min: 1, max: 24, paso: 1, valor: Math.min(S.h, 24) }); dibujar(); });
+    const hs = slider(ctr, { etiqueta: 'h', min: 1, max: 24, paso: 1, valor: 12 }, dibujar);
+    const nw = slider(ctr, { etiqueta: 'n_windows', min: 1, max: 6, paso: 1, valor: 3 }, dibujar);
+    const st = slider(ctr, { etiqueta: 'step_size', min: 1, max: 24, paso: 1, valor: 12 }, dibujar);
+    const vw = slider(ctr, { etiqueta: 'Ventana que se dibuja', min: 1, max: 3, paso: 1, valor: 3 }, dibujar);
+    const g = lamina(c), g2 = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: el MAE de cada ventana'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
+    function dibujar() {
+      const S = SERIES_REF[se.get()], n = S.y.length, h = hs.get(), paso = st.get();
+      let W = nw.get();
+      while (W > 1 && n - h - (W - 1) * paso < Math.max(2 * S.m + 2, 10)) W--;
+      if (W !== nw.get()) nw.set(W);
+      vw.config({ min: 1, max: W, paso: 1, valor: Math.min(vw.get(), W) });
+      const ventanas = rango(W).map(i => {
+        const corte = n - h - (W - 1 - i) * paso, tr = S.y.slice(0, corte), te = S.y.slice(corte, corte + h);
+        const P = T2.refPronostico(tr, h, { m: S.m }), mae = {};
+        REF_K.forEach(k => { mae[k] = TS.media(te.map((v, j) => Math.abs(v - P[k].media[j]))); });
+        return { corte, cutoff: S.x[corte - 1], xs: S.x.slice(corte, corte + h), P, mae };
+      });
+      const sel = ventanas[vw.get() - 1], sombras = ventanas.map((v, i) => ({ type: 'rect', xref: 'x', yref: 'paper', x0: v.xs[0], x1: v.xs[v.xs.length - 1], y0: 0, y1: 1, fillcolor: i === vw.get() - 1 ? 'rgba(224,112,159,.16)' : 'rgba(124,105,214,.09)', line: { width: 0 } }));
+      const trazas = [lin(S.x, S.y, '#45397a', 'serie', { line: { color: '#45397a', width: 1.3 } }),
+        vline(sel.cutoff, Math.min(...S.y), Math.max(...S.y), PAL.gris, 'dash', 'cutoff')].concat(REF_K.map(k => lin(sel.xs, sel.P[k].media, REF_COL[k], REF_ES[k], { line: { color: REF_COL[k], width: 2.2 } })));
+      graf(g, trazas, { height: 300, title: { text: `${W} ventanas de ${h} periodos cada ${paso}` }, shapes: sombras, legend: { orientation: 'h', y: -0.2 } });
+      const etiquetas = ventanas.map((v, i) => `ventana ${i + 1}`);
+      graf(g2, REF_K.map(k => ({ type: 'bar', x: etiquetas.concat(['promedio']), y: ventanas.map(v => v.mae[k]).concat([TS.media(ventanas.map(v => v.mae[k]))]), name: REF_ES[k], marker: { color: REF_COL[k] }, hovertemplate: REF_ES[k] + ': MAE %{y:.2f}<extra></extra>' })),
+        { height: 260, barmode: 'group', title: { text: 'MAE por ventana' }, legend: { orientation: 'h', y: -0.25 }, yaxis: { rangemode: 'tozero' } });
+      const prom = {};
+      REF_K.forEach(k => { prom[k] = TS.media(ventanas.map(v => v.mae[k])); });
+      const orden = REF_K.slice().sort((a, b) => prom[a] - prom[b]);
+      const pierde = ventanas.map((v, i) => [i + 1, REF_K.slice().sort((a, b) => v.mae[a] - v.mae[b])[0]]).filter(([, k]) => k !== orden[0]);
+      lec.innerHTML = `En promedio gana <b>${REF_ES[orden[0]]}</b> (MAE ${fmt(prom[orden[0]], 2)}), seguido de ${REF_ES[orden[1]]} (${fmt(prom[orden[1]], 2)}). ` +
+        (pierde.length ? `Pero no gana en todas: en ${pierde.map(([i, k]) => `la ventana ${i} gana ${REF_ES[k]}`).join(' y ')}. Por eso conviene promediar varias ventanas.` : 'Gana en todas las ventanas.') +
+        (paso < h && W > 1 ? ' ⚠ Con step_size < h las ventanas se traslapan.' : '');
+      tx.innerHTML = tablaHTML(['cutoff'].concat(REF_K.map(k => T2.REF_NOMBRES[k])), ventanas.map(v => [String(v.cutoff)].concat(REF_K.map(k => fmt(v.mae[k], 2))))
+        .concat([['promedio'].concat(REF_K.map(k => fmt(prom[k], 2)))]));
+    }
+    dibujar();
+  });
+
+  R('py2-statsforecast', c => {
+    const ctr = lienzo(c);
+    let activo = 'models';
+    const cambia = k => () => { activo = k; dibujar(); };
+    const mo = segmentado(ctr, { etiqueta: 'models', valor: 'dos', opciones: [['dos', 'Naive + SeasonalNaive'], ['cuatro', 'los cuatro'], ['ha', 'solo HistoricAverage']] }, cambia('models'));
+    const sl = segmentado(ctr, { etiqueta: 'season_length', valor: '12', opciones: [['12', '12'], ['4', '4'], ['1', '1']] }, cambia('season'));
+    const fq = segmentado(ctr, { etiqueta: 'freq', valor: 'MS', opciones: [['MS', '"MS"'], ['ME', '"ME"'], ['D', '"D"']] }, cambia('freq'));
+    const hs = slider(ctr, { etiqueta: 'h', min: 1, max: 24, paso: 1, valor: 12 }, cambia('h'));
+    const lv = segmentado(ctr, { etiqueta: 'level', valor: '80', opciones: [['none', 'None'], ['80', '[80]'], ['8095', '[80, 95]']] }, cambia('level'));
+    const md = segmentado(ctr, { etiqueta: 'Método', valor: 'forecast', opciones: [['forecast', 'forecast'], ['fitpredict', 'fit + predict'], ['fitted', 'fitted=True'], ['olvido', 'olvidar fitted=True']] }, cambia('modo'));
+    const pc = panelCodigo(c, { fuente: 'statsforecast' }), lec = lectura(c);
+    const tr = AP.slice(0, 132), FTR = FECHAS_AP.slice(0, 132);
+    const fecha = (iso, f, j) => {
+      const [a, m] = iso.split('-').map(Number);
+      if (f === 'MS') { const t = (a * 12 + m - 1) + j; return `${Math.floor(t / 12)}-${String(t % 12 + 1).padStart(2, '0')}-01`; }
+      if (f === 'ME') { const t = (a * 12 + m - 1) + j - 1, aa = Math.floor(t / 12), mm = t % 12 + 1, d = new Date(Date.UTC(aa, mm, 0)).getUTCDate(); return `${aa}-${String(mm).padStart(2, '0')}-${String(d).padStart(2, '0')}`; }
+      const d = new Date(Date.UTC(a, m - 1, 1 + j)); return d.toISOString().slice(0, 10);
+    };
+    // Formato de pandas: columna de enteros → 1 decimal; si no, 6 decimales
+    const colFmt = vs => { const fin = vs.filter(Number.isFinite), ent = fin.every(v => Math.abs(v - Math.round(v)) < 1e-9); return vs.map(v => !Number.isFinite(v) ? 'NaN' : ent ? v.toFixed(1) : v.toFixed(6)); };
+    function dibujar() {
+      const m = +sl.get(), f = fq.get(), h = hs.get(), lvl = lv.get(), modo = md.get();
+      const claves = { dos: ['n', 'sn'], cuatro: ['ha', 'n', 'sn', 'rwd'], ha: ['ha'] }[mo.get()];
+      const clase = { ha: 'HistoricAverage()', n: 'Naive()', sn: `SeasonalNaive(season_length=${m})`, rwd: 'RandomWalkWithDrift()' };
+      const imp = { ha: 'HistoricAverage', n: 'Naive', sn: 'SeasonalNaive', rwd: 'RandomWalkWithDrift' };
+      const niveles = lvl === 'none' ? [] : lvl === '80' ? [80] : [80, 95], levelTxt = lvl === 'none' ? 'None' : `[${niveles.join(', ')}]`;
+      const nombres = claves.map(k => T2.REF_NOMBRES[k]);
+      const cols = ['unique_id', 'ds'];
+      claves.forEach(k => { cols.push(T2.REF_NOMBRES[k]); niveles.forEach(v => cols.push(`${T2.REF_NOMBRES[k]}-lo-${v}`)); niveles.forEach(v => cols.push(`${T2.REF_NOMBRES[k]}-hi-${v}`)); });
+      const llamada = {
+        forecast: `fcst = sf.forecast(df=train_df, h={h}, level={level})\nprint(fcst.columns.tolist())\nprint(fcst[["ds"] + {nombres}].head(4))`,
+        fitpredict: `sf.fit(df=train_df)\nfcst = sf.predict(h={h}, level={level})\nprint(fcst.columns.tolist())\nprint(fcst[["ds"] + {nombres}].head(4))`,
+        fitted: `fcst = sf.forecast(df=train_df, h={h}, level={level}, fitted=True)\najust = sf.forecast_fitted_values()\nprint(ajust[["ds", "y"] + {nombres}].iloc[10:14])`,
+        olvido: `fcst = sf.forecast(df=train_df, h={h}, level={level})\najust = sf.forecast_fitted_values()`
+      }[modo];
+      const args = { imports: claves.map(k => imp[k]).join(', '), models: '[' + claves.map(k => clase[k]).join(', ') + ']', freq: `"${f}"`, h, level: levelTxt, nombres: '[' + nombres.map(s => `"${s}"`).join(', ') + ']' };
+      const marca = { models: 'models', season: 'models', freq: 'freq', h: 'h', level: 'level', modo: 'h' }[activo];
+      pc.codigo(codigoPython(`from statsforecast import StatsForecast\nfrom statsforecast.models import {imports}\n\ntrain_df = df_ap.iloc[:-12]      # AirPassengers 1949–1959 en formato largo\nsf = StatsForecast(models={models}, freq={freq})\n` + llamada, args, marca));
+      const P = T2.refPronostico(tr, Math.max(h, 1), { m, niveles });
+      let salida;
+      if (modo === 'olvido') salida = 'Exception: Please run `forecast` method using `fitted=True`';
+      else if (modo === 'fitted') {
+        const A = P.A, idx = rango(4, 10), datos = [['ds', idx.map(i => FTR[i])], ['y', colFmt(idx.map(i => tr[i]))]];
+        claves.forEach(k => datos.push([T2.REF_NOMBRES[k], colFmt(idx.map(i => A.fit[k][i]))]));
+        salida = tablaTexto(datos.map(d => d[0]), idx.map((_, r) => datos.map(d => d[1][r])), idx.map(String));
+      } else {
+        const filas = rango(Math.min(4, h)), datos = [['ds', filas.map(j => fecha(FTR[131], f, j + 1))]];
+        claves.forEach(k => datos.push([T2.REF_NOMBRES[k], colFmt(filas.map(j => P[k].media[j]))]));
+        salida = '[' + cols.map(s => `'${s}'`).join(', ') + ']\n' + tablaTexto(datos.map(d => d[0]), filas.map(r => datos.map(d => d[1][r])), filas.map(String));
+      }
+      pc.salida(salida);
+      const notas = [];
+      if (modo === 'olvido') notas.push('Los ajustados solo se guardan si los pides: vuelve a llamar a <code>forecast</code> con <code>fitted=True</code>.');
+      if (modo === 'fitted') notas.push(`Los primeros renglones de los ajustados tienen <code>NaN</code>: el ingenuo no tiene dato anterior en el renglón 0 y el estacional no tiene temporada anterior en los primeros ${m} renglones. Quítalos con <code>.dropna()</code> antes de calcular residuales.`);
+      if (f !== 'MS' && modo !== 'fitted' && modo !== 'olvido') notas.push(`⚠ Con <code>freq="${f}"</code> el primer pronóstico queda fechado ${fecha(FTR[131], f, 1)}, no 1960-01-01: al unir con la prueba por <code>ds</code> no coincide ninguna fecha y las métricas salen <code>NaN</code>.`);
+      if (claves.includes('sn') && m !== 12) notas.push(`⚠ Con <code>season_length=${m}</code> el estacional copia los últimos ${m} ${m === 1 ? 'mes (es igual al ingenuo)' : 'meses'}, no el mismo mes del año anterior. No sale ningún error: es un error silencioso.`);
+      if (claves.includes('rwd') && modo !== 'olvido') notas.push('La deriva sale en la columna <code>RWD</code>, no <code>RandomWalkWithDrift</code>.');
+      if (lvl === 'none' && modo !== 'fitted' && modo !== 'olvido') notas.push('Sin <code>level</code> no hay columnas <code>-lo-</code> ni <code>-hi-</code>.');
+      if (modo === 'fitpredict') notas.push('<code>fit</code> + <code>predict</code> da exactamente los mismos números que <code>forecast</code>.');
+      lec.className = 'w-lectura ' + (notas.some(t => t.startsWith('⚠')) || modo === 'olvido' ? 'mal' : 'ok');
+      lec.innerHTML = notas.join(' ') || 'Configuración correcta para AirPassengers: fechas al inicio de mes y estacionalidad de 12.';
+    }
+    dibujar();
+  });
+
   /* ======================= 17 · Caso AirPassengers ======================= */
   R('w2-caso-ap', c => {
     const G = DATOS.rejilla_ap;
