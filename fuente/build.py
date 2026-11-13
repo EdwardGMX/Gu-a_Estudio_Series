@@ -85,7 +85,24 @@ UNIDADES = {
                (r"(?<![A-Za-z\\])x_\{t-[0-9a-zD]+\}", "x-j"),
                (r"(?<![A-Za-z\\{])L(?![A-Za-z])", "L-op"),
            ]},
+    # ---------------- Laboratorio: flujos completos con un dataset ----------------
+    "lab": {"carpeta": "laboratorio/inicio", "salida": "laboratorio.html", "numero": "Lab", "nombre": "Laboratorio",
+            "titulo_pagina": "Laboratorio · Análisis completos de series de tiempo — Guía de estudio",
+            "descripcion": "Laboratorio de Análisis de Series de Tiempo: elige un dataset y recorre un análisis completo, paso a paso, con las herramientas de las tres unidades, código Python con su salida real y prueba y error.",
+            "scripts": ["assets/js/lab.js"], "indice_titulo": "Laboratorio",
+            "pie": "Laboratorio · Análisis de Series de Tiempo. Todo el código se ejecuta al generar la página; las gráficas muestran sus resultados reales."},
+    "lab-manchas": {"carpeta": "laboratorio/manchas_solares", "salida": "lab-manchas-solares.html", "numero": "Lab",
+                    "nombre": "Laboratorio · Manchas solares", "en_nav": False, "nav_activo": "lab",
+                    "titulo_pagina": "Laboratorio · Manchas solares (1700–2008) — Guía de estudio",
+                    "descripcion": "Análisis completo de las manchas solares anuales 1700–2008: exploración, transformación, descomposición, estacionariedad, ACF/PACF, modelos AR/ARMA/SARIMA, validación cruzada, periodograma, espectro AR y filtros HP y Baxter–King, paso a paso con código Python.",
+                    "scripts": ["assets/js/lab.js"], "indice_titulo": "Flujo · Manchas solares",
+                    "pie": "Laboratorio · Manchas solares. Todo el código se ejecuta al generar la página; las gráficas y tablas muestran sus resultados reales.",
+                    "reglas": [(r"\\hat\{y\}", "yhat"), (r"\\omega(?![A-Za-z_])", "omega3"), (r"\\lambda(?![A-Za-z])", "lambda-hp")]},
 }
+
+# Estado de cada pastilla del Laboratorio: clase CSS, icono y etiqueta
+ESTADOS = {"azul": ("🔵", "Exploración"), "verde": ("✅", "Logrado"), "amarillo": ("🟡", "Funciona con reservas"),
+           "rojo": ("❌", "Descartado")}
 
 MACROS = {
     r"\tip": r"\htmlData{tip=#1}{#2}",
@@ -303,6 +320,7 @@ class Documento:
         self.toc = []
         self.abierta = False
         self.n_ejercicio = 0
+        self.pastillas = []
         self.ns = {"__name__": "__guia__"}
         self.errores = []
         self.exportados = {}
@@ -360,11 +378,23 @@ class Documento:
                        lambda m: f'<span class="termino" data-tip="{m.group(1)}">{m.group(2)}</span>', texto)
         return texto.replace(r"\$", "$")
 
+    def valores(self, texto):
+        """{{=expresión|formato}} se sustituye por el valor que tiene en Python en ese punto del documento."""
+        def rep(m):
+            expr, _, fmt = m.group(1).partition("|")
+            try:
+                v = eval(expr, self.ns)
+                return format(v, fmt.strip()) if fmt.strip() else str(v)
+            except Exception as e:
+                self.errores.append(f"No se pudo evaluar {{{{={m.group(1)}}}}}: {type(e).__name__}: {e}")
+                return "??"
+        return re.sub(r"\{\{=(.+?)\}\}", rep, texto)
+
     def md(self, texto):
-        return md.render(self.proteger(texto))
+        return md.render(self.proteger(self.valores(texto)))
 
     def md_inline(self, texto):
-        return md.renderInline(self.proteger(texto))
+        return md.renderInline(self.proteger(self.valores(texto)))
 
     def ancla(self, id_, num, titulo, tipo):
         if id_ in self.anclas:
@@ -521,7 +551,7 @@ class Documento:
             salida = (salida + "\n" if salida else "") + "\n".join(dict.fromkeys(avisos))
         return salida
 
-    def render_code(self, info, codigo):
+    def render_code(self, info, codigo, separar=False):
         partes = info.split()
         lang = partes[0] if partes else "text"
         opciones = set(partes[1:])
@@ -559,6 +589,13 @@ class Documento:
             else:
                 salida = self.ejecutar(codigo, esperar_error="error" in opciones)
         h = highlight(codigo, PythonLexer(), FORMATO)
+        if separar:
+            cod = (f'<div class="codigo"><div class="c-cab"><span class="c-lang">🐍 Python</span>'
+                   f'<button class="c-copiar" type="button">Copiar</button></div>'
+                   f'<pre class="c-fuente"><code>{h}</code></pre></div>')
+            sal = (f'<div class="codigo c-solo-salida"><div class="c-salida"><div class="c-salida-cab">Salida del código</div>'
+                   f'<pre>{html.escape(salida)}</pre></div></div>') if salida else ""
+            return cod, sal
         out = (f'<div class="codigo"><div class="c-cab"><span class="c-lang">🐍 Python</span>'
                f'<button class="c-copiar" type="button">Copiar</button></div>'
                f'<pre class="c-fuente"><code>{h}</code></pre>')
@@ -587,6 +624,8 @@ class Documento:
             return self.render_pasos(hijos)
         if tipo == "guiado":
             return self.render_guiado(cab, hijos, id_)
+        if tipo == "pastilla":
+            return self.render_pastilla(cab, hijos, id_)
         if tipo == "ejercicio":
             return self.render_ejercicio(cab, hijos)
         if tipo == "cols":
@@ -635,6 +674,68 @@ class Documento:
             return (f'<details class="bloque b-demo"{idattr} open><summary class="b-cab">{cabecera}'
                     f'<span class="b-plegar"></span></summary><div class="b-cuerpo">{cuerpo}</div></details>')
         return f'<div class="bloque b-{tipo}"{idattr}><div class="b-cab">{cabecera}</div><div class="b-cuerpo">{cuerpo}</div></div>'
+
+    def render_pastilla(self, cab, hijos, id_):
+        """Un paso del Laboratorio: objetivo, parámetros, código plegable, resultado, lectura y decisión."""
+        partes = [p.strip() for p in cab.split("|")]
+        estado, titulo = partes[0], partes[1] if len(partes) > 1 else "Paso"
+        repasos = partes[2].split() if len(partes) > 2 else []
+        if estado not in ESTADOS:
+            self.errores.append(f"Estado de pastilla desconocido: {estado}")
+            estado = "azul"
+        ico, etiqueta = ESTADOS[estado]
+        n = len(self.pastillas) + 1
+        id_ = id_ or f"paso-{n}"
+        self.sub += 1
+        self.ancla(id_, str(n), f"Paso {n} · {titulo}", "sub")
+        corto = re.sub(r"^Aplicar\s*·\s*", "", titulo)
+        self.toc[-1]["subs"].append({"id": id_, "num": str(n), "titulo": corto, "estado": estado})
+        self.pastillas.append({"id": id_, "n": n, "titulo": corto, "estado": estado, "fase": self.toc[-1]["id"]})
+        # Secciones separadas por líneas «@@ Nombre»
+        secciones, actual, nombre = [], [], "Objetivo"
+        for l in hijos:
+            m = re.match(r"^@@\s+(.+?)\s*$", l)
+            if m:
+                secciones.append((nombre, actual))
+                nombre, actual = m.group(1), []
+            else:
+                actual.append(l)
+        secciones.append((nombre, actual))
+        ETQ = {"Objetivo": "🎯 Objetivo", "Parámetros": "⚙️ Parámetros y por qué", "Código": "🐍 Código",
+               "Resultado": "📊 Resultado", "Lectura": "🔎 Qué nos dicen los valores", "Decisión": "➡️ Decisión y siguiente paso"}
+        html_sec, salidas = [], []
+        for nom, lineas in secciones:
+            if not any(x.strip() for x in lineas):
+                continue
+            if nom == "Código":
+                nodos = self.parsear(lineas)
+                codigos = []
+                for nd in nodos:
+                    if nd[0] == "code" and nd[1].split()[:1] == ["python"] and "oculto" not in nd[1].split():
+                        cod, sal = self.render_code(nd[1], nd[2], separar=True)
+                        codigos.append(cod)
+                        salidas.append(sal)
+                    else:
+                        codigos.append(self.render_nodo(nd))
+                html_sec.append(f'<details class="pa-codigo"><summary><span class="pa-tri" aria-hidden="true"></span>'
+                                f'Ver el código de este paso</summary><div class="pa-codigo-cuerpo">{"".join(codigos)}</div></details>')
+                continue
+            cuerpo = self.render(self.parsear(lineas))
+            if nom == "Resultado":
+                cuerpo = "".join(salidas) + cuerpo
+                salidas = []
+            clase = {"Objetivo": "obj", "Parámetros": "par", "Resultado": "res", "Lectura": "lec", "Decisión": "dec"}.get(nom, "otro")
+            html_sec.append(f'<div class="pa-sec pa-{clase}"><div class="pa-et">{ETQ.get(nom, nom)}</div>{cuerpo}</div>')
+        if salidas:      # código sin sección de resultado: la salida va al final
+            html_sec.append(f'<div class="pa-sec pa-res"><div class="pa-et">{ETQ["Resultado"]}</div>{"".join(salidas)}</div>')
+        rep_html = ""
+        if repasos:
+            rep_html = ('<div class="pa-repaso"><span>📚 Repasa:</span> '
+                        + " ".join(self.md_inline(f"[[{r}]]") for r in repasos) + "</div>")
+        return (f'<article class="pastilla pa-{estado}" id="{id_}"><header class="pa-cab">'
+                f'<span class="pa-num">Paso {n}</span><span class="pa-estado">{ico} {etiqueta}</span>'
+                f'<h3 class="pa-titulo">{self.md_inline(titulo)}</h3></header>'
+                f'<div class="pa-cuerpo">{"".join(html_sec)}{rep_html}</div></article>')
 
     def num_actual(self):
         return f"{self.sec}.{self.sub}" if self.sub else str(self.sec)
@@ -803,6 +904,8 @@ def construir(clave, externos):
     SALIDA = RAIZ / cfg["salida"]
     doc = Documento()
     archivos = sorted((AQUI / cfg["carpeta"]).glob("*.md"))
+    if not archivos:
+        sys.exit(f"No hay archivos .md en {cfg['carpeta']}")
     cuerpo = []
     for a in archivos:
         cuerpo.append(doc.render(doc.parsear(a.read_text(encoding="utf-8").splitlines())))
@@ -864,7 +967,8 @@ def construir(clave, externos):
     # ---- índice lateral y mapa ----
     toc = []
     for s in doc.toc:
-        subs = "".join(f'<li><a href="#{x["id"]}" data-id="{x["id"]}"><span class="t-num">{x["num"]}</span>'
+        clase_li = lambda x: f' class="t-pa t-{x["estado"]}"' if x.get("estado") else ""
+        subs = "".join(f'<li{clase_li(x)}><a href="#{x["id"]}" data-id="{x["id"]}"><span class="t-num">{x["num"]}</span>'
                        f'{titulo_html(x["titulo"])}</a></li>' for x in s["subs"])
         toc.append(f'<li class="t-sec" data-seccion="{s["id"]}"><a href="#{s["id"]}" data-id="{s["id"]}">'
                    f'<span class="t-num">{s["num"]}</span>{titulo_html(s["titulo"])}'
@@ -874,6 +978,16 @@ def construir(clave, externos):
         f'<span class="mapa-titulo">{titulo_html(m["titulo"])}</span><span class="mapa-texto">{html.escape(m["texto"])}</span></a>'
         for m in doc.mapa)
     html_cuerpo = html_cuerpo.replace("@@MAPA@@", mapa)
+    # Mapa de pasos del Laboratorio: una ficha por pastilla, con su color
+    fases = []
+    for s in doc.toc:
+        ps = [p for p in doc.pastillas if p["fase"] == s["id"]]
+        if ps:
+            fichas = "".join(f'<a class="paso-ficha pf-{p["estado"]}" href="#{p["id"]}" title="{html.escape(titulo_html(p["titulo"]), quote=True)}">'
+                             f'<b>{p["n"]}</b><span>{titulo_html(p["titulo"])}</span></a>' for p in ps)
+            fases.append(f'<div class="pasos-fase"><div class="pasos-fase-cab"><span class="mapa-num">{s["num"]}</span>'
+                         f'{titulo_html(s["titulo"])}</div><div class="pasos-fichas">{fichas}</div></div>')
+    html_cuerpo = html_cuerpo.replace("@@PASOS@@", "".join(fases))
 
     # ---- validación de símbolos ----
     usados = set(re.findall(r'data-tip="([^"]+)"', html_cuerpo))
@@ -882,13 +996,18 @@ def construir(clave, externos):
         doc.errores.append("Claves de glosario sin definir: " + ", ".join(faltan))
 
     plantilla = (AQUI / "plantilla.html").read_text(encoding="utf-8")
+    activo = cfg.get("nav_activo", clave)
     nav = "".join(
-        (f'<a class="unidad activa" href="#inicio">{c["nombre"]}</a>' if k == clave else f'<a class="unidad" href="{c["salida"]}">{c["nombre"]}</a>')
-        for k, c in UNIDADES.items())
+        (f'<a class="unidad activa" href="{"#inicio" if k == clave else c["salida"]}">{c["nombre"]}</a>' if k == activo
+         else f'<a class="unidad" href="{c["salida"]}">{c["nombre"]}</a>')
+        for k, c in UNIDADES.items() if c.get("en_nav", True))
     scripts = "\n".join(f'<script src="{x}" defer></script>' for x in cfg["scripts"])
     final = (plantilla.replace("{{INDICE}}", "\n".join(toc))
              .replace("{{TITULO_PAGINA}}", cfg["titulo_pagina"]).replace("{{DESCRIPCION}}", cfg["descripcion"])
-             .replace("{{NAV}}", nav).replace("{{UNIDAD}}", clave).replace("{{NUMERO}}", cfg["numero"])
+             .replace("{{NAV}}", nav).replace("{{UNIDAD}}", clave)
+             .replace("{{INDICE_TITULO}}", cfg.get("indice_titulo", f'Índice de la Unidad {cfg["numero"]}'))
+             .replace("{{PIE}}", cfg.get("pie", f'Guía de estudio · Análisis de Series de Tiempo · Unidad {cfg["numero"]}. Las gráficas se calculan en tu navegador con las mismas fórmulas que usa <code>statsmodels</code>.'))
+             .replace("{{NUMERO}}", cfg["numero"])
              .replace("{{SCRIPTS}}", scripts)
              .replace("{{DATOS}}", json.dumps(doc.exportados, ensure_ascii=False).replace("</", "<\\/"))
              .replace("{{CONTENIDO}}", html_cuerpo)
@@ -900,7 +1019,7 @@ def construir(clave, externos):
     print(f"✓ {SALIDA.relative_to(RAIZ)}: {len(final) / 1024:.0f} KB · {len(doc.math)} fórmulas · "
           f"{len(doc.toc)} secciones · {doc.n_ejercicio} ejercicios · {len(usados)} símbolos explicados")
     sin_uso = sorted(set(glosario) - usados)
-    if sin_uso:
+    if sin_uso and not clave.startswith("lab"):
         print("  (claves de glosario sin usar: " + ", ".join(sin_uso) + ")")
     if doc.errores:
         print("\n".join("✗ " + e for e in doc.errores))

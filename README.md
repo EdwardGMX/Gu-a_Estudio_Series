@@ -1,12 +1,13 @@
 # Guía de estudio · Análisis de Series de Tiempo
 
-Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. Tiene tres unidades, cada una en su propia página y con un menú arriba para cambiar de una a otra:
+Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. Tiene tres unidades y un Laboratorio, cada uno en su propia página y con un menú arriba para cambiar de uno a otro:
 
 | Página | Unidad |
 |---|---|
 | `index.html` | **Unidad I · Características de series de tiempo** |
 | `unidad2.html` | **Unidad II · Procesos lineales en tiempo discreto: AR, MA, ARMA, ARIMA, SARIMA y SARIMAX** |
 | `unidad3.html` | **Unidad III · Análisis espectral y filtrado** |
+| `laboratorio.html` | **Laboratorio · análisis completos con datasets reales** |
 
 ## Qué incluye
 
@@ -38,6 +39,15 @@ Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. T
 - **70 ejercicios** en 8 bloques (básicos, intermedios y retos), con respuesta explicada y enlace al tema.
 - Enlaces **⇠ Unidad I** y **⇠ Unidad II** a lo que ya se estudió (autocovarianza, ruido blanco, AR(2) con raíces complejas, sobrediferenciación…).
 
+### Laboratorio
+
+- **Página de inicio** (`laboratorio.html`) para elegir el dataset. Por ahora está disponible **Manchas solares**; AirPassengers, CO₂ de Mauna Loa, Macroeconomía de EE. UU. y el caudal del Nilo aparecen como «Próximamente».
+- **Manchas solares, 1700–2008** (`lab-manchas-solares.html`): un análisis completo de principio a fin, con introducción, objetivo general y criterios de éxito, **46 pastillas** en 9 fases (exploración y transformación, estacionalidad contra ciclo, estacionariedad, partición y referencias, modelos ARMA/SARIMA/ARIMA, validación cruzada e intervalos, dominio de la frecuencia, filtros y pronóstico final 2009–2030) y **Resultados generales** al final.
+- Cada pastilla dice qué se **aplica** y para qué, explica cada parámetro, tiene un triángulo para **ver el código**, muestra la salida real de Python con su gráfica o tabla, explica qué dicen los valores y decide el siguiente paso.
+- **Prueba y error con colores**: 🔵 exploración, ✅ logrado, 🟡 funciona con reservas, ❌ descartado. Las suposiciones del analista que no resultaron (logaritmo, estacionalidad de 11 años, diferenciar, MAPE, λ = 6.25…) se prueban y se descartan con los resultados.
+- Solo usa pandas, numpy, statsmodels, scipy, statsforecast y scikit-learn; las 43 gráficas y 7 tablas son fijas (calculadas al generar la página). Los números del texto se insertan desde el propio cálculo, así que siempre coinciden con la salida.
+- Enlaces **📚 Repasa** de cada pastilla al tema correspondiente de las unidades.
+
 ### En las tres unidades
 
 - **Explicación de cada símbolo** al pasar el cursor (o tocar) las fórmulas.
@@ -47,8 +57,8 @@ Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. T
 
 ## Cómo verla
 
-- **GitHub Pages**: *Settings → Pages → Build and deployment → Deploy from a branch*, elige la rama `main` y la carpeta `/ (root)`. La Unidad I queda en la dirección principal del sitio, la Unidad II en `.../unidad2.html` y la Unidad III en `.../unidad3.html`.
-- **En tu computadora**: abre `index.html`, `unidad2.html` o `unidad3.html` en el navegador. Necesita internet para cargar KaTeX y Plotly desde el CDN.
+- **GitHub Pages**: *Settings → Pages → Build and deployment → Deploy from a branch*, elige la rama `main` y la carpeta `/ (root)`. La Unidad I queda en la dirección principal del sitio, la Unidad II en `.../unidad2.html`, la Unidad III en `.../unidad3.html` y el Laboratorio en `.../laboratorio.html`.
+- **En tu computadora**: abre `index.html`, `unidad2.html`, `unidad3.html` o `laboratorio.html` en el navegador. Necesita internet para cargar KaTeX y Plotly desde el CDN.
 
 ## Estructura
 
@@ -56,6 +66,8 @@ Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. T
 index.html               Unidad I (generada, no editar a mano)
 unidad2.html             Unidad II (generada, no editar a mano)
 unidad3.html             Unidad III (generada, no editar a mano)
+laboratorio.html         inicio del Laboratorio (generada)
+lab-manchas-solares.html flujo de Manchas solares (generada)
 assets/css/estilos.css   diseño
 assets/js/ts.js          cálculos de la Unidad I (ACF, PACF, ADF, KPSS, Ljung–Box…)
 assets/js/ts2.js         cálculos de la Unidad II (polinomios y raíces, ACF/PACF teóricas, simulación
@@ -68,9 +80,11 @@ assets/js/ui.js          explicación de símbolos, enlaces, índice, ejemplos g
 assets/js/widgets.js     gráficas de la Unidad I y utilidades comunes
 assets/js/widgets2.js    gráficas y simuladores de la Unidad II
 assets/js/widgets3.js    gráficas y simuladores de la Unidad III
+assets/js/lab.js         gráficas y tablas fijas del Laboratorio
 fuente/unidad1/*.md      texto de la Unidad I (Markdown + fórmulas)
 fuente/unidad2/*.md      texto de la Unidad II
 fuente/unidad3/*.md      texto de la Unidad III
+fuente/laboratorio/      texto del Laboratorio (inicio/ y un folder por dataset)
 fuente/glosario.json     explicación de cada símbolo (compartido)
 fuente/plantilla.html    plantilla de las páginas
 fuente/cache/            resultados guardados de los cálculos de Python más lentos
@@ -82,10 +96,13 @@ fuente/build.py          genera las páginas
 ```bash
 pip install markdown-it-py pygments numpy pandas scipy statsmodels scikit-learn matplotlib arch statsforecast utilsforecast
 cd fuente && npm install && cd ..
-python3 fuente/build.py          # las tres unidades
-python3 fuente/build.py u3       # solo la Unidad III (u1, u2 o u3)
+python3 fuente/build.py              # todo
+python3 fuente/build.py u3           # solo la Unidad III (u1, u2 o u3)
+python3 fuente/build.py lab-manchas  # solo el flujo de Manchas solares (lab = inicio del Laboratorio)
 ```
 
 Los bloques de Python marcados con `cache` (rejillas de modelos, validación con origen móvil, el caso de usuarios) se ejecutan una vez y su resultado se guarda en `fuente/cache/`; si cambias su código se vuelven a ejecutar. Los enlaces entre unidades (⇠ Unidad I, ⇠ Unidad II) usan `fuente/cache/anclas_u1.json`, `anclas_u2.json` y `anclas_u3.json`, que se actualizan cada vez que se genera la unidad correspondiente.
 
-Los datos de la Unidad III vienen de `statsmodels.datasets` (manchas solares, El Niño, CO₂ y macrodata), así que no hace falta internet para generarla.
+En el Laboratorio, cada paso es un bloque `:::pastilla estado | título | enlaces` con secciones `@@ Parámetros`, `@@ Código`, `@@ Resultado`, `@@ Lectura` y `@@ Decisión`; el estado (`azul`, `verde`, `amarillo` o `rojo`) da el color. Dentro del texto, `{{=expresión|formato}}` inserta un valor calculado por el código de Python.
+
+Los datos de la Unidad III y del Laboratorio vienen de `statsmodels.datasets` (manchas solares, El Niño, CO₂ y macrodata), así que no hace falta internet para generarla.
