@@ -136,9 +136,39 @@ Elige el modelo y cómo calcular el RMSE y la escala del MASE. El código y la s
 - La **escala** del MASE cambia mucho el resultado: con el ingenuo simple ($m = 1$) y con el estacional ($m = 12$). Con datos estacionales se recomienda el estacional.
 :::
 
+### Comparar contra las referencias con utilsforecast {#metricas-ref}
+
+Ya con todas las métricas, la comparación del inicio de la unidad [[ref-evaluar]] se completa: las cuatro referencias, la referencia compuesta STL + deriva [[ref-transformadas]] y el SARIMA de aerolínea, con MAE, RMSE, MAPE y MASE. La función `evaluate` de `utilsforecast` calcula todo en una tabla.
+
+```python
+from functools import partial
+from utilsforecast.losses import mape, mase
+
+res_sf["Aerolinea"] = np.exp(ajuste_def.get_forecast(12).predicted_mean.values)      # SARIMA de aerolínea
+todos = modelos_ref + ["STL_deriva", "Aerolinea"]
+ev_sf = evaluate(res_sf, metrics=[mae, rmse, mape, partial(mase, seasonality=12)], models=todos, train_df=train_df)
+ev_sf.loc[ev_sf["metric"] == "mape", todos] *= 100                   # proporción → %
+print(ev_sf.drop(columns="unique_id").set_index("metric").round(2))
+```
+
+| Modelo | MAE | RMSE | MAPE | MASE |
+|---|---|---|---|---|
+| Promedio histórico | 213.67 | 226.27 | 43.62% | 7.02 |
+| Ingenuo | 76.00 | 102.98 | 14.25% | 2.50 |
+| Ingenuo estacional | 47.83 | 50.71 | 9.99% | 1.57 |
+| Deriva | 66.31 | 92.67 | 12.42% | 2.18 |
+| STL + deriva (log) | 14.00 | 17.94 | 3.05% | 0.46 |
+| SARIMA de aerolínea | **13.26** | **18.59** | **2.90%** | **0.44** |
+
+Contra el ingenuo estacional, el modelo de aerolínea reduce el error a menos de la tercera parte. Contra la referencia compuesta, la ventaja es **pequeña**: 13.26 contra 14.00 de MAE, y por RMSE la referencia incluso gana. La conclusión honesta incluye las dos frases. El SARIMA aporta sobre todo lo que una referencia no da: un modelo con parámetros interpretables, diagnóstico de residuos e intervalos con base teórica [[caso-ap-conclusion]].
+
+:::cuidado `mape` de utilsforecast devuelve una proporción
+Igual que en scikit-learn [[metricas-python]], `utilsforecast.losses.mape` devuelve 0.0999, no 9.99. Por eso se multiplica por 100 la fila de `mape`. Y `mase` necesita el argumento `seasonality` (con `functools.partial`) y el `train_df` para calcular la escala; sin ellos lanza `TypeError`.
+:::
+
 :::resumen Lo que debes llevarte de las métricas
 - MAE (interpretable), MSE/RMSE (castigan errores grandes; $\RMSE \ge \MAE$), MAPE/sMAPE (porcentaje; cuidado con ceros), MASE (contra el ingenuo; < 1 = mejor que el ingenuo).
 - Calcula las métricas en la **escala original** (pasajeros), no en logaritmos.
 - En scikit-learn reciente: `root_mean_squared_error`; `mean_absolute_percentage_error` devuelve proporción.
-- Reporta varias métricas y siempre la del ingenuo como referencia.
+- Reporta varias métricas y siempre la de la **mejor** referencia [[referencia]]; con `utilsforecast.evaluation.evaluate` sale todo en una tabla (`mape` devuelve proporción).
 :::

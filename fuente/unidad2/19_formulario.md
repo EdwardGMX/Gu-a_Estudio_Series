@@ -37,6 +37,11 @@
 | Referencias | promedio $\bar{y}$; ingenuo $y_T$; estacional $y_{T+h-m(k+1)}$, $k = \lfloor (h-1)/m \rfloor$; deriva $y_T + h\frac{y_T - y_1}{T - 1}$ | [[ref-metodos]] |
 | Bandas de las referencias | $\hat{y} \pm c\,\hat{\sigma}_h$: $\hat{\sigma}\sqrt{1 + 1/T}$, $\hat{\sigma}\sqrt{h}$, $\hat{\sigma}\sqrt{k + 1}$, $\hat{\sigma}\sqrt{h(1 + h/(T-1))}$; $c = 1.28,\ 1.645,\ 1.96$ | [[ref-intervalos]] |
 | Residuales del ingenuo | $e_t = \Delta y_t$, $\bar{e} = \frac{y_T - y_1}{T - 1} = b$ | [[demo-ref-media-res]] |
+| Error de pronóstico | $e = y - \hat{y}$ en la prueba; $\mathrm{MAE} = \frac1n\sum\lvert e\rvert$, $\mathrm{RMSE} = \sqrt{\frac1n\sum e^2}$ | [[ref-pronosticar]] |
+| Ventanas | promedio de ventana $\frac1k\sum_{j=0}^{k-1} y_{T-j}$; estacional de ventana $\frac1k\sum_{j=0}^{k-1} y_{T+h-m(j+1)}$ | [[ref-ventanas]] |
+| Suavizamiento exponencial | $\ell_t = \alpha y_t + (1 - \alpha)\ell_{t-1}$, $\ell_1 = y_1$, $\hat{y}_{T+h} = \ell_T$; peso de $y_{T-j}$: $\alpha(1-\alpha)^j$ | [[demo-ref-ses-pesos]] |
+| Referencias en logaritmo | ingenuo y estacional: mismo pronóstico puntual; deriva: $\hat{y}_{T+h} = y_T\,g^h$, $g = (y_T/y_1)^{1/(T-1)}$ | [[demo-ref-log]] |
+| Referencia por descomposición | $\hat{y}_{T+h} = \exp(\hat{A}_{T+h} + \hat{S}_{T+h})$: deriva en $A_t$, ingenuo estacional en $S_t$ | [[ref-transformadas]] |
 
 ### Tabla de pruebas sobre los residuos {#tabla-pruebas2}
 
@@ -103,6 +108,9 @@ La guía oficial propone este flujo:
 - [ ] Explicar entrenamiento/validación/prueba, un paso contra varios pasos y el origen móvil.
 - [ ] Calcular a mano MAE, RMSE, MAPE, sMAPE y MASE y saber cuál conviene.
 - [ ] Calcular a mano los pronósticos del promedio, el ingenuo, el estacional y la deriva, y decir qué ARIMA es cada uno.
+- [ ] Calcular a mano el MAE y el RMSE de varias referencias en la prueba y explicar por qué pueden ordenarlas distinto.
+- [ ] Calcular el promedio de ventana, el promedio estacional de ventana y el suavizamiento exponencial, y saber en qué casos se convierten en el ingenuo, el promedio o el estacional.
+- [ ] Elegir la referencia adecuada para una serie (árbol de decisión) y construir la referencia por descomposición cuando hay tendencia y estacionalidad.
 - [ ] Calcular los residuales y las bandas de 80% y 95% de una referencia, y explicar por qué crecen con $h$ (o no).
 - [ ] Escribir el flujo de statsforecast: formato `unique_id, ds, y`, `forecast` con `level` y `fitted=True`, `forecast_fitted_values`, `evaluate` y `cross_validation`.
 - [ ] Redactar la conclusión completa de un caso práctico.

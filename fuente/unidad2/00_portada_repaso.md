@@ -9,6 +9,7 @@
 <div class="tarjeta"><h3>🎨 Cada color es un tipo de bloque</h3><div class="leyenda"><span style="background:var(--lavanda-f);border-color:var(--lavanda)">📘 Definición</span><span style="background:var(--mantequilla-f);border-color:var(--mantequilla)">💡 Intuición</span><span style="background:var(--celeste-f);border-color:var(--celeste)">🔍 Demostración</span><span style="background:var(--durazno-f);border-color:var(--durazno)">✍️ Ejemplo a mano</span><span style="background:var(--rosa-f);border-color:var(--rosa)">🎛️ Interactivo</span><span style="background:var(--coral-f);border-color:var(--coral)">⚠️ Cuidado</span><span style="background:var(--turquesa-f);border-color:var(--turquesa)">💬 Duda frecuente</span><span style="background:var(--verde-f);border-color:var(--verde)">✅ Resumen</span></div></div>
 </div>
 <div class="ruta">
+<div class="ruta-paso"><b>0 · Poner la vara</b><span>Pronosticar con las referencias más simples y medir su error: lo que todo modelo debe superar.</span></div>
 <div class="ruta-paso"><b>1 · Identificar</b><span>Transformar, diferenciar y leer ACF/PACF para proponer p, d, q, P, D, Q.</span></div>
 <div class="ruta-paso"><b>2 · Estimar</b><span>Máxima verosimilitud; comparar candidatos con AIC y BIC.</span></div>
 <div class="ruta-paso"><b>3 · Diagnosticar</b><span>Los residuos deben parecer ruido blanco: Ljung–Box, Jarque–Bera, ARCH-LM.</span></div>

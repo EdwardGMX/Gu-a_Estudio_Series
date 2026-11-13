@@ -548,6 +548,22 @@
     return { A, ...out };
   };
 
+  // Más referencias de statsforecast: WindowAverage, SeasonalWindowAverage y SES (ℓ_1 = y_1)
+  T2.refVentana = (y, h, k) => {
+    const T = y.length, w = y.slice(T - k), v = w.reduce((a, b) => a + b, 0) / k;
+    return new Array(h).fill(v);
+  };
+  T2.refVentanaEst = (y, h, m, k) => {
+    const T = y.length, temp = [];
+    for (let i = 0; i < m; i++) {
+      let s = 0;
+      for (let j = 0; j < k; j++) s += y[T - m + i - m * j];
+      temp.push(s / k);
+    }
+    return Array.from({ length: h }, (_, j) => temp[j % m]);
+  };
+  T2.refSES = (y, h, alpha) => new Array(h).fill(T2.ses(y, alpha).nivel);
+
   if (typeof module !== 'undefined' && module.exports) module.exports = T2;
   else global.TS2 = T2;
 })(typeof window !== 'undefined' ? window : globalThis);

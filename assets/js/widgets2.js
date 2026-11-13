@@ -1771,6 +1771,123 @@
     dibujar();
   });
 
+  // Ventanas y suavizamiento exponencial: la perilla de la memoria
+  const VEN_ES = { wa: 'Promedio de ventana', swa: 'Promedio estacional de ventana', ses: 'Suavizamiento exponencial' };
+  R('w2-ref-ventanas', c => {
+    const ctr = lienzo(c);
+    const se = seleccion(ctr, { etiqueta: 'Serie', valor: 'estable', opciones: opcionesSerieRef() }, () => { ajustar(true); dibujar(); });
+    const me = segmentado(ctr, { etiqueta: 'Método', valor: 'wa', opciones: [['wa', 'WindowAverage'], ['swa', 'SeasonalWindowAverage'], ['ses', 'SES']] }, () => { ajustar(true); dibujar(); });
+    const ps = slider(ctr, { etiqueta: 'window_size k', min: 1, max: 32, paso: 1, valor: 4 }, dibujar);
+    const g1 = lamina(c), g2 = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: el peso de cada dato pasado en el pronóstico'), gx = lamina(ex), lx = lectura(ex);
+    function datos() {
+      const S = SERIES_REF[se.get()], n = S.y.length;
+      return { S, tr: S.y.slice(0, n - S.h), te: S.y.slice(n - S.h), xt: S.x.slice(0, n - S.h), xf: S.x.slice(n - S.h) };
+    }
+    function ajustar(reinicio) {
+      const { S, tr } = datos(), k = me.get(), T = tr.length;
+      if (k === 'ses') ps.config({ min: 0.01, max: 1, paso: 0.01, valor: reinicio ? 0.3 : ps.get(), etiqueta: 'alpha α', fmt: v => v.toFixed(2) });
+      else if (k === 'wa') ps.config({ min: 1, max: T, paso: 1, valor: reinicio ? Math.min(S.m, T) : ps.get(), etiqueta: 'window_size k', fmt: v => v });
+      else ps.config({ min: 1, max: Math.floor(T / S.m), paso: 1, valor: reinicio ? Math.min(2, Math.floor(T / S.m)) : ps.get(), etiqueta: `window_size k (temporadas de m = ${S.m})`, fmt: v => v });
+    }
+    const pron = (k, tr, h, m, v) => k === 'wa' ? T2.refVentana(tr, h, v) : k === 'swa' ? T2.refVentanaEst(tr, h, m, v) : T2.refSES(tr, h, v);
+    const maeDe = (te, p) => TS.media(te.map((v, i) => Math.abs(v - p[i])));
+    function dibujar() {
+      const { S, tr, te, xt, xf } = datos(), k = me.get(), v = ps.get(), h = te.length, T = tr.length;
+      const p = pron(k, tr, h, S.m, v), P = T2.refPronostico(tr, h, { m: S.m });
+      const base = {}; REF_K.forEach(j => { base[j] = maeDe(te, P[j].media); });
+      const desde = Math.max(0, T - Math.max(4 * S.m, 40));
+      graf(g1, [lin(xt.slice(desde), tr.slice(desde), '#45397a', 'entrenamiento', { line: { color: '#45397a', width: 1.4 } }),
+        { x: xf, y: te, mode: 'markers', marker: { color: PAL.menta, size: 7, line: { color: '#fff', width: 1 } }, name: 'prueba (real)' },
+        lin(xf, P.sn.media, PAL.rosa, 'ingenuo estacional', { line: { color: PAL.rosa, width: 1.6, dash: 'dot' } }),
+        lin(xf, p, PAL.lav, VEN_ES[k], { line: { color: PAL.lav, width: 3 } })],
+      { height: 300, title: { text: `${S.nombre}: ${VEN_ES[k]} (${k === 'ses' ? 'α = ' + v.toFixed(2) : 'k = ' + v})` }, legend: { orientation: 'h', y: -0.2 } });
+      const grid = k === 'ses' ? rango(100, 1).map(i => i / 100) : rango(k === 'wa' ? T : Math.floor(T / S.m), 1);
+      const curva = grid.map(g => maeDe(te, pron(k, tr, h, S.m, g)));
+      const ib = curva.indexOf(Math.min(...curva)), x0 = grid[0], x1 = grid[grid.length - 1];
+      const tr2 = [lin(grid, curva, PAL.lav, 'MAE en la prueba', { line: { color: PAL.lav, width: 2.4 } }),
+        { x: [v], y: [maeDe(te, p)], mode: 'markers', marker: { color: PAL.lav, size: 12, line: { color: '#fff', width: 2 } }, name: 'valor actual' }]
+        .concat(REF_K.map(j => hline(x0, x1, base[j], REF_COL[j], j === 'sn' ? 'dot' : 'dash', REF_ES[j])));
+      graf(g2, tr2, { height: 270, title: { text: `MAE en la prueba para cada ${k === 'ses' ? 'α' : 'k'}` }, xaxis: { title: { text: k === 'ses' ? 'α' : 'k' } }, yaxis: { rangemode: 'tozero' }, legend: { orientation: 'h', y: -0.3 } });
+      const m0 = maeDe(te, p), mejorBase = REF_K.slice().sort((a, b) => base[a] - base[b])[0];
+      let eq = '';
+      if (k === 'wa' && v === 1) eq = ' Con k = 1 es exactamente el <b>ingenuo</b>.';
+      else if (k === 'wa' && v === T) eq = ' Con k = T es exactamente el <b>promedio histórico</b>.';
+      else if (k === 'swa' && v === 1) eq = ' Con k = 1 es exactamente el <b>ingenuo estacional</b>.';
+      else if (k === 'ses' && v >= 0.995) eq = ' Con α = 1 es exactamente el <b>ingenuo</b>.';
+      else if (k === 'ses' && v <= 0.05) eq = ' Con α tan chico el nivel casi no se mueve de y<sub>1</sub>: no es el promedio.';
+      lec.className = 'w-lectura ' + (m0 <= base[mejorBase] ? 'ok' : '');
+      lec.innerHTML = `MAE = <b>${fmt(m0, 2)}</b> con ${k === 'ses' ? 'α = ' + v.toFixed(2) : 'k = ' + v}. El mejor valor en esta prueba es ${k === 'ses' ? 'α = ' + grid[ib].toFixed(2) : 'k = ' + grid[ib]} (MAE ${fmt(curva[ib], 2)}). ` +
+        `La mejor referencia básica es ${REF_ES[mejorBase]} (MAE ${fmt(base[mejorBase], 2)}): ${m0 <= base[mejorBase] ? 'este método le gana.' : 'este método no le gana.'}` + eq +
+        ' ⚠ Elegir k o α mirando la prueba es hacer trampa: en la práctica se eligen con el entrenamiento o con validación cruzada.';
+      const N = Math.min(T, Math.max(3 * S.m, 24)), lags = rango(N), w = lags.map(j => {
+        if (k === 'wa') return j < v ? 1 / v : 0;
+        if (k === 'swa') return (j + 1) % S.m === 0 && (j + 1) / S.m <= v ? 1 / v : 0;
+        return j < T - 1 ? v * Math.pow(1 - v, j) : Math.pow(1 - v, T - 1);
+      });
+      graf(gx, [{ type: 'bar', x: lags, y: w, marker: { color: PAL.lav }, hovertemplate: 'y<sub>T−%{x}</sub>: peso %{y:.4f}<extra></extra>' }],
+        { height: 240, title: { text: 'Peso de y<sub>T−j</sub> en el pronóstico de T + 1' }, xaxis: { title: { text: 'j (periodos hacia atrás)' } }, showlegend: false });
+      lx.innerHTML = k === 'wa' ? `Los últimos ${v} datos pesan lo mismo (1/${v} = ${fmt(1 / v, 4)}) y los demás nada: un corte de golpe.`
+        : k === 'swa' ? `Solo pesan los datos del mismo periodo de la temporada (cada ${S.m}), ${v} de ellos con peso 1/${v}.`
+          : `Pesos α(1 − α)<sup>j</sup>: el último dato pesa ${fmt(v, 2)}, el penúltimo ${fmt(v * (1 - v), 3)}. La mitad del peso está en los últimos ${Math.max(1, Math.ceil(Math.log(0.5) / Math.log(1 - Math.min(v, 0.9999))))} datos.`;
+    }
+    ajustar(true);
+    dibujar();
+  });
+
+  // Referencias con logaritmo y con descomposición (AirPassengers, prueba 1960)
+  const TRF_ES = { n: 'Ingenuo', sn: 'Ingenuo estacional', rwd: 'Deriva', stld: 'STL + deriva', stln: 'STL + ingenuo' };
+  function pronTransformado(k, log, nivel) {
+    const tr = AP.slice(0, 132), z = log ? tr.map(Math.log) : tr, h = 12, back = log ? Math.exp : (v => v);
+    let media, lo, hi;
+    if (k === 'stld' || k === 'stln') {
+      const D = TS.stl(z, 12, { robust: true }), A = z.map((v, i) => v - D.seasonal[i]), Sf = D.seasonal.slice(-12);
+      const P = T2.refPronostico(A, h, { m: 1, niveles: [nivel] }), F = P[k === 'stld' ? 'rwd' : 'n'];
+      media = F.media.map((v, i) => v + Sf[i]); lo = F.bandas[nivel].lo.map((v, i) => v + Sf[i]); hi = F.bandas[nivel].hi.map((v, i) => v + Sf[i]);
+    } else {
+      const P = T2.refPronostico(z, h, { m: 12, niveles: [nivel] }), F = P[k];
+      media = F.media; lo = F.bandas[nivel].lo; hi = F.bandas[nivel].hi;
+    }
+    return { media: media.map(back), lo: lo.map(back), hi: hi.map(back) };
+  }
+  R('w2-ref-transformar', c => {
+    const ctr = lienzo(c);
+    const me = segmentado(ctr, { etiqueta: 'Referencia', valor: 'sn', opciones: Object.keys(TRF_ES).map(k => [k, TRF_ES[k]]) }, dibujar);
+    const es = segmentado(ctr, { etiqueta: 'Escala', valor: 'orig', opciones: [['orig', 'original'], ['log', 'logaritmo']] }, dibujar);
+    const nv = segmentado(ctr, { etiqueta: 'Banda', valor: '80', opciones: [['80', '80%'], ['95', '95%']] }, dibujar);
+    const g = lamina(c), lec = lectura(c);
+    const ex = extra(c, 'Vista extra: las diez combinaciones en una tabla'), tx = el('div', { class: 'w-tabla' });
+    ex.append(tx);
+    const te = AP.slice(132), xf = FECHAS_AP.slice(132);
+    const medir = F => {
+      const e = te.map((v, i) => v - F.media[i]);
+      return { mae: TS.media(e.map(Math.abs)), rmse: Math.sqrt(TS.media(e.map(v => v * v))), dentro: te.filter((v, i) => v >= F.lo[i] && v <= F.hi[i]).length, neg: F.lo.some(v => v < 0) };
+    };
+    function dibujar() {
+      const k = me.get(), log = es.get() === 'log', nivel = +nv.get(), F = pronTransformado(k, log, nivel), M = medir(F);
+      graf(g, [bandaTr(xf, F.lo, F.hi, 'rgba(124,105,214,.22)', 'banda de ' + nivel + '%'),
+        lin(FECHAS_AP.slice(96, 132), AP.slice(96, 132), '#45397a', 'entrenamiento (1957–1959)', { line: { color: '#45397a', width: 1.5 } }),
+        lin(xf, F.media, PAL.lav, TRF_ES[k] + (log ? ' (log)' : ''), { line: { color: PAL.lav, width: 2.8 } }),
+        { x: xf, y: te, mode: 'markers', marker: { color: PAL.menta, size: 7, line: { color: '#fff', width: 1 } }, name: 'real 1960' }],
+      { height: 330, title: { text: `${TRF_ES[k]} en escala ${log ? 'logarítmica' : 'original'}` }, legend: { orientation: 'h', y: -0.18 } });
+      const arriba = F.hi[0] - F.media[0], abajo = F.media[0] - F.lo[0];
+      lec.className = 'w-lectura ' + (M.mae < 20 ? 'ok' : '');
+      lec.innerHTML = `MAE = <b>${fmt(M.mae, 2)}</b> · RMSE = ${fmt(M.rmse, 2)} · cobertura de la banda: <b>${M.dentro} de 12</b> (promete ${nivel}%). ` +
+        `En enero la banda se abre ${fmt(abajo, 1)} hacia abajo y ${fmt(arriba, 1)} hacia arriba${log ? ': asimétrica, por la exponencial.' : ': simétrica.'} ` +
+        (k === 'n' || k === 'sn' ? (log ? 'El pronóstico puntual es el mismo que en la escala original: copiar un dato y regresar con exp da el mismo dato.' : 'Cambia a logaritmo: el pronóstico puntual no se moverá, solo la banda.') : '') +
+        (k === 'rwd' ? (log ? ' La deriva en log es crecimiento porcentual: sube un poco más rápido que la recta.' : ' La deriva en la escala original sube 2.24 pasajeros por mes.') : '') +
+        (k.startsWith('stl') ? ' La descomposición ve las dos cosas: el patrón (ingenuo estacional sobre S) y el nivel (' + (k === 'stld' ? 'deriva' : 'ingenuo') + ' sobre la desestacionalizada).' : '');
+      const filas = [], clases = [];
+      Object.keys(TRF_ES).forEach(j => ['orig', 'log'].forEach(e => {
+        const Fj = pronTransformado(j, e === 'log', nivel), Mj = medir(Fj);
+        filas.push([TRF_ES[j], e === 'log' ? 'logaritmo' : 'original', fmt(Mj.mae, 2), fmt(Mj.rmse, 2), `${Mj.dentro} de 12`]);
+        clases.push(j === k && (e === 'log') === log ? 'elegido' : '');
+      }));
+      tx.innerHTML = tablaHTML(['referencia', 'escala', 'MAE', 'RMSE', `cobertura ${nivel}%`], filas, clases);
+    }
+    dibujar();
+  });
+
   R('w2-ref-cv', c => {
     const ctr = lienzo(c);
     const se = seleccion(ctr, { etiqueta: 'Serie', valor: 'ap', opciones: opcionesSerieRef() }, () => { const S = SERIES_REF[se.get()]; hs.config({ min: 1, max: Math.min(24, S.hMax), paso: 1, valor: Math.min(S.h, 24) }); st.config({ min: 1, max: 24, paso: 1, valor: Math.min(S.h, 24) }); dibujar(); });

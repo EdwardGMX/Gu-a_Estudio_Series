@@ -43,7 +43,7 @@ UNIDADES = {
            "scripts": []},
     "u2": {"carpeta": "unidad2", "salida": "unidad2.html", "numero": "II", "nombre": "Unidad II",
            "titulo_pagina": "Unidad II · Procesos lineales: AR, MA, ARMA, ARIMA y SARIMA(X) — Guía de estudio",
-           "descripcion": "Guía de estudio interactiva de la Unidad II de Análisis de Series de Tiempo: operador rezago, AR, MA, ARMA, ARIMA, SARIMA, SARIMAX, máxima verosimilitud, AIC/BIC, diagnóstico de residuos, ARCH, validación temporal, métricas de pronóstico y modelos de referencia con statsforecast.",
+           "descripcion": "Guía de estudio interactiva de la Unidad II de Análisis de Series de Tiempo: pronósticos de referencia con statsforecast, operador rezago, AR, MA, ARMA, ARIMA, SARIMA, SARIMAX, máxima verosimilitud, AIC/BIC, diagnóstico de residuos, ARCH, validación temporal y métricas de pronóstico.",
            "scripts": ["assets/js/ts2.js", "assets/js/widgets2.js"],
            # En la Unidad II algunos símbolos cambian de significado o aparecen símbolos nuevos
            "renombrar": {"alpha": "alpha-u2", "beta": "beta-x", "xt": "x-exo", "p": "p-ar"},

@@ -199,10 +199,46 @@ Mueve el origen y mira cómo cada modelo pronostica los siguientes 12 meses con 
 - **Vista extra**: la tabla con MAE y MAPE totales de cada modelo.
 :::
 
+### Origen móvil con statsforecast {#ref-cv}
+
+Con las referencias del inicio de la unidad [[ref-statsforecast]], statsforecast hace el origen móvil con una sola llamada: `cross_validation` corta la serie en `n_windows` orígenes, separados `step_size` periodos, y en cada uno pronostica `h` periodos **reajustando** cada método con el pasado de ese origen.
+
+:::definicion Los tres parámetros de `cross_validation`
+- `h`: cuántos periodos se pronostican desde cada corte (el horizonte que interesa).
+- `n_windows`: cuántos cortes. El último termina justo al final de la serie.
+- `step_size`: cada cuántos periodos se mueve el corte. Si `step_size < h`, las ventanas de prueba se **traslapan**; si `step_size = h`, quedan una detrás de otra.
+
+El resultado tiene una fila por fecha pronosticada y ventana, con las columnas `unique_id`, `ds`, `cutoff` (el último dato que vio el método), `y` (el real) y una columna por método.
+:::
+
+```python
+cv_sf = sf.cross_validation(df=df_ap, h=12, n_windows=3, step_size=12)
+print(cv_sf.columns.tolist())
+err_cv = cv_sf[modelos_ref].sub(cv_sf["y"], axis=0).abs()          # |y − ŷ| de cada método
+err_cv["cutoff"] = cv_sf["cutoff"]
+mae_cv = err_cv.groupby("cutoff").mean()                  # MAE de cada ventana
+print(mae_cv.round(2))
+print("Promedio de las 3 ventanas:\n", mae_cv.mean().round(2).to_string())
+```
+
+:::interactivo w2-ref-cv | Validación cruzada de las referencias {#w-ref-cv}
+Reproduce `cross_validation(df, h, n_windows, step_size)` con los cuatro métodos básicos.
+@@@
+- **Arriba**: la serie con cada ventana de prueba sombreada y su corte (`cutoff`) marcado. Los pronósticos de la ventana elegida se dibujan encima.
+- **Abajo**: el MAE de cada método en cada ventana y su promedio. Un método que gana en promedio puede perder en alguna ventana.
+- Con `step_size` menor que `h` las ventanas se **traslapan**: los mismos meses se evalúan desde varios cortes.
+- **Vista extra**: la tabla del MAE por ventana, como la que imprime el código de arriba.
+:::
+
+:::cuidado La validación cruzada también necesita los métodos compatibles
+`cross_validation` acepta `level` y `fitted=True` igual que `forecast`, con las mismas restricciones: si mezclas `WindowAverage` o `SeasonalWindowAverage` con `level`, falla todo [[ref-ventanas]]. Y como reajusta en cada corte, con modelos lentos (un SARIMA en cientos de series) conviene empezar con pocas ventanas.
+:::
+
 :::resumen Lo que debes llevarte de la validación
 - Nunca partición aleatoria: entrenamiento → validación → prueba, **en orden**; la prueba se usa una sola vez.
 - Todo lo que se estima (parámetros, $\lambda$, estandarización) se estima solo con el pasado.
 - Un paso usa datos reales hasta $t$; varios pasos usan pronósticos previos; en promedio el error crece con $h$.
 - Estrategias: recursiva (ARIMA), directa (un modelo por horizonte) y MIMO (todos a la vez).
 - El origen móvil da muchos errores honestos y permite comparar modelos parecidos con más confianza que un solo año de prueba.
+- En statsforecast: `cross_validation(df, h, n_windows, step_size)`; la columna `cutoff` dice desde dónde se pronosticó.
 :::

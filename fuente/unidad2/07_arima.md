@@ -47,7 +47,7 @@ Con ARIMA(0,1,0), $y_{t+h} = y_t + \varepsilon_{t+1} + \dots + \varepsilon_{t+h}
 
 $$\hat{y}_{t+h \mid t} = y_t \quad \text{para todo } h$$
 
-El mejor pronóstico es **el último valor observado**. Es el famoso **pronóstico ingenuo** (*naive*), que sirve de referencia para cualquier modelo: si tu modelo no le gana al ingenuo, no está aportando nada [[metricas]]. Las cuatro referencias (promedio, ingenuo, estacional y deriva) se estudian a fondo en [[referencia]].
+El mejor pronóstico es **el último valor observado**: el **pronóstico ingenuo** (*naive*) que usamos como referencia al inicio de la unidad [[ref-metodos]]. Ahora sabemos de dónde sale: es el pronóstico óptimo **si** la serie es un paseo aleatorio. Las otras referencias también son ARIMA pequeños [[ref-arima]].
 
 #### ARIMA(0,1,1) = suavizamiento exponencial simple
 
@@ -143,6 +143,50 @@ Compara la **función de pronóstico** de varios modelos a partir de la misma hi
 - **Vista extra**: las bandas de 95% de cada modelo. Fíjate que en los modelos con diferencias la banda crece sin límite.
 :::
 
+### Las referencias son modelos ARIMA {#ref-arima}
+
+Con la deriva ya entendida, podemos cerrar el círculo con los pronósticos de referencia del inicio de la unidad [[ref-metodos]]: **todos son modelos ARIMA** con cero o un parámetro.
+
+:::demo Los cuatro métodos básicos son modelos ARIMA {#demo-ref-arima}
+:::pasos
+= y_t = c + \varepsilon_t \;\Rightarrow\; \hat{y}_{T+h \mid T} = \E_T[c + \varepsilon_{T+h}] = c, \qquad \hat{c} = \bar{y}
+> **Promedio**: ARIMA(0,0,0) con constante, ruido blanco alrededor de una media. Por mínimos cuadrados (o máxima verosimilitud), la constante estimada es $\bar{y}$.
+= y_t = y_{t-1} + \varepsilon_t \;\Rightarrow\; \hat{y}_{T+h \mid T} = y_T
+> **Ingenuo**: ARIMA(0,1,0), el paseo aleatorio. Los choques futuros valen 0 en promedio [[el-paseo-aleatorio-el-pronóstico-ingenuo]].
+= y_t = y_{t-m} + \varepsilon_t \;\Rightarrow\; \hat{y}_{T+h \mid T} = y_{T+h-m}\ \ (h \le m)
+> **Estacional**: $(1 - L^m)\,y_t = \varepsilon_t$, un ARIMA(0,0,0)(0,1,0)$_m$. Cada mes es un paseo aleatorio propio, que solo se conecta con el mismo mes del año anterior [[sarima]].
+= y_t = c + y_{t-1} + \varepsilon_t \;\Rightarrow\; \hat{y}_{T+h \mid T} = y_T + h\,c, \qquad \hat{c} = \overline{\Delta y} = b
+> **Deriva**: ARIMA(0,1,0) con constante. La constante de un modelo con $d = 1$ es una pendiente [[demo-deriva]], y se estima con el promedio de las diferencias, que es $b$ [[demo-ref-deriva]].
+:::
+Por eso las referencias **no son una categoría aparte**: son los ARIMA más pequeños posibles. Cuando un ARIMA más grande no les gana, la conclusión es que los términos AR y MA adicionales no capturan nada útil. El suavizamiento exponencial simple también es un ARIMA: el (0,1,1) con $\alpha = 1 + \theta$ [[demo-ses]]. El promedio de ventana, en cambio, no corresponde a ningún ARIMA (sus pesos se cortan de golpe en $k$).
+:::
+
+| Referencia | Modelo ARIMA | En statsmodels |
+|---|---|---|
+| Promedio histórico | ARIMA(0,0,0) con constante | `ARIMA(y, order=(0, 0, 0), trend="c")` |
+| Ingenuo | ARIMA(0,1,0) | `ARIMA(y, order=(0, 1, 0))` |
+| Ingenuo estacional | ARIMA(0,0,0)(0,1,0)$_m$ | `ARIMA(y, order=(0, 0, 0), seasonal_order=(0, 1, 0, m))` |
+| Deriva | ARIMA(0,1,0) con constante | `ARIMA(y, order=(0, 1, 0), trend="t")` |
+| Suavizamiento exponencial | ARIMA(0,1,1), $\alpha = 1 + \theta$ | `ARIMA(y, order=(0, 1, 1))` |
+
+Comprobación en Python: statsmodels da exactamente los mismos pronósticos que las fórmulas.
+
+```python
+entrena_ref = serie.iloc[:-12]                      # 1949–1959
+ar_media = ARIMA(entrena_ref, order=(0, 0, 0), trend="c").fit()
+ar_paseo = ARIMA(entrena_ref, order=(0, 1, 0)).fit()
+ar_deriva = ARIMA(entrena_ref, order=(0, 1, 0), trend="t").fit()
+ar_estac = ARIMA(entrena_ref, order=(0, 0, 0), seasonal_order=(0, 1, 0, 12)).fit()
+
+print("ARIMA(0,0,0)+c   :", ar_media.forecast(3).round(2).tolist(), "| ȳ =", round(entrena_ref.mean(), 2))
+print("ARIMA(0,1,0)     :", ar_paseo.forecast(3).round(2).tolist(), "| y_T =", entrena_ref.iloc[-1])
+print("ARIMA(0,1,0)+t   :", ar_deriva.forecast(3).round(2).tolist(),
+      "| b =", round((entrena_ref.iloc[-1] - entrena_ref.iloc[0]) / (len(entrena_ref) - 1), 4))
+print("(0,0,0)(0,1,0)12 :", ar_estac.forecast(3).round(2).tolist(), "| enero-marzo 1959 =", entrena_ref.iloc[-12:-9].tolist())
+```
+
+La deriva estimada por máxima verosimilitud ($2.2366$) coincide con $b = (405 - 112)/131 = 2.2366$ hasta el cuarto decimal.
+
 ### Pronosticar un ARIMA a mano {#arima-pronostico}
 
 :::definicion Receta del pronóstico recursivo
@@ -210,6 +254,8 @@ Usamos la forma MA(∞) $y_{t+h} = \mu + \sum_j \psi_j\,\varepsilon_{t+h-j}$. Pa
 :::
 
 Consecuencias: con $h = 1$ el error es solo $\varepsilon_{t+1}$ y la banda es $\pm 1.96\,\sigma$. En un modelo **estacionario** los $\psi_j$ se apagan y la varianza converge a la de la serie. En un modelo **integrado** los $\psi_j$ no se apagan y la banda crece sin límite.
+
+Las bandas de las referencias [[ref-intervalos]] son casos particulares de esta fórmula. En el ingenuo (paseo aleatorio) todos los $\psi_j = 1$, así que $\sigma_h^2 = h\,\sigma^2$ y la banda crece como $\sqrt{h}$. En el ingenuo estacional $\psi_j = 1$ solo cuando $j$ es múltiplo de $m$ y 0 en los demás, de ahí los escalones de $\sqrt{k + 1}$. La deriva agrega el término $h^2\sigma^2/(T - 1)$ por la incertidumbre de la pendiente, que la fórmula con $\psi$ no incluye porque trata los parámetros como conocidos.
 
 :::guiado Tres bandas de pronóstico calculadas a mano {#guia-bandas}
 | $h$ | Paseo aleatorio ($\sigma = 2$): $\psi_j = 1$ | ARIMA(1,1,0), $\phi = 0.4$, $\sigma = 1$: $\psi_j$ | su $\sum\psi^2$ | AR(1), $\phi = 0.4$, $\sigma = 1$: $\sum\psi^2$ |
