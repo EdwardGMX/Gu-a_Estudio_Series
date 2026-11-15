@@ -1,0 +1,50 @@
+{
+ "lineas": 1048576,
+ "por_estado": {
+  "completa": 231239,
+  "reparada": 44927,
+  "parcial": 135,
+  "ilegible": 7359,
+  "truncada": 16338,
+  "vacía": 748577
+ },
+ "turbinas": [
+  "MV01",
+  "MV02",
+  "MV03",
+  "MV04",
+  "MV05",
+  "MV06"
+ ],
+ "por_turbina": {
+  "MV01|completa": 38373,
+  "MV01|ilegible": 1563,
+  "MV01|parcial": 56,
+  "MV01|reparada": 12146,
+  "MV01|truncada": 417,
+  "MV02|completa": 40807,
+  "MV02|ilegible": 986,
+  "MV02|parcial": 25,
+  "MV02|reparada": 10737,
+  "MV03|completa": 45879,
+  "MV03|ilegible": 441,
+  "MV03|parcial": 5,
+  "MV03|reparada": 4623,
+  "MV03|truncada": 1544,
+  "MV04|completa": 38416,
+  "MV04|ilegible": 2204,
+  "MV04|parcial": 2,
+  "MV04|reparada": 4501,
+  "MV04|truncada": 7432,
+  "MV05|completa": 35776,
+  "MV05|ilegible": 1293,
+  "MV05|parcial": 41,
+  "MV05|reparada": 10064,
+  "MV05|truncada": 5381,
+  "MV06|completa": 31988,
+  "MV06|ilegible": 872,
+  "MV06|parcial": 6,
+  "MV06|reparada": 2856,
+  "MV06|truncada": 1564
+ }
+}

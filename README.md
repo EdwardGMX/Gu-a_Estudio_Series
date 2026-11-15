@@ -56,8 +56,9 @@ Página web interactiva para preparar el ETS de Análisis de Series de Tiempo. C
 
 ### Laboratorio
 
-- **Página de inicio** (`laboratorio.html`) para elegir el dataset. Por ahora está disponible **Manchas solares**; AirPassengers, CO₂ de Mauna Loa, Macroeconomía de EE. UU. y el caudal del Nilo aparecen como «Próximamente».
+- **Página de inicio** (`laboratorio.html`) para elegir el dataset. Están disponibles **Manchas solares** y **Viento (SCADA)**; AirPassengers, CO₂ de Mauna Loa, Macroeconomía de EE. UU. y el caudal del Nilo aparecen como «Próximamente».
 - **Manchas solares, 1700–2008** (`lab-manchas-solares.html`): un análisis completo de principio a fin, con introducción, objetivo general y criterios de éxito, **46 pastillas** en 9 fases (exploración y transformación, estacionalidad contra ciclo, estacionariedad, partición y referencias, modelos ARMA/SARIMA/ARIMA, validación cruzada e intervalos, dominio de la frecuencia, filtros y pronóstico final 2009–2030) y **Resultados generales** al final.
+- **Viento de un aerogenerador, 2019** (`lab-viento.html`): el flujo de trabajo del proyecto con los datos SCADA que dio la profesora (`MV01-MV25_2019.txt`), en **67 pastillas** y 13 fases: reparar el archivo dañado, validación temporal (horario de verano), limpieza (códigos de error, anemómetro apagado, paros), experimento de imputación, EDA (Weibull, Box–Cox, ciclo diario, rosa de los vientos, curva de potencia), descomposición clásica/STL/MSTL, ADF y KPSS, ACF/PACF, espectro, coherencia, preblanqueo y filtros, división 80/20 con validación, modelos de referencia, métricas, ingeniería de características (calendario, rezagos, estadísticos móviles), SARIMA, Holt–Winters, regresión armónica, Ridge, gradient boosting, redes neuronales y un ensamble, métricas preliminares, evaluación en la prueba, diagnóstico de residuos (Ljung–Box, ARCH, GARCH), intervalos del 80% y 95%, conversión a energía, y **Resultados y conclusiones** con limitaciones y trabajo futuro. Tiene 41 gráficas y 6 tablas.
 - Cada pastilla dice qué se **aplica** y para qué, explica cada parámetro, tiene un triángulo para **ver el código**, muestra la salida real de Python con su gráfica o tabla, explica qué dicen los valores y decide el siguiente paso.
 - **Prueba y error con colores**: 🔵 exploración, ✅ logrado, 🟡 funciona con reservas, ❌ descartado. Las suposiciones del analista que no resultaron (logaritmo, estacionalidad de 11 años, diferenciar, MAPE, λ = 6.25…) se prueban y se descartan con los resultados.
 - Solo usa pandas, numpy, statsmodels, scipy, statsforecast y scikit-learn; las 43 gráficas y 7 tablas son fijas (calculadas al generar la página). Los números del texto se insertan desde el propio cálculo, así que siempre coinciden con la salida.
@@ -84,10 +85,12 @@ unidad2.html             Unidad II (generada, no editar a mano)
 unidad3.html             Unidad III (generada, no editar a mano)
 laboratorio.html         inicio del Laboratorio (generada)
 lab-manchas-solares.html flujo de Manchas solares (generada)
+lab-viento.html          flujo del Viento con datos SCADA (generada)
 preguntas-tipo.html      las 21 preguntas de la guía oficial (generada)
 practica.html            simulacro, interpretar salidas y repaso de errores (generada)
 repaso.html              hojas de repaso (generada)
 assets/datos/            banco de ejercicios de cada unidad e índice del buscador (generados)
+assets/datos/viento/     datos SCADA reparados que usa el flujo del Viento (generados con preparar_datos.py)
 assets/css/estilos.css   diseño
 assets/js/ts.js          cálculos de la Unidad I (ACF, PACF, ADF, KPSS, Ljung–Box…)
 assets/js/ts2.js         cálculos de la Unidad II (polinomios y raíces, ACF/PACF teóricas, simulación
@@ -126,6 +129,13 @@ python3 fuente/build.py              # todo
 python3 fuente/build.py u3           # solo la Unidad III (u1, u2 o u3)
 python3 fuente/build.py u1 inicio repaso   # varias páginas (inicio, preguntas, practica, repaso…)
 python3 fuente/build.py lab-manchas  # solo el flujo de Manchas solares (lab = inicio del Laboratorio)
+python3 fuente/build.py lab-viento   # solo el flujo del Viento (tarda unos 4 minutos)
+```
+
+El archivo original del Viento (`MV01-MV25_2019.txt`, 280 MB) **no está en el repositorio**. Los datos que usa el flujo ya están reparados en `assets/datos/viento/`; para volver a generarlos desde el archivo original:
+
+```bash
+python3 fuente/laboratorio/viento/preparar_datos.py ruta/a/MV01-MV25_2019.txt
 ```
 
 Los bloques de Python marcados con `cache` (rejillas de modelos, validación con origen móvil, el caso de usuarios) se ejecutan una vez y su resultado se guarda en `fuente/cache/`; si cambias su código se vuelven a ejecutar. Los enlaces entre unidades (⇠ Unidad I, ⇠ Unidad II) usan `fuente/cache/anclas_u1.json`, `anclas_u2.json` y `anclas_u3.json`, que se actualizan cada vez que se genera la unidad correspondiente.
@@ -140,4 +150,4 @@ Marcas propias del Markdown que usan las páginas nuevas:
 - `@@REPASO:u1@@`: inserta la hoja de repaso de una unidad (sus resúmenes y su formulario).
 - Un `:::resumen` sin id es el resumen de su sección; con `{#id}` pertenece a su subtema y, si este es de profundización, se marca igual en las hojas de repaso.
 
-Los datos de la Unidad III y del Laboratorio vienen de `statsmodels.datasets` (manchas solares, El Niño, CO₂ y macrodata), así que no hace falta internet para generarla.
+Los datos de la Unidad III y del flujo de Manchas solares vienen de `statsmodels.datasets` (manchas solares, El Niño, CO₂ y macrodata), y los del Viento, de `assets/datos/viento/`, así que no hace falta internet para generarlas.

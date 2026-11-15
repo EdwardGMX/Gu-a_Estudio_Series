@@ -107,6 +107,13 @@ UNIDADES = {
                     "scripts": ["assets/js/lab.js"], "indice_titulo": "Flujo · Manchas solares",
                     "pie": "Laboratorio · Manchas solares. Todo el código se ejecuta al generar la página; las gráficas y tablas muestran sus resultados reales.",
                     "reglas": [(r"\\hat\{y\}", "yhat"), (r"\\omega(?![A-Za-z_])", "omega3"), (r"\\lambda(?![A-Za-z])", "lambda-hp")]},
+    "lab-viento": {"carpeta": "laboratorio/viento", "salida": "lab-viento.html", "numero": "Lab",
+                   "nombre": "Laboratorio · Viento en un parque eólico", "en_nav": False, "nav_activo": "lab",
+                   "titulo_pagina": "Laboratorio · Viento de un aerogenerador (SCADA 2019) — Guía de estudio",
+                   "descripcion": "Flujo completo con datos SCADA reales de un parque eólico en 2019: reparación del archivo, validación temporal, limpieza, imputación, análisis exploratorio, descomposición, estacionariedad, espectro, coherencia, modelos de referencia, SARIMA, Holt–Winters, regresión armónica, Ridge, gradient boosting y redes neuronales, con validación, prueba y diagnóstico de residuos.",
+                   "scripts": ["assets/js/lab.js"], "indice_titulo": "Flujo · Viento (SCADA)",
+                   "pie": "Laboratorio · Viento en un parque eólico. Datos SCADA proporcionados en clase. Todo el código se ejecuta al generar la página; las gráficas y tablas muestran sus resultados reales.",
+                   "reglas": [(r"\\hat\{y\}", "yhat"), (r"\\omega(?![A-Za-z_])", "omega3")]},
     # ---------------- Práctica para el examen ----------------
     "preguntas": {"carpeta": "preguntas", "salida": "preguntas-tipo.html", "numero": "", "nombre": "Preguntas tipo",
                   "titulo_pagina": "Preguntas tipo del ETS con respuesta modelo — Guía de estudio",
@@ -128,9 +135,9 @@ UNIDADES = {
                "pie": "Hojas de repaso · Análisis de Series de Tiempo. Se arman con los resúmenes y formularios de cada unidad."},
 }
 # Las páginas que usan datos de otras (anclas, tiempos, resúmenes, ejercicios) se generan después de ellas
-ORDEN_BUILD = ["u1", "u2", "u3", "lab", "lab-manchas", "preguntas", "practica", "repaso", "inicio"]
+ORDEN_BUILD = ["u1", "u2", "u3", "lab", "lab-manchas", "lab-viento", "preguntas", "practica", "repaso", "inicio"]
 DATOS = RAIZ / "assets" / "datos"
-CORTO = {"u1": "U I", "u2": "U II", "u3": "U III", "lab": "Lab", "lab-manchas": "Lab", "preguntas": "Preguntas",
+CORTO = {"u1": "U I", "u2": "U II", "u3": "U III", "lab": "Lab", "lab-manchas": "Lab", "lab-viento": "Lab", "preguntas": "Preguntas",
          "practica": "Práctica", "repaso": "Repaso", "inicio": "Inicio"}
 
 # Estado de cada pastilla del Laboratorio: clase CSS, icono y etiqueta
