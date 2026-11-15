@@ -108,7 +108,7 @@ Simulamos muchos paseos aleatorios (donde $H_0$ es cierta) y calculamos $\tau$ e
 - **Líneas discontinuas**: el crítico de la normal ($-1.645$) y el de Dickey–Fuller. El área del histograma a la izquierda de cada línea es la proporción de rechazos.
 :::
 
-### Dickey–Fuller calculada a mano {#df-mano}
+### Dickey–Fuller calculada a mano {#df-mano .prof}
 
 :::guiado Prueba DF (sin constante) con 10 datos {#guia-df}
 $$y = (3,\; 1,\; 2,\; -1,\; 0,\; -2,\; 1,\; 0,\; 2,\; 1)$$
@@ -485,7 +485,264 @@ print("Solo la primera mitad:"); print(diagnostico(quiebre[:150]))
 
 Con el salto, ADF no rechaza la raíz unitaria y KPSS rechaza la estacionariedad: la lectura conjunta dice «NO estacionaria», aunque cada mitad por separado es ruido blanco perfectamente estacionario. Recomendaciones: **grafica siempre** primero, analiza por tramos si hay un evento conocido y, si hace falta, usa pruebas que permiten una ruptura (por ejemplo, Zivot–Andrews).
 
-### ¿Qué tan confiable es la ADF? {#potencia}
+Las pruebas formales para estos problemas (tendencia, ruptura y varianza que cambia) están en [[prueba-tendencia]], [[pruebas-ruptura]] y [[pruebas-varianza]].
+
+### Prueba de tendencia: Mann–Kendall {#prueba-tendencia .prof}
+
+La ADF y la KPSS preguntan por **raíz unitaria** o por **estacionariedad**. A veces la pregunta es más simple: **¿la serie tiende a subir (o a bajar)?** La prueba de Mann–Kendall lo responde sin suponer que la tendencia sea una recta ni que los datos sean normales: solo cuenta cuántas parejas de datos suben y cuántas bajan.
+
+:::definicion Prueba de Mann–Kendall
+- $H_0$: no hay tendencia (datos independientes y con la misma distribución). $H_1$: hay una tendencia **monótona**, creciente o decreciente.
+- Estadístico, sumando sobre todas las parejas $i < j$:
+$$S = \sum_{i<j}\operatorname{sgn}(y_j - y_i)$$
+donde $\operatorname{sgn}$ vale $+1$ si la pareja sube, $-1$ si baja y $0$ si empata.
+- Sin empates y bajo $H_0$: $\E[S] = 0$ y $\Var(S) = \dfrac{n(n-1)(2n+5)}{18}$.
+- Estadístico normalizado (con corrección de continuidad): $Z = \dfrac{S - \operatorname{sgn}(S)}{\sqrt{\Var(S)}}$. Se rechaza al 5% si $\lvert Z\rvert > 1.96$.
+- Tamaño de la tendencia: la **pendiente de Sen**, la mediana de todas las pendientes $(y_j - y_i)/(j - i)$.
+:::
+
+:::intuicion Una votación entre todas las parejas
+Cada pareja de fechas «vota»: si el dato posterior es mayor, vota $+1$; si es menor, $-1$. Sin tendencia, los votos se cancelan y $S$ queda cerca de 0. Como solo importa el **signo** de cada diferencia, un dato atípico enorme cuenta igual que uno moderado: la prueba es robusta. De hecho, $S$ dividido entre el número de parejas es la tau de Kendall entre el tiempo y la serie.
+:::
+
+:::guiado Mann–Kendall con seis datos {#guia-mk}
+| $i$ | $y_i$ | Parejas que suben | Parejas que bajan | Aporte a $S$ |
+|---|---|---|---|---|
+| 1 | 3 | 5 | 0 | +5 |
+| 2 | 5 | 3 | 1 | +2 |
+| 3 | 4 | 3 | 0 | +3 |
+| 4 | 7 | 1 | 1 | 0 |
+| 5 | 8 | 0 | 1 | −1 |
+| 6 | 6 | — | — | — |
+| **Total** | | 12 | 3 | 9 |
+---
+= y_1 = 3:\ \text{se compara con } 5,\ 4,\ 7,\ 8,\ 6 \;\Rightarrow\; 5 \text{ suben},\ 0 \text{ bajan}
+> Cada dato se compara solo con los que vienen **después**.
+@ usa c2[1-6]; da c3[1] c4[1] c5[1]
+= y_2 = 5:\ \text{baja con el } 4,\ \text{sube con } 7,\ 8,\ 6 \;\Rightarrow\; 3 - 1 = +2
+> Una pareja que baja resta un voto.
+@ usa c2[2-6]; da c3[2] c4[2] c5[2]
+= y_3 = 4:\ +3, \qquad y_4 = 7:\ +1 - 1 = 0, \qquad y_5 = 8:\ -1
+> El 6 del final queda por debajo del 7 y del 8: esas dos parejas bajan.
+@ usa c2[3-6]; da c3[3-5] c4[3-5] c5[3-5]
+= S = 12 - 3 = 9 \quad \text{de } \tbinom{6}{2} = 15 \text{ parejas}
+> La tau de Kendall es $9/15 = 0.6$.
+@ usa c3[1-5] c4[1-5]; da c3[7] c4[7] c5[7]
+= \Var(S) = \frac{6 \cdot 5 \cdot 17}{18} = 28.33, \qquad Z = \frac{9 - 1}{\sqrt{28.33}} = \frac{8}{5.32} = 1.50
+> Corrección de continuidad: como $S > 0$, se le resta 1.
+@ usa c5[7]
+= p = 2\,\big[1 - \Phi(1.50)\big] = 0.13 > 0.05 \;\Rightarrow\; \text{no se rechaza } H_0
+> Aunque 12 de 15 parejas suben, **seis datos no alcanzan** para afirmar una tendencia al 5%. Con $n$ tan chico se puede usar la distribución exacta de $S$, que da $p = 0.14$: la misma conclusión.
+= \text{pendiente de Sen} = \operatorname{mediana}\left\{\frac{y_j - y_i}{j - i}\right\} = 1
+> Las 15 pendientes ordenadas van de $-2$ a $3$; la del centro (la 8.ª) es 1: la serie sube alrededor de una unidad por periodo.
+:::
+
+```python
+from scipy.stats import norm
+
+def mann_kendall(y):
+    """Prueba de Mann–Kendall (sin corrección por empates) y pendiente de Sen."""
+    y = np.asarray(y, dtype=float)
+    n = len(y)
+    i, j = np.triu_indices(n, k=1)                      # todas las parejas i < j
+    S = np.sign(y[j] - y[i]).sum()
+    var_S = n * (n - 1) * (2 * n + 5) / 18
+    Z = (S - np.sign(S)) / np.sqrt(var_S)              # corrección de continuidad
+    return pd.Series({"S": S, "Z": round(Z, 3), "p-value": round(2 * norm.sf(abs(Z)), 4),
+                      "pendiente de Sen": round(np.median((y[j] - y[i]) / (j - i)), 4)})
+
+print(mann_kendall([3, 5, 4, 7, 8, 6]))                 # el ejemplo a mano
+
+rng = np.random.default_rng(8)
+k = np.arange(120)
+casos_mk = {"ruido blanco": rng.normal(size=120),
+            "ruido + 0.02·t": rng.normal(size=120) + 0.02 * k,
+            "paseo aleatorio": rng.normal(size=120).cumsum()}
+print(pd.DataFrame({nombre: mann_kendall(v) for nombre, v in casos_mk.items()}).T)
+```
+
+El ruido blanco no rechaza y la tendencia suave de 0.02 por periodo se detecta, con una pendiente de Sen que la recupera casi exacta. Pero el **paseo aleatorio** también «tiene tendencia» según Mann–Kendall, aunque no tiene tendencia determinística.
+
+:::cuidado Mann–Kendall supone datos independientes
+Una serie muy autocorrelacionada forma rachas largas que se parecen a una tendencia, y la prueba rechaza de más (es lo que pasó con el paseo aleatorio). Antes de usarla, revisa la ACF; si hay autocorrelación, usa una versión corregida (con preblanqueo o la de Hamed–Rao). Y si la pregunta es si la tendencia es **determinística o estocástica**, la herramienta es la ADF con `"ct"` junto con la KPSS [[especificaciones]] [[tendencias]].
+:::
+
+### Pruebas de ruptura en la media: Chow, CUSUM y Zivot–Andrews {#pruebas-ruptura .prof}
+
+Una **ruptura estructural** es un cambio en los parámetros de la serie (su media, su tendencia) a partir de cierta fecha. Hay una prueba para cada situación: fecha conocida, fecha desconocida, y la duda de si lo que se ve es una ruptura o una raíz unitaria.
+
+:::definicion Tres pruebas de ruptura
+- **Chow** (fecha conocida $\tau$). Se ajusta el mismo modelo a toda la muestra (suma de cuadrados de los residuos $\mathrm{SCR}_R$) y por separado a cada tramo ($\mathrm{SCR}_1$ y $\mathrm{SCR}_2$). Con $k$ parámetros por tramo:
+$$F = \frac{\big[\mathrm{SCR}_R - (\mathrm{SCR}_1 + \mathrm{SCR}_2)\big]/k}{(\mathrm{SCR}_1 + \mathrm{SCR}_2)/(n - 2k)} \sim F_{k,\ n-2k}$$
+$H_0$: los parámetros son iguales en los dos tramos.
+- **CUSUM** (fecha desconocida). Se acumulan los residuos del modelo ajustado con toda la muestra: $W_t = \sum_{s \le t}\hat e_s \big/ (\hat\sigma\sqrt{n})$. Con parámetros constantes, $W_t$ ronda el 0; si cambian, se aleja. Se rechaza la estabilidad si $\max_{1 \le t \le n}\lvert W_t\rvert > 1.36$ (al 5%). $H_0$: parámetros constantes.
+- **Zivot–Andrews** (¿raíz unitaria o ruptura?). Una ADF que deja que la constante (o la tendencia) cambie en una fecha **desconocida**, elegida donde la evidencia contra la raíz unitaria es más fuerte. $H_0$: raíz unitaria (sin ruptura). $H_1$: estacionaria con **una** ruptura.
+:::
+
+:::intuicion Comparar un modelo atado con uno libre
+Chow pregunta: ¿cuánto mejora el ajuste si dejo que cada tramo tenga su propia media? Si la mejora es grande comparada con el ruido que queda, hay ruptura. Es la misma lógica que la prueba $F$ de una regresión. CUSUM la hace sin fecha: si antes del cambio la serie estaba por debajo de la media global y después por arriba, los residuos acumulados bajan y luego suben, y el fondo de esa «V» señala la fecha.
+:::
+
+:::guiado Prueba de Chow para un cambio de media después de $t = 4$ {#guia-chow}
+| $t$ | $y_t$ | $(y_t - \bar y)^2$ | Media de su tramo | $(y_t - \bar y_{\text{tramo}})^2$ |
+|---|---|---|---|---|
+| 1 | 2 | 4 | 2 | 0 |
+| 2 | 3 | 1 | 2 | 1 |
+| 3 | 1 | 9 | 2 | 1 |
+| 4 | 2 | 4 | 2 | 0 |
+| 5 | 6 | 4 | 6 | 0 |
+| 6 | 7 | 9 | 6 | 1 |
+| 7 | 5 | 1 | 6 | 1 |
+| 8 | 6 | 4 | 6 | 0 |
+| **Suma** | 32 | 36 | | 4 |
+---
+= \bar y = \frac{32}{8} = 4 \;\Rightarrow\; \mathrm{SCR}_R = \sum(y_t - 4)^2 = 36
+> Modelo restringido: una sola media para toda la muestra.
+@ usa c2[1-8]; da c2[9] c3[1-9]
+= \bar y_1 = \frac{2 + 3 + 1 + 2}{4} = 2, \qquad \bar y_2 = \frac{6 + 7 + 5 + 6}{4} = 6
+> Modelo libre: cada tramo con su propia media.
+@ usa c2[1-8]; da c4[1-8]
+= \mathrm{SCR}_1 + \mathrm{SCR}_2 = 2 + 2 = 4
+> Lo que queda sin explicar cuando cada tramo tiene su media.
+@ usa c2[1-8] c4[1-8]; da c5[1-9]
+= F = \frac{(36 - 4)/1}{4/(8 - 2)} = \frac{32}{0.667} = 48
+> $k = 1$ (una media por tramo), así que $F \sim F_{1,\,6}$, con crítico al 5% de 5.99.
+@ usa c3[9] c5[9]
+= 48 > 5.99 \;\Rightarrow\; \text{se rechaza } H_0 \;(p = 0.0004)
+> La media cambió después de $t = 4$. Con un solo parámetro, Chow es el cuadrado de la prueba $t$ de diferencia de medias: $t = (6 - 2)\big/\sqrt{0.667\,(\tfrac14 + \tfrac14)} = 6.93$ y $6.93^2 = 48$.
+:::
+
+Las tres pruebas, sobre la serie `quiebre` de [[rupturas]] (salto de 0 a 4 después del dato 150):
+
+```python
+from statsmodels.stats.diagnostic import breaks_cusumolsresid
+from statsmodels.tsa.stattools import zivot_andrews
+from scipy.stats import f as dist_f
+
+def chow_media(y, tau):
+    """Prueba de Chow para un cambio de media después de la posición tau (k = 1)."""
+    y = np.asarray(y, dtype=float)
+    scr = lambda v: ((v - v.mean()) ** 2).sum()
+    R, U = scr(y), scr(y[:tau]) + scr(y[tau:])
+    F = (R - U) / 1 / (U / (len(y) - 2))
+    return f"F = {F:.2f}, p-value = {dist_f.sf(F, 1, len(y) - 2):.4f}"
+
+print("Chow, ejemplo a mano: ", chow_media([2, 3, 1, 2, 6, 7, 5, 6], 4))
+print("Chow, serie quiebre:  ", chow_media(quiebre, 150))
+
+res_q = quiebre - quiebre.mean()                         # residuos del modelo «una sola media»
+sup_w, p_cusum, _ = breaks_cusumolsresid(res_q, ddof=1)
+print(f"CUSUM: máx |W_t| = {sup_w:.2f} (crítico 5%: 1.36), p-value = {p_cusum:.1e}, "
+      f"el máximo ocurre en el dato {np.argmax(np.abs(np.cumsum(res_q))) + 1}")
+
+za = zivot_andrews(quiebre, regression="c", autolag="AIC")
+print(f"Zivot–Andrews: estadístico = {za[0]:.2f} (crítico 5%: {za[2]['5%']:.2f}), p-value = {za[1]:.4f}, "
+      f"ruptura estimada en el dato {za[4] + 1}")
+```
+
+La ADF sola no rechazaba la raíz unitaria en esta serie [[rupturas]]. Zivot–Andrews, que sí permite el salto, la rechaza con claridad y ubica la ruptura en el dato 150, justo donde está. CUSUM también la detecta sin que le digamos la fecha. Chow confirma el cambio de media, pero necesita que tú propongas la fecha.
+
+:::cuidado Fecha elegida viendo la gráfica
+Si eliges $\tau$ para Chow **después** de ver dónde «parece» haber un salto, el valor crítico de la $F$ ya no es válido: buscaste el punto más extremo y la prueba rechaza de más. Chow es para fechas que conoces por fuera de los datos (una reforma, una pandemia); si la fecha sale de los datos, usa CUSUM o Zivot–Andrews. Ojo también con la documentación de `statsmodels`, que describe la nula de Zivot–Andrews como «raíz unitaria con una ruptura»: en el artículo original la nula es raíz unitaria y la alternativa estacionaria con una ruptura. En los dos casos, **rechazar es evidencia de estacionariedad alrededor de una ruptura**.
+:::
+
+### Homoscedasticidad y ACF estable {#pruebas-varianza .prof}
+
+La estacionariedad débil pide, además de media constante, **varianza constante** (homoscedasticidad) y una **autocorrelación que solo dependa del rezago**, no de la fecha [[def-debil]]. Para la varianza hay dos pruebas clásicas; para la ACF, una comparación por tramos.
+
+:::definicion Levene, Breusch–Pagan y ACF por tramos
+- **Levene por tramos**. Se parte la serie (sin tendencia) en $g$ tramos, se calcula $z_t = \lvert y_t - \operatorname{mediana}_{\text{tramo}}\rvert$ y se hace un ANOVA de $z$ entre tramos:
+$$W = \frac{\sum_j n_j(\bar z_j - \bar z)^2 \,/\, (g - 1)}{\sum_j\sum_{t \in j}(z_t - \bar z_j)^2 \,/\, (n - g)} \sim F_{g-1,\ n-g}$$
+$H_0$: todos los tramos tienen la misma varianza.
+- **Breusch–Pagan**. Se hace la regresión de los residuos al cuadrado $\hat e_t^2$ sobre las variables que podrían mover la varianza (por ejemplo, $t$). $LM = nR^2 \sim \chi^2_k$ con $k$ regresores. $H_0$: homoscedasticidad.
+- **ACF por tramos**. Se estima la ACF en la primera y en la segunda mitad, cada una con su banda $\pm 1.96/\sqrt{n_{\text{tramo}}}$. Si la serie es estacionaria, deben parecerse.
+:::
+
+:::intuicion De varianzas a promedios
+Levene convierte una pregunta de varianzas en una de medias: un tramo más disperso tiene, en promedio, distancias más grandes a su mediana. Breusch–Pagan pregunta si el tamaño de los errores se puede predecir: si $\hat e_t^2$ crece con $t$, la varianza no es constante. Y la comparación de la ACF por tramos detecta algo que ni la ADF ni la KPSS miran: que la **memoria** de la serie cambie.
+:::
+
+:::guiado Levene con dos tramos de cuatro datos {#guia-levene}
+| Tramo | $y_t$ (sin tendencia) | Mediana | $z_t = \lvert y_t - \text{mediana}\rvert$ | $\bar z_j$ |
+|---|---|---|---|---|
+| A | −1, 1, −1, 1 | 0 | 1, 1, 1, 1 | 1 |
+| B | −3, 3, −2, 2 | 0 | 3, 3, 2, 2 | 2.5 |
+---
+= z_t = \lvert y_t - 0\rvert, \qquad \bar z_A = 1, \qquad \bar z_B = \frac{3 + 3 + 2 + 2}{4} = 2.5
+> Las dos medianas valen 0; las distancias del tramo B son más grandes.
+@ usa c2[1-2] c3[1-2]; da c4[1-2] c5[1-2]
+= \bar z = \frac{4(1) + 4(2.5)}{8} = 1.75
+> El promedio general de las distancias.
+@ usa c5[1-2]
+= \text{entre tramos} = 4(1 - 1.75)^2 + 4(2.5 - 1.75)^2 = 2.25 + 2.25 = 4.5, \qquad g - 1 = 1
+> Qué tan distintos son los promedios de los tramos.
+@ usa c5[1-2]
+= \text{dentro de tramos} = 0 + 4(0.5)^2 = 1, \qquad n - g = 8 - 2 = 6
+> En A todas las distancias valen 1; en B cada una está a 0.5 de su promedio 2.5.
+@ usa c4[1-2] c5[1-2]
+= W = \frac{4.5/1}{1/6} = 27 > F_{1,\,6}(0.95) = 5.99 \;\Rightarrow\; \text{se rechaza } H_0 \;(p = 0.002)
+> El tramo B es más disperso: la varianza no es constante.
+:::
+
+En AirPassengers, quitando primero la tendencia (con la media móvil de [[descomposicion]]) y usando un tramo por año:
+
+```python
+from scipy.stats import levene
+from statsmodels.stats.diagnostic import het_breuschpagan
+from statsmodels.tsa.seasonal import seasonal_decompose
+import statsmodels.api as sm
+
+lev = levene([-1, 1, -1, 1], [-3, 3, -2, 2])               # el ejemplo a mano
+print(f"Levene a mano: W = {lev.statistic:.1f}, p-value = {lev.pvalue:.4f}")
+for nombre, v in {"AirPassengers": serie, "log(AirPassengers)": np.log(serie)}.items():
+    sin_t = (v - seasonal_decompose(v, model="additive", period=12).trend).dropna()   # quitar la tendencia
+    Z_bp = sm.add_constant(np.arange(len(sin_t)))                                       # ¿la varianza depende de t?
+    p_bp = het_breuschpagan(sin_t.values - sin_t.mean(), Z_bp)[1]
+    p_lev = levene(*[g.values for _, g in sin_t.groupby(sin_t.index.year)]).pvalue      # un tramo por año
+    print(f"{nombre:20s} Breusch–Pagan p = {p_bp:.4f} | Levene por año p = {p_lev:.4f}")
+```
+
+Las dos pruebas rechazan la homoscedasticidad en la serie original y ninguna la rechaza en logaritmos: es la prueba formal de lo que se veía en la gráfica, la amplitud que crece con el nivel [[multiplicativo]].
+
+Ahora una serie cuya **memoria** cambia a la mitad: un AR(1) que pasa de $\phi = 0.1$ a $\phi = 0.8$.
+
+```python
+from statsmodels.tsa.stattools import acf
+
+rng = np.random.default_rng(4)
+e_c = rng.normal(size=400)
+cambia = np.zeros(400)
+for k in range(1, 400):
+    cambia[k] = (0.1 if k < 200 else 0.8) * cambia[k - 1] + e_c[k]     # φ cambia de 0.1 a 0.8
+for nombre, v in {"primera mitad": cambia[:200], "segunda mitad": cambia[200:]}.items():
+    print(f"{nombre}: ρ̂(1), ρ̂(2), ρ̂(3) = {np.round(acf(v, nlags=3)[1:], 2)}   banda ±{1.96 / np.sqrt(200):.2f}")
+print(diagnostico(cambia))
+```
+
+La ADF y la KPSS dicen «estacionaria» sin dudarlo, pero la ACF de cada mitad es completamente distinta: la autocorrelación **sí depende de la fecha**, así que la serie no es estacionaria en el sentido débil. Ninguna prueba sustituye a mirar la ACF por tramos cuando hay sospecha de un cambio de régimen.
+
+### Todas las pruebas en una tabla {#mapa-pruebas .prof}
+
+| Pregunta | Prueba | $H_0$ | Si rechazas | En Python |
+|---|---|---|---|---|
+| ¿Raíz unitaria? | ADF [[adf]] | hay raíz unitaria | estacionaria | `adfuller` |
+| ¿Estacionaria? | KPSS [[kpss]] | estacionaria | no estacionaria | `kpss` |
+| ¿Tendencia monótona? | Mann–Kendall [[prueba-tendencia]] | no hay tendencia | hay tendencia | a mano o `kendalltau(t, y)` |
+| ¿Ruptura en una fecha conocida? | Chow [[pruebas-ruptura]] | mismos parámetros en los dos tramos | hay ruptura en esa fecha | a mano (prueba $F$) |
+| ¿Parámetros estables? (fecha desconocida) | CUSUM | parámetros constantes | inestabilidad | `breaks_cusumolsresid` |
+| ¿Raíz unitaria o ruptura? | Zivot–Andrews | raíz unitaria | estacionaria con una ruptura | `zivot_andrews` |
+| ¿Misma varianza en cada tramo? | Levene [[pruebas-varianza]] | varianzas iguales | heteroscedasticidad | `scipy.stats.levene` |
+| ¿La varianza depende de $t$? | Breusch–Pagan | homoscedasticidad | heteroscedasticidad | `het_breuschpagan` |
+| ¿Hay autocorrelación? | Ljung–Box [[ljung-box]] | sin autocorrelación hasta el rezago $h$ | hay autocorrelación | `acorr_ljungbox` |
+
+:::resumen Pruebas de tendencia, ruptura y varianza {#res-pruebas-extra}
+- Mann–Kendall: $S = \sum_{i<j}\operatorname{sgn}(y_j - y_i)$, $\Var(S) = n(n-1)(2n+5)/18$; $H_0$: sin tendencia. Supone independencia: con autocorrelación rechaza de más.
+- Chow (fecha conocida): $F = \frac{[\mathrm{SCR}_R - \mathrm{SCR}_U]/k}{\mathrm{SCR}_U/(n - 2k)}$. CUSUM (fecha desconocida): residuos acumulados contra la banda 1.36. Zivot–Andrews: ADF que permite una ruptura.
+- Levene: ANOVA de $\lvert y_t - \text{mediana}\rvert$ entre tramos. Breusch–Pagan: $nR^2$ de $\hat e_t^2$ sobre $t$. $H_0$ en ambas: varianza constante.
+- La ACF también debe ser estable: compárala por tramos; la ADF y la KPSS no lo revisan.
+:::
+
+### ¿Qué tan confiable es la ADF? {#potencia .prof}
 
 La ADF tiene **poca potencia** cuando $\phi$ está cerca de 1: le cuesta distinguir «muy persistente» de «raíz unitaria», sobre todo con pocos datos.
 

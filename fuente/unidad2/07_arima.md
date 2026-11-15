@@ -143,7 +143,7 @@ Compara la **función de pronóstico** de varios modelos a partir de la misma hi
 - **Vista extra**: las bandas de 95% de cada modelo. Fíjate que en los modelos con diferencias la banda crece sin límite.
 :::
 
-### Las referencias son modelos ARIMA {#ref-arima}
+### Las referencias son modelos ARIMA {#ref-arima .prof}
 
 Con la deriva ya entendida, podemos cerrar el círculo con los pronósticos de referencia del inicio de la unidad [[ref-metodos]]: **todos son modelos ARIMA** con cero o un parámetro.
 
@@ -234,7 +234,7 @@ La deriva estimada por máxima verosimilitud ($2.2366$) coincide con $b = (405 -
 | ARIMA($p$, 1, $q$) con constante | recta con pendiente igual a la deriva |
 | ARIMA($p$, 2, $q$) sin constante | recta cuya pendiente sale de los últimos datos |
 
-### Intervalos de pronóstico con los pesos ψ {#intervalos-psi}
+### Intervalos de pronóstico con los pesos ψ {#intervalos-psi .prof}
 
 :::demo La varianza del error de pronóstico {#demo-var-pronostico}
 Usamos la forma MA(∞) $y_{t+h} = \mu + \sum_j \psi_j\,\varepsilon_{t+h-j}$. Para un ARIMA, los $\psi_j$ salen de dividir $\theta(L)$ entre el polinomio AR **completo** $\phi(L)(1 - L)^d$ con la misma recursión de [[demo-psi]].

@@ -50,7 +50,7 @@ El periodograma tiene tres interpretaciones, y conviene dominar las tres:
 :::
 :::
 
-### Un periodograma completo a mano {#periodograma-mano}
+### Un periodograma completo a mano {#periodograma-mano .prof}
 
 Ventas trimestrales de dos años: $x = (5, 9, 6, 2, 6, 10, 7, 3)$. Con $n = 8$ las frecuencias de Fourier son $0, 1/8, 2/8, 3/8, 4/8$, de periodos ∞, 8, 4, 2.67 y 2 trimestres.
 
@@ -126,7 +126,7 @@ Repitamos el proceso por el camino de la regresión con otra serie, ahora con fr
 @ usa c3[1-6]
 :::
 
-### Parseval: el análisis de varianza por frecuencias {#parseval}
+### Parseval: el análisis de varianza por frecuencias {#parseval .prof}
 
 :::definicion Identidad de Parseval
 $$\sum_{t=1}^{n}(x_t - \bar x)^2 = \sum_{j=1}^{n-1}I(\omega_j) = 2\sum_{j=1}^{\lfloor (n-1)/2\rfloor}I(\omega_j) \;\big[+\, I(1/2)\ \text{si } n \text{ es par}\big]$$
@@ -271,7 +271,7 @@ Elige la serie y los argumentos de `periodogram`. El código, su salida y la gr�
 - La tabla de parámetros dice qué hace cada uno y qué valor conviene.
 :::
 
-### Fuga espectral, ventanas y tendencias {#fuga}
+### Fuga espectral, ventanas y tendencias {#fuga .prof}
 
 :::definicion Fuga espectral
 Si una oscilación tiene una frecuencia que **no** es de Fourier (no cabe un número entero de veces en la muestra), su energía no cae en una sola barra: se **fuga** a las frecuencias vecinas y, en menor medida, a todo el espectro. La fuga también aparece cuando la serie tiene una **tendencia**: la potencia gigantesca de la frecuencia cero se derrama sobre las frecuencias bajas y puede tapar un ciclo.
@@ -307,7 +307,7 @@ Se puede (con relleno de ceros o evaluando la fórmula), y sirve para dibujar cu
 Solo la media: $d(0) = n^{-1/2}\sum x_t = \sqrt n\,\bar x$, así que $I(0) = n\bar x^2$. No dice nada de las oscilaciones, y con una media grande es enorme: en las manchas solares, $I(0) = 764\,859$ contra 67 506 de la mayor ordenada del ciclo. Por eso se centra la serie (o `scipy` usa `detrend="constant"`), y por eso Parseval empieza en $j = 1$. Las frecuencias **cercanas** a cero sí importan: ahí viven la tendencia y los movimientos lentos.
 :::
 
-:::examen Así te lo pueden preguntar: «Explique el papel de la transformada de Fourier en el análisis espectral»
+:::examen Así te lo pueden preguntar: «Explique el papel de la transformada de Fourier en el análisis espectral» {#ex-fourier}
 «La transformada discreta de Fourier reexpresa una serie de $n$ datos como una suma de senos y cosenos en las frecuencias de Fourier $\omega_j = j/n$: para cada frecuencia da un coeficiente complejo $d(\omega_j)$ cuyo módulo mide la intensidad de esa oscilación y cuyo argumento su fase. Su módulo al cuadrado es el periodograma, $I(\omega_j) = \lvert d(\omega_j)\rvert^2$, que equivale a reemplazar $\gamma(k)$ por $\hat\gamma(k)$ en la definición de la densidad espectral y reparte la suma de cuadrados de la serie entre frecuencias (Parseval). Así permite identificar qué frecuencias están presentes y con qué intensidad. Como cada ordenada sigue aproximadamente $f(\omega_j)\chi^2_2/2$, el periodograma es casi insesgado pero muy ruidoso, por lo que en la práctica se suaviza o se usa el método de Welch.»
 :::
 

@@ -13,14 +13,23 @@
 <link rel="stylesheet" href="assets/css/estilos.css">
 </head>
 <body data-unidad="{{UNIDAD}}">
+<script>try { if (JSON.parse(localStorage.getItem('guia-modo-ets'))) document.body.classList.add('modo-ets'); } catch (e) { /* sin almacenamiento */ }</script>
 <div id="barra-progreso" aria-hidden="true"><span></span></div>
 <header class="barra">
   <button class="btn-menu" id="btn-menu" type="button" aria-label="Abrir índice" aria-controls="indice" aria-expanded="false">☰</button>
-  <a class="marca" href="#inicio"><span class="marca-ico">📈</span><span class="marca-txt">Series de Tiempo <small>Guía de estudio</small></span></a>
+  <a class="marca" href="index.html" title="Ir a la portada de la guía"><span class="marca-ico">📈</span><span class="marca-txt">Series de Tiempo <small>Guía de estudio</small></span></a>
   <nav class="unidades" aria-label="Unidades">
     {{NAV}}
   </nav>
+  <div class="barra-acciones">
+    <button class="btn-ets" id="btn-ets" type="button" aria-pressed="false" title="Modo ETS: deja a la vista solo lo que entra al examen y pliega la profundización"><span class="ets-ico" aria-hidden="true">🎯</span><span class="ets-txt">Modo ETS</span><span class="ets-sw" aria-hidden="true"></span></button>
+    <button class="btn-buscar" id="btn-buscar" type="button" aria-label="Buscar en la guía" aria-controls="buscador" aria-expanded="false" title="Buscar (tecla /)">🔎</button>
+  </div>
 </header>
+<div class="buscador" id="buscador" role="search" hidden>
+  <input type="search" id="buscador-campo" placeholder="Busca un tema, una definición o un símbolo…" autocomplete="off" aria-label="Buscar en la guía">
+  <div class="buscador-res" id="buscador-res" aria-live="polite"></div>
+</div>
 
 <aside class="indice" id="indice" aria-label="Índice de la unidad">
   <div class="indice-cab">
@@ -49,6 +58,7 @@
 <script id="glosario" type="application/json">{{GLOSARIO}}</script>
 <script id="macros-katex" type="application/json">{{MACROS}}</script>
 <script id="datos-unidad" type="application/json">{{DATOS}}</script>
+<script src="assets/datos/buscador.js" defer></script>
 <script src="assets/js/ts.js" defer></script>
 <script src="assets/js/ui.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>

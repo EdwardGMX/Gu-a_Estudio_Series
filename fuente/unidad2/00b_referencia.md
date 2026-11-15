@@ -1,5 +1,5 @@
 ## 🧱 Pronósticos de referencia (benchmarks) {#referencia}
-@mapa Antes de cualquier modelo: pronosticar, partir los datos y medir el error con MAE y RMSE; los cuatro métodos básicos y tres más (ventanas y suavizamiento exponencial), statsforecast, residuales, intervalos, referencias con logaritmo y descomposición, cómo elegir la referencia y los errores más frecuentes.
+@mapa Antes de cualquier modelo: pronosticar, partir los datos y medir el error con MAE y RMSE; los cuatro métodos básicos y tres más (ventanas y suavizamiento exponencial), Holt y Holt–Winters, statsforecast, residuales, intervalos, referencias con logaritmo y descomposición, cómo elegir la referencia y los errores más frecuentes.
 
 ### Por qué empezar por lo más simple {#ref-por-que}
 
@@ -66,7 +66,7 @@ Cada método **supone** algo sobre el futuro: que no hay memoria (promedio), que
 Las otras tres columnas llevan el nombre de la clase, pero `RandomWalkWithDrift()` produce la columna **`RWD`** (y `RWD-lo-80`, `RWD-hi-80`, …). Si buscas `"RandomWalkWithDrift"` en el DataFrame obtendrás un `KeyError`.
 :::
 
-### Los cuatro pronósticos a mano {#guia-ref-pron-sec}
+### Los cuatro pronósticos a mano {#guia-ref-pron-sec .prof}
 
 :::guiado Producción trimestral de refresco: cuatro pronósticos para 2022 {#guia-ref-pron}
 | $t$ | Trimestre | $y_t$ | Promedio | Ingenuo | Estacional | Deriva |
@@ -113,7 +113,7 @@ Las otras tres columnas llevan el nombre de la clase, pero `RandomWalkWithDrift(
 Consecuencia práctica: **solo importan $y_1$ y $y_T$**. Si el primer dato es atípico, la pendiente sale mal aunque los demás 130 datos sean perfectos. En el ejemplo, las diferencias son $4, -6, 4, 1, 4, -8, 6$ y su promedio es $5/7$, igual que $b$.
 :::
 
-### Evaluar a mano: ¿cuál le atinó a 2022? {#guia-ref-eval-sec}
+### Evaluar a mano: ¿cuál le atinó a 2022? {#guia-ref-eval-sec .prof}
 
 Al terminar 2022 se conocen los datos reales: **14, 18, 10 y 16**. Son la prueba de los cuatro pronósticos.
 
@@ -184,7 +184,7 @@ La regla general:
 | tiene tendencia **y** estacionalidad | ninguna de las cuatro basta | se necesita una referencia compuesta [[ref-transformadas]] o un modelo SARIMA |
 :::
 
-### El flujo de statsforecast {#ref-statsforecast}
+### El flujo de statsforecast {#ref-statsforecast .prof}
 
 `statsforecast` (de Nixtla) trabaja siempre con un DataFrame en **formato largo** con tres columnas obligatorias:
 
@@ -252,7 +252,7 @@ Porque los valores ajustados solo se guardan si los pides al pronosticar. Si lla
 Dan los mismos números. `fit` guarda los modelos ajustados (útil si vas a pronosticar varias veces o quieres inspeccionarlos con `sf.fitted_`), y `predict` pronostica con ellos. `forecast` hace todo en un solo paso sin guardarlos y es más eficiente cuando tienes miles de series. Para el examen basta con saber que son equivalentes.
 :::
 
-### Más referencias: ventanas y suavizamiento exponencial {#ref-ventanas}
+### Más referencias: ventanas y suavizamiento exponencial {#ref-ventanas .prof}
 
 Los cuatro métodos básicos son extremos: el promedio le da **el mismo peso a todos** los datos y el ingenuo le da **todo el peso al último**. Hay tres referencias intermedias, también en statsforecast, que viven entre esos dos extremos.
 
@@ -385,7 +385,133 @@ Elige la serie, el método y su parámetro ($k$ o $\alpha$). Se compara contra l
 - **Vista extra**: los pesos que recibe cada dato pasado en el pronóstico (barras): parejos en la ventana, geométricos en el suavizamiento.
 :::
 
-### Valores ajustados y residuales {#ref-residuos}
+### Holt y Holt–Winters: tendencia y estacionalidad {#holt .prof}
+
+El suavizamiento exponencial simple solo sigue un **nivel**, y por eso su pronóstico es plano. Si la serie crece o tiene estacionalidad, se le agregan más «memorias», cada una con su propia constante de suavizamiento. Son los dos métodos clásicos de suavizamiento que completan la lista de referencias.
+
+:::definicion Método de Holt (nivel y pendiente)
+$$\ell_t = \alpha\,y_t + (1 - \alpha)\,(\ell_{t-1} + b_{t-1})$$
+$$b_t = \beta\,(\ell_t - \ell_{t-1}) + (1 - \beta)\,b_{t-1}$$
+$$\hat{y}_{T+h \mid T} = \ell_T + h\,b_T$$
+
+- $\ell_t$ es el **nivel** y $b_t$ la **pendiente** (cuánto sube por periodo), con $0 \le \alpha, \beta \le 1$.
+- El nivel promedia el dato nuevo con lo que se esperaba, $\ell_{t-1} + b_{t-1}$; la pendiente promedia el último cambio de nivel con la pendiente anterior.
+- El pronóstico es una **recta** que parte del último nivel.
+:::
+
+:::definicion Método de Holt–Winters (nivel, pendiente y estacionalidad de periodo $m$)
+**Aditivo**, para una amplitud estacional constante:
+$$\ell_t = \alpha\,(y_t - s_{t-m}) + (1 - \alpha)\,(\ell_{t-1} + b_{t-1})$$
+$$b_t = \beta\,(\ell_t - \ell_{t-1}) + (1 - \beta)\,b_{t-1}$$
+$$s_t = \gamma\,(y_t - \ell_{t-1} - b_{t-1}) + (1 - \gamma)\,s_{t-m}$$
+$$\hat{y}_{T+h \mid T} = \ell_T + h\,b_T + s_{T+h-m} \qquad (h \le m)$$
+
+**Multiplicativo**, para una amplitud que crece con el nivel: el factor estacional divide en lugar de restar,
+$$\ell_t = \alpha\,\frac{y_t}{s_{t-m}} + (1 - \alpha)\,(\ell_{t-1} + b_{t-1})$$
+$$s_t = \gamma\,\frac{y_t}{\ell_{t-1} + b_{t-1}} + (1 - \gamma)\,s_{t-m}$$
+$$\hat{y}_{T+h \mid T} = (\ell_T + h\,b_T)\,s_{T+h-m}$$
+
+Para $h > m$ se repite el índice de la última temporada observada que corresponde a ese periodo.
+:::
+
+:::intuicion Tres perillas de memoria
+El suavizamiento simple estima **dónde está** la serie. Holt además estima **qué tan rápido se mueve** ($b_t$), y Holt–Winters recuerda **el calendario** ($s_t$: cuánto se separa cada mes de lo normal). Cada componente se actualiza como un suavizamiento simple, promediando lo nuevo con lo que ya se sabía, con su propia perilla: $\alpha$, $\beta$ o $\gamma$. Con $\beta$ chico la pendiente casi no cambia; con $\gamma$ chico el patrón estacional es casi fijo.
+:::
+
+:::guiado Holt con α = β = 0.5 en cinco datos {#guia-holt}
+| $t$ | $y_t$ | $\hat{y}_{t \mid t-1} = \ell_{t-1} + b_{t-1}$ | $\ell_t$ | $b_t$ |
+|---|---|---|---|---|
+| 1 | 10 | | 10 | 2 |
+| 2 | 12 | 12 | 12 | 2 |
+| 3 | 13 | 14 | 13.5 | 1.75 |
+| 4 | 15 | 15.25 | 15.125 | 1.6875 |
+| 5 | 18 | 16.8125 | 17.406 | 1.984 |
+| 6 | ? | 19.39 | | |
+---
+= \ell_1 = y_1 = 10, \qquad b_1 = y_2 - y_1 = 2
+> Un arranque sencillo: el primer nivel es el primer dato y la primera pendiente, el primer cambio. Los programas estiman estos valores iniciales; abajo se ve cómo dárselos a mano.
+@ usa c2[1-2]; da c4[1] c5[1]
+= \begin{gathered} \ell_2 = 0.5(12) + 0.5(10 + 2) = 12 \\ b_2 = 0.5(12 - 10) + 0.5(2) = 2 \end{gathered}
+> El dato cayó justo donde se esperaba (12), así que el nivel y la pendiente siguen el plan.
+@ usa c2[2] c4[1] c5[1]; da c3[2] c4[2] c5[2]
+= \begin{gathered} \ell_3 = 0.5(13) + 0.5(12 + 2) = 13.5 \\ b_3 = 0.5(13.5 - 12) + 0.5(2) = 1.75 \end{gathered}
+> Se esperaba 14 y llegó 13: el nivel queda a la mitad del camino y la pendiente baja un poco.
+@ usa c2[3] c4[2] c5[2]; da c3[3] c4[3] c5[3]
+= \begin{gathered} \ell_4 = 0.5(15) + 0.5(13.5 + 1.75) = 15.125 \\ b_4 = 0.5(1.625) + 0.5(1.75) = 1.6875 \end{gathered}
+> La misma regla, con el cambio de nivel $15.125 - 13.5 = 1.625$.
+@ usa c2[4] c4[3] c5[3]; da c3[4] c4[4] c5[4]
+= \begin{gathered} \ell_5 = 0.5(18) + 0.5(15.125 + 1.6875) = 17.406 \\ b_5 = 0.5(2.281) + 0.5(1.6875) = 1.984 \end{gathered}
+> El 18 sorprende hacia arriba: suben el nivel y la pendiente.
+@ usa c2[5] c4[4] c5[4]; da c3[5] c4[5] c5[5]
+= \hat{y}_{6 \mid 5} = 17.406 + 1.984 = 19.39, \qquad \hat{y}_{7 \mid 5} = 21.38, \qquad \hat{y}_{8 \mid 5} = 23.36
+> El pronóstico es la recta $\ell_5 + h\,b_5$: sube 1.984 por periodo. El suavizamiento simple habría dado un valor plano.
+@ usa c4[5] c5[5]; da c3[6]
+:::
+
+:::ejemplo Pronóstico de Holt–Winters aditivo con los estados finales
+Datos trimestrales. Al cerrar un cuarto trimestre, el modelo tiene $\ell_T = 100$, $b_T = 2$ y efectos estacionales $(-5,\ +3,\ +8,\ -6)$ para T1 a T4. El año siguiente:
+
+- T1: $100 + 1(2) - 5 = 97$
+- T2: $100 + 2(2) + 3 = 107$
+- T3: $100 + 3(2) + 8 = 114$
+- T4: $100 + 4(2) - 6 = 102$
+
+Cada trimestre combina la recta (nivel más $h$ pendientes) con su efecto estacional. En el **multiplicativo** los efectos son porcentajes, por ejemplo $(0.95,\ 1.03,\ 1.08,\ 0.94)$, y T1 sería $(100 + 2)(0.95) = 96.9$.
+:::
+
+```python
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+# 1) El ejemplo a mano. statsmodels pide el nivel y la pendiente ANTES del primer dato (ℓ0, b0):
+#    con ℓ0 = 8 y b0 = 2 se obtienen exactamente ℓ1 = 10 y b1 = 2.
+holt_mano = ExponentialSmoothing(np.array([10, 12, 13, 15, 18.0]), trend="add", initialization_method="known",
+                                 initial_level=8, initial_trend=2).fit(smoothing_level=0.5, smoothing_trend=0.5,
+                                                                       optimized=False)
+print("niveles:   ", holt_mano.level.round(4))
+print("pendientes:", holt_mano.trend.round(4))
+print("pronóstico:", holt_mano.forecast(3).round(4))
+```
+
+Ahora AirPassengers, con la misma prueba de 1960 que las demás referencias:
+
+```python
+from statsforecast.models import Holt, HoltWinters
+
+sf_hw = StatsForecast(models=[Holt(season_length=12),
+                              HoltWinters(season_length=12, error_type="A", alias="HW-aditivo"),
+                              HoltWinters(season_length=12, error_type="M", alias="HW-multiplicativo"),
+                              SeasonalNaive(season_length=12), RandomWalkWithDrift()], freq="MS")
+fc_hw = sf_hw.forecast(df=train_df, h=12)
+for col in ["Holt", "HW-aditivo", "HW-multiplicativo", "SeasonalNaive", "RWD"]:
+    e = test_df["y"].values - fc_hw[col].values.astype("float64")
+    print(f"{col:18s} MAE = {np.mean(np.abs(e)):6.2f} | RMSE = {np.sqrt(np.mean(e ** 2)):6.2f}")
+
+sf_hw.fit(train_df)
+for m in sf_hw.fitted_[0, :3]:
+    print(f"{m.alias:18s} componentes ETS = {m.model_['components']}   α = {m.model_['par'][0]:.4f}")
+```
+
+Tres lecturas:
+
+1. **Holt sin estacionalidad empata con la deriva.** El ajuste eligió $\alpha \approx 1$: «el último dato más una pendiente», que es casi el ingenuo con deriva. Sin estacionalidad, ninguno de los dos alcanza al ingenuo estacional.
+2. **Holt–Winters sí gana**: el multiplicativo deja el MAE en 19.7, menos de la mitad que el ingenuo estacional (47.8), la referencia más difícil de vencer en esta serie [[ref-elegir]]. Que el multiplicativo supere al aditivo cuadra con la amplitud estacional que crece con el nivel [[u1:multiplicativo]].
+3. **statsforecast los implementa como modelos ETS** (error, tendencia, estacionalidad): `Holt` es ETS(A,A,N) y `HoltWinters` es ETS(A,A,A) o ETS(M,A,M) según `error_type`. Estima los parámetros y los valores iniciales por máxima verosimilitud y, además, decide si **amortiguar** la tendencia: la cuarta letra `D` de los componentes del aditivo indica que eligió una pendiente que se apaga con el horizonte.
+
+:::cuidado Antes de usar Holt o Holt–Winters
+- Holt proyecta la pendiente **para siempre**: a horizontes largos puede exagerar. Para eso existe la tendencia amortiguada.
+- Holt–Winters necesita al menos dos temporadas completas para arrancar los índices estacionales.
+- Así como el suavizamiento simple equivale a un ARIMA(0,1,1) [[demo-ses]], el método de Holt equivale a un ARIMA(0,2,2): son casos particulares de los modelos de la unidad.
+- Los parámetros se eligen con el entrenamiento; la comparación justa es en la prueba y contra las referencias [[ref-evaluar]].
+:::
+
+:::resumen Holt y Holt–Winters {#res-holt}
+- Holt: $\ell_t = \alpha y_t + (1 - \alpha)(\ell_{t-1} + b_{t-1})$, $b_t = \beta(\ell_t - \ell_{t-1}) + (1 - \beta)b_{t-1}$; pronóstico $\ell_T + h\,b_T$, una recta.
+- Holt–Winters agrega el componente estacional $s_t$ con su constante $\gamma$: aditivo si la amplitud es constante, multiplicativo si crece con el nivel.
+- En AirPassengers (prueba 1960), Holt–Winters multiplicativo (MAE 19.7) le gana con claridad al ingenuo estacional (47.8); Holt sin estacionalidad no le gana a la deriva.
+- statsforecast: `Holt(season_length=m)` y `HoltWinters(season_length=m, error_type="A" o "M")`, que son modelos ETS.
+:::
+
+### Valores ajustados y residuales {#ref-residuos .prof}
 
 :::definicion Ajustados y residuales de cada método
 El **valor ajustado** $\hat{y}_t$ es lo que el método habría pronosticado para $t$ con los datos hasta $t - 1$ (un paso adelante), y el **residual** es $\tip{e-res}{e_t} = y_t - \hat{y}_t$: lo que el método no explicó dentro del entrenamiento. Los errores de la prueba miden qué tan bien pronostica; los residuales dicen **si todavía queda algo que aprovechar**.
@@ -485,7 +611,7 @@ Elige la serie y el método. Los residuales se calculan sobre el entrenamiento (
 Una regla práctica es $2m$ para datos estacionales (24 en mensuales) y 10 si no hay estacionalidad. Las referencias casi no estiman nada (el ingenuo y el estacional, cero parámetros; el promedio y la deriva, uno), así que no hace falta corregir los grados de libertad. Lo importante es **no aplicar la prueba sobre los `NaN` iniciales**: `acorr_ljungbox` con un `NaN` devuelve `NaN`.
 :::
 
-### Intervalos de predicción {#ref-intervalos}
+### Intervalos de predicción {#ref-intervalos .prof}
 
 Un pronóstico puntual dice «lo más probable»; el **intervalo de predicción** dice entre qué valores caerá el dato real con una probabilidad dada. En statsforecast se piden con `level=[80, 95]`.
 
@@ -591,7 +717,7 @@ Las fórmulas suponen que los residuales son ruido blanco **normal** con media c
 Sí, **si el método es correcto**: de cada 10 pronósticos, en promedio 8 datos reales quedan dentro de su banda de 80%. No es un intervalo de confianza para un parámetro (como el de la media), sino para una observación futura: incluye el choque que todavía no ocurre, y por eso siempre es más ancho.
 :::
 
-### Referencias con logaritmo y con descomposición {#ref-transformadas}
+### Referencias con logaritmo y con descomposición {#ref-transformadas .prof}
 
 Las referencias se pueden aplicar a una **versión transformada** de la serie y luego regresar a la escala original. Es la manera de construir referencias más fuertes sin dejar de ser simples.
 
@@ -668,7 +794,7 @@ AirPassengers, prueba 1960. Elige la referencia, la escala y el nivel de la band
 - **Lectura**: MAE, RMSE y la cobertura observada de la banda. Compara la cobertura del estacional (3 de 12) con la de STL + deriva.
 :::
 
-### Cómo elegir la referencia {#ref-elegir}
+### Cómo elegir la referencia {#ref-elegir .prof}
 
 :::definicion Árbol de decisión
 1. **¿La serie tiene un patrón estacional claro?** (en la gráfica, o con picos de la ACF en $m, 2m, \dots$ [[u1:patrones]])
@@ -696,7 +822,7 @@ AirPassengers, prueba 1960. Elige la referencia, la escala y el nivel de la band
 Porque la referencia tiene que ser **difícil de vencer y fácil de explicar**. Si usas como vara una que ya es casi un modelo, nadie sabrá si el SARIMA gana por sus términos AR y MA o por la descomposición. Lo usual es reportar **dos**: la referencia simple natural (ingenuo estacional, en datos mensuales) y la mejor que encontraste.
 :::
 
-### Evaluar contra las referencias {#ref-evaluar}
+### Evaluar contra las referencias {#ref-evaluar .prof}
 
 La función `evaluate` de `utilsforecast` hace la comparación de un jalón: une el pronóstico con la prueba por `unique_id` y `ds`, y devuelve una fila por métrica y una columna por método.
 
@@ -726,7 +852,7 @@ La conclusión se escribe así: *«entre las cuatro referencias simples gana el 
 No está mal: es la evaluación más simple, respetando el orden. Su problema es que el resultado depende de qué pasó en ese 20%: con otra ventana de prueba, las distancias entre los métodos cambian, y a veces también el ganador. Más adelante, la validación con origen móvil promedia varios cortes y da una estimación más estable del error esperado [[ref-cv]]. Si el examen pide 80/20, hazlo así.
 :::
 
-### Errores frecuentes con las referencias {#ref-errores}
+### Errores frecuentes con las referencias {#ref-errores .prof}
 
 | Error | Qué pasa | Cómo evitarlo |
 |---|---|---|

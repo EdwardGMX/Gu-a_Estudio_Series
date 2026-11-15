@@ -1,5 +1,5 @@
 ## 🧩 Ejercicios de la Unidad II {#ejercicios2}
-@mapa 86 ejercicios de opción múltiple, cálculo e interpretación de salidas de Python, cada uno con su respuesta explicada.
+@mapa 90 ejercicios de opción múltiple, cálculo e interpretación de salidas de Python, cada uno con su respuesta explicada.
 
 Elige una opción y presiona **Ver respuesta**: se marca la correcta, se explica por qué y hay un enlace a la sección donde se estudia el tema. Los ejercicios de cálculo abierto tienen **Ver solución paso a paso**. Intenta resolverlos en papel antes de abrir la solución.
 

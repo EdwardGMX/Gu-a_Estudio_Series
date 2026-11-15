@@ -292,7 +292,7 @@ Regla: **p-value < 0.05 ⇒ hay dependencia temporal significativa**.
 :::
 :::
 
-### Ljung–Box calculada a mano {#lb-mano}
+### Ljung–Box calculada a mano {#lb-mano .prof}
 
 :::guiado (a) La serie diminuta, h = 2
 Con $n = 6$, $\hat\rho(1) = 0.1$ y $\hat\rho(2) = -0.6$ [[guia-acf]]:

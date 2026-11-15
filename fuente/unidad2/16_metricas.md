@@ -136,7 +136,7 @@ Elige el modelo y cómo calcular el RMSE y la escala del MASE. El código y la s
 - La **escala** del MASE cambia mucho el resultado: con el ingenuo simple ($m = 1$) y con el estacional ($m = 12$). Con datos estacionales se recomienda el estacional.
 :::
 
-### Comparar contra las referencias con utilsforecast {#metricas-ref}
+### Comparar contra las referencias con utilsforecast {#metricas-ref .prof}
 
 Ya con todas las métricas, la comparación del inicio de la unidad [[ref-evaluar]] se completa: las cuatro referencias, la referencia compuesta STL + deriva [[ref-transformadas]] y el SARIMA de aerolínea, con MAE, RMSE, MAPE y MASE. La función `evaluate` de `utilsforecast` calcula todo en una tabla.
 

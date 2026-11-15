@@ -23,7 +23,7 @@ La guía oficial insiste en un punto: **ARMA requiere que la serie ya sea estaci
 Por **parsimonia**. Un AR(1) tiene ACF que decae desde $\phi$; un MA(1) tiene un solo pico. Si los datos muestran «un primer pico grande y luego un decaimiento geométrico», un AR puro necesitaría muchos rezagos para imitarlo y un MA puro también. Un ARMA(1,1) lo logra con **dos parámetros**. Es como describir una curva con su fórmula en lugar de con una tabla de cien puntos.
 :::
 
-### Los pesos ψ: la forma MA(∞) {#psi-pesos}
+### Los pesos ψ: la forma MA(∞) {#psi-pesos .prof}
 
 Todo ARMA estacionario es un filtro de choques $y_t = \mu + \sum \psi_j \varepsilon_{t-j}$ [[filtro-lineal]]. Los pesos salen de «dividir» los polinomios: $\psi(L) = \theta(L)/\phi(L)$.
 
@@ -156,7 +156,7 @@ Mueve $\phi$ y $\theta$. Compara la ACF y la PACF del ARMA(1,1) con las del AR(1
 - **Vista extra**: la cuenta de $\rho(1)$ con tus valores y la tabla de $\rho(k)$.
 :::
 
-### Cancelación de raíces y parsimonia {#cancelacion}
+### Cancelación de raíces y parsimonia {#cancelacion .prof}
 
 :::demo Un ARMA(1,1) con φ = −θ es ruido blanco {#demo-cancelacion}
 Tomemos $\phi = 0.5$ y $\theta = -0.5$.

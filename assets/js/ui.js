@@ -1,11 +1,14 @@
 /* =====================================================================
    ui.js — Interacción general de la guía: explicación de símbolos,
-   enlaces de regreso, índice, copiar código y ejercicios.
+   enlaces de regreso, índice, copiar código, ejercicios (opción múltiple
+   y respuesta abierta), modo ETS, buscador y avance en la portada.
    ===================================================================== */
 (function () {
   'use strict';
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const UNIDAD = document.body.dataset.unidad || 'u1';
+  const enEts = () => document.body.classList.contains('modo-ets');
   const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } };
   const leer = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
 
@@ -76,9 +79,18 @@
     el.classList.add('destello');
     setTimeout(() => el.classList.remove('destello'), 2300);
   }
+  // Si el destino está dentro de un bloque de profundización plegado (modo ETS), se abre
+  function abrirProf(el) {
+    for (let p = el.closest('.prof'); p; p = p.parentElement && p.parentElement.closest('.prof')) {
+      p.classList.add('abierta');
+      const b = p.querySelector(':scope > .prof-stub');
+      if (b) b.setAttribute('aria-expanded', 'true');
+    }
+  }
   function irA(id, origen) {
     const destino = document.getElementById(id);
     if (!destino) return;
+    abrirProf(destino);
     // Se guarda el enlace de origen y su altura en la ventana: así el regreso es exacto
     // aunque las gráficas que se dibujan al pasar cambien la altura de la página.
     if (origen) { pila.push({ el: origen, dy: origen.getBoundingClientRect().top, y: window.scrollY }); actualizarVolver(); }
@@ -129,10 +141,14 @@
     const lim = 140;
     let actual = null;
     for (const t of titulos) {
+      if (t.offsetParent === null) continue;          // oculto por el modo ETS
       if (t.getBoundingClientRect().top - lim <= 0) actual = t; else break;
     }
     if (!actual || actual === marcado) return;
     marcado = actual;
+    if (/^u[123]$/.test(UNIDAD) && window.scrollY > 300) {
+      guardar('guia-ultima', { u: UNIDAD, id: actual.id, t: actual.textContent.replace(/\s+/g, ' ').trim().slice(0, 90) });
+    }
     $$('.toc a.activo').forEach(a => a.classList.remove('activo'));
     const a = enlaces.get(actual.id);
     if (a) a.classList.add('activo');
@@ -168,8 +184,10 @@
       b.querySelector('.ico').textContent = ok ? '✓' : '☐';
     });
     $$('.toc .t-sec').forEach(li => li.classList.toggle('estudiada', estudiadas.has(li.dataset.seccion)));
-    const total = $$('.toc .t-sec').length;
-    $('#indice-avance').textContent = estudiadas.size ? `${estudiadas.size}/${total} estudiadas` : '';
+    if (!$('.btn-estudiada')) return;
+    const cuentan = $$('.toc .t-sec').filter(li => !(enEts() && li.classList.contains('prof')));
+    const hechas = cuentan.filter(li => estudiadas.has(li.dataset.seccion)).length;
+    $('#indice-avance').textContent = hechas ? `${hechas}/${cuentan.length} estudiadas` : '';
   }
   $$('.btn-estudiada').forEach(b => b.addEventListener('click', () => {
     const s = b.dataset.seccion;
@@ -196,11 +214,19 @@
   }));
 
   /* ---------------------------- Ejercicios ---------------------------- */
+  // Lista de ejercicios fallados (para «Repasar mis errores»): { id del ejercicio: fecha }
+  function registrarError(eid, mal) {
+    if (!eid) return;
+    const e = leer('guia-errores', {});
+    if (mal) e[eid] = Date.now(); else delete e[eid];
+    guardar('guia-errores', e);
+    document.dispatchEvent(new CustomEvent('guia:errores'));
+  }
   const marcador = $('#marcador');
   function actualizarMarcador() {
     if (!marcador) return;
-    const ej = $$('.ejercicio');
-    const conOpciones = ej.filter(e => e.dataset.correcta !== '');
+    const ej = $$('.ejercicio').filter(e => !(enEts() && e.dataset.prof));
+    const conOpciones = ej.filter(e => e.dataset.correcta !== undefined && e.dataset.correcta !== '');
     const revelados = conOpciones.filter(e => e.classList.contains('revelado'));
     const ok = revelados.filter(e => e.dataset.resultado === 'ok').length;
     const mal = revelados.filter(e => e.dataset.resultado === 'mal').length;
@@ -208,45 +234,91 @@
     $('.m-ok', marcador).textContent = `✓ ${ok} correctas`;
     $('.m-mal', marcador).textContent = `✗ ${mal} por repasar`;
   }
-  $$('.ejercicio').forEach(ej => {
+  const textoBoton = (ej, abierto) => ej.dataset.abierta ? (abierto ? 'Ocultar respuesta modelo' : 'Ver respuesta modelo')
+    : $$('.opcion', ej).length ? (abierto ? 'Ocultar explicación' : 'Ver explicación') : (abierto ? 'Ocultar solución' : 'Ver solución paso a paso');
+  // Muestra la solución; en opción múltiple califica la opción elegida. Devuelve 'ok', 'mal' o null.
+  function revelar(ej, opc) {
+    const contarVacia = !!(opc && opc.contarVacia);
+    const opciones = $$('.opcion', ej), btn = $('.btn-respuesta', ej), sol = $('.ej-solucion', ej);
+    sol.hidden = false;
+    if (opciones.length && !ej.classList.contains('revelado')) {
+      const c = Number(ej.dataset.correcta);
+      const elegida = opciones.findIndex(o => o.classList.contains('elegida'));
+      opciones[c].classList.add('correcta');
+      let veredicto = 'Aún no habías elegido opción: la correcta está marcada en verde.';
+      let clase = '';
+      if (elegida >= 0) {
+        if (elegida === c) { veredicto = '¡Correcto! 🎉'; clase = 'ok'; ej.dataset.resultado = 'ok'; }
+        else { opciones[elegida].classList.add('incorrecta'); veredicto = 'Casi: revisa la explicación 👇'; clase = 'mal'; ej.dataset.resultado = 'mal'; }
+      } else if (contarVacia) { veredicto = 'Sin responder: la correcta está marcada en verde.'; clase = 'mal'; ej.dataset.resultado = 'mal'; }
+      ej.classList.add('revelado');
+      const v = document.createElement('span');
+      v.className = 'ej-veredicto ' + clase;
+      v.textContent = veredicto;
+      btn.after(v);
+      if (ej.dataset.resultado) registrarError(ej.dataset.eid, ej.dataset.resultado === 'mal');
+      actualizarMarcador();
+    }
+    if (ej.dataset.abierta) ej.classList.add('revelado');
+    btn.textContent = textoBoton(ej, true);
+    window.dispatchEvent(new Event('resize'));
+    return ej.dataset.resultado || null;
+  }
+  // Respuesta abierta: el borrador y la autocalificación se guardan en el navegador
+  // (efimero = true en el simulacro: no lee ni guarda el borrador ni la nota, pero sí registra el error)
+  function iniciarAbierta(ej, efimero) {
+    const eid = ej.dataset.eid, txt = $('.ab-texto', ej);
+    const borradores = efimero ? {} : leer('guia-borradores', {});
+    if (borradores[eid]) txt.value = borradores[eid];
+    let espera = null;
+    txt.addEventListener('input', () => {
+      if (efimero) return;
+      clearTimeout(espera);
+      espera = setTimeout(() => {
+        const b = leer('guia-borradores', {});
+        if (txt.value.trim()) b[eid] = txt.value; else delete b[eid];
+        guardar('guia-borradores', b);
+      }, 400);
+    });
+    const pintar = n => {
+      if (n) ej.dataset.nota = n; else delete ej.dataset.nota;
+      $$('.ab-nota button', ej).forEach(b => b.classList.toggle('on', b.dataset.nota === n));
+    };
+    pintar(efimero ? null : leer('guia-abiertas', {})[eid] || null);
+    $$('.ab-nota button', ej).forEach(b => b.addEventListener('click', () => {
+      const n = ej.dataset.nota === b.dataset.nota ? null : b.dataset.nota;
+      if (!efimero) {
+        const N = leer('guia-abiertas', {});
+        if (n) N[eid] = n; else delete N[eid];
+        guardar('guia-abiertas', N);
+      }
+      pintar(n);
+      registrarError(eid, n === 'mal' || n === 'medias');
+      ej.dispatchEvent(new CustomEvent('guia:nota', { bubbles: true, detail: n }));
+    }));
+  }
+  function iniciarEjercicio(ej, opc) {
+    if (ej.dataset.listo) return;
+    ej.dataset.listo = '1';
     const opciones = $$('.opcion', ej);
     opciones.forEach(op => op.addEventListener('click', () => {
       if (ej.classList.contains('revelado')) return;
       opciones.forEach(o => o.classList.remove('elegida'));
       op.classList.add('elegida');
+      ej.dispatchEvent(new CustomEvent('guia:eleccion', { bubbles: true }));
     }));
     const btn = $('.btn-respuesta', ej), sol = $('.ej-solucion', ej);
     btn.addEventListener('click', () => {
-      const abrir = sol.hidden;
-      sol.hidden = !abrir;
-      if (abrir) {
-        if (opciones.length && !ej.classList.contains('revelado')) {
-          const c = Number(ej.dataset.correcta);
-          const elegida = opciones.findIndex(o => o.classList.contains('elegida'));
-          opciones[c].classList.add('correcta');
-          let veredicto = 'Aún no habías elegido opción: la correcta está marcada en verde.';
-          let clase = '';
-          if (elegida >= 0) {
-            if (elegida === c) { veredicto = '¡Correcto! 🎉'; clase = 'ok'; ej.dataset.resultado = 'ok'; }
-            else { opciones[elegida].classList.add('incorrecta'); veredicto = 'Casi: revisa la explicación 👇'; clase = 'mal'; ej.dataset.resultado = 'mal'; }
-          }
-          ej.classList.add('revelado');
-          const v = document.createElement('span');
-          v.className = 'ej-veredicto ' + clase;
-          v.textContent = veredicto;
-          btn.after(v);
-          actualizarMarcador();
-        }
-        btn.textContent = opciones.length ? 'Ocultar explicación' : 'Ocultar solución';
-        window.dispatchEvent(new Event('resize'));
-      } else {
-        btn.textContent = opciones.length ? 'Ver explicación' : 'Ver solución paso a paso';
-      }
+      if (sol.hidden) revelar(ej);
+      else { sol.hidden = true; btn.textContent = textoBoton(ej, false); }
     });
-  });
+    if (ej.dataset.abierta) iniciarAbierta(ej, !!(opc && opc.efimero));
+  }
+  $$('.ejercicio').forEach(ej => iniciarEjercicio(ej));
   if (marcador) {
     $('button', marcador).addEventListener('click', () => {
       $$('.ejercicio').forEach(ej => {
+        if (ej.dataset.abierta) return;
         ej.classList.remove('revelado');
         delete ej.dataset.resultado;
         $$('.opcion', ej).forEach(o => o.classList.remove('elegida', 'correcta', 'incorrecta'));
@@ -341,9 +413,215 @@
     c.addEventListener('change', () => { marcas[i] = c.checked; guardar('guia-' + (document.body.dataset.unidad || 'u1') + '-checklist', marcas); });
   });
 
-  // Si la página se abre con un #ancla, resaltarla
-  if (location.hash.length > 1) {
-    const d = document.getElementById(decodeURIComponent(location.hash.slice(1)));
-    if (d) setTimeout(() => destellar(d), 400);
+  /* ------------------------------ Modo ETS ------------------------------ */
+  // Deja a la vista lo que entra al examen; la profundización queda plegada tras un botón.
+  const btnEts = $('#btn-ets');
+  function ponerModo(on) {
+    const ancla = marcado && marcado.offsetParent !== null ? marcado : null;
+    const dy = ancla ? ancla.getBoundingClientRect().top : 0;
+    document.body.classList.toggle('modo-ets', on);
+    if (btnEts) btnEts.setAttribute('aria-pressed', String(on));
+    guardar('guia-modo-ets', on);
+    if (ancla) {
+      if (ancla.offsetParent !== null) window.scrollTo({ top: window.scrollY + ancla.getBoundingClientRect().top - dy });
+      else { const p = ancla.closest('.prof'); if (p) p.scrollIntoView({ block: 'start' }); }
+    }
+    pintarEstudiadas();
+    actualizarMarcador();
+    document.dispatchEvent(new CustomEvent('guia:modo', { detail: on }));
+    window.dispatchEvent(new Event('resize'));
   }
+  if (btnEts) {
+    btnEts.setAttribute('aria-pressed', String(enEts()));
+    btnEts.addEventListener('click', () => ponerModo(!enEts()));
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.prof-stub');
+    if (!b) return;
+    const abierta = b.parentElement.classList.toggle('abierta');
+    b.setAttribute('aria-expanded', String(abierta));
+    window.dispatchEvent(new Event('resize'));
+  });
+  // La unidad activa queda a la vista en la barra cuando no caben todas
+  const nav = $('.unidades'), navActiva = $('.unidad.activa');
+  if (nav && navActiva) nav.scrollLeft = Math.max(0, navActiva.offsetLeft - nav.clientWidth / 2 + navActiva.offsetWidth / 2);
+
+  /* ------------------------------ Buscador ------------------------------ */
+  const B = window.GUIA_BUSCADOR, caja = $('#buscador'), campo = $('#buscador-campo'), resultados = $('#buscador-res'), btnBuscar = $('#btn-buscar');
+  const norm = t => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let indiceBusqueda = null, activoBusqueda = -1;
+  function prepararBusqueda() {
+    if (indiceBusqueda || !B) return;
+    indiceBusqueda = [];
+    B.entradas.forEach(e => indiceBusqueda.push({ u: e[0], id: e[1], tipo: e[2], num: e[3], t: e[4], prof: e[5], n: norm(e[4]) }));
+    B.glosario.forEach(g => indiceBusqueda.push({ u: g[3], id: g[4], tipo: 'sim', clave: g[0], t: g[1], d: g[2], n: norm(g[1]), nd: norm(g[2] + ' ' + g[0]) }));
+  }
+  function buscar(q) {
+    const tokens = norm(q).split(/\s+/).filter(Boolean);
+    if (!tokens.length) return [];
+    const res = [];
+    for (const it of indiceBusqueda) {
+      let p = 0, ok = true;
+      for (const tk of tokens) {
+        const i = it.n.indexOf(tk);
+        if (i >= 0) {
+          const inicioPalabra = i === 0 || /[^a-z0-9]/.test(it.n[i - 1]), finPalabra = i + tk.length === it.n.length || /[^a-z0-9]/.test(it.n[i + tk.length]);
+          p += (inicioPalabra ? 20 : 10) + (inicioPalabra && finPalabra ? 8 : 0) + (i === 0 ? 6 : 0);
+        }
+        else if (it.nd && it.nd.includes(tk)) p += 3;
+        else { ok = false; break; }
+      }
+      if (!ok) continue;
+      p += ({ seccion: 16, def: 10, sub: 9, sim: 7, menor: 2, bloque: 0 })[it.tipo] || 0;
+      p -= it.n.length / 200 + (it.prof ? 2 : 0);
+      res.push([p, it]);
+    }
+    res.sort((a, b) => b[0] - a[0]);
+    return res.slice(0, 40).map(r => r[1]);
+  }
+  const ETIQUETA = { def: 'Definición', sim: 'Símbolo', bloque: 'Bloque' };
+  function pintarBusqueda() {
+    const q = campo.value.trim();
+    activoBusqueda = -1;
+    if (!q) { resultados.innerHTML = '<div class="bq-vacio">Escribe una palabra: «Ljung», «invertibilidad», «coherencia», «AIC»…</div>'; return; }
+    if (!B) { resultados.innerHTML = '<div class="bq-vacio">El índice de búsqueda no está disponible.</div>'; return; }
+    const res = buscar(q);
+    if (!res.length) { resultados.innerHTML = `<div class="bq-vacio">Sin resultados para «${esc(q)}».</div>`; return; }
+    resultados.innerHTML = res.map(it => {
+      const pag = B.paginas[it.u] || { a: '', c: '' };
+      const sim = it.tipo === 'sim' && GLOS[it.clave] ? `<span class="bq-sim">${GLOS[it.clave].s}</span>` : '';
+      const tag = (ETIQUETA[it.tipo] ? `<span class="bq-tag">${ETIQUETA[it.tipo]}</span>` : '') + (it.prof ? '<span class="bq-tag prof">profundización</span>' : '');
+      const desc = it.d ? `<span class="bq-desc">${esc(it.d)}</span>` : '';
+      return `<a class="bq-item" href="${pag.a}#${it.id}" data-u="${it.u}" data-id="${it.id}"><span class="bq-donde">${esc(pag.c)}${it.num ? ' · ' + esc(it.num) : ''}</span>` +
+        `${sim}<span class="bq-titulo">${esc(it.t)}</span>${tag}${desc}</a>`;
+    }).join('');
+  }
+  function abrirBusqueda(abrir) {
+    if (!caja) return;
+    caja.hidden = !abrir;
+    btnBuscar.setAttribute('aria-expanded', String(abrir));
+    if (abrir) { prepararBusqueda(); pintarBusqueda(); campo.focus(); campo.select(); }
+  }
+  if (caja && btnBuscar) {
+    btnBuscar.addEventListener('click', e => { e.stopPropagation(); abrirBusqueda(caja.hidden); });
+    campo.addEventListener('input', pintarBusqueda);
+    campo.addEventListener('keydown', e => {
+      const items = $$('.bq-item', resultados);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!items.length) return;
+        activoBusqueda = (activoBusqueda + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+        items.forEach((a, i) => a.classList.toggle('activo', i === activoBusqueda));
+        items[activoBusqueda].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        const a = items[activoBusqueda >= 0 ? activoBusqueda : 0];
+        if (a) { e.preventDefault(); a.click(); }
+      } else if (e.key === 'Escape') abrirBusqueda(false);
+    });
+    resultados.addEventListener('click', e => {
+      const a = e.target.closest('.bq-item');
+      if (!a) return;
+      abrirBusqueda(false);
+      if (a.dataset.u === UNIDAD && document.getElementById(a.dataset.id)) { e.preventDefault(); irA(a.dataset.id, null); }
+    });
+    document.addEventListener('click', e => { if (!caja.hidden && !caja.contains(e.target) && e.target !== btnBuscar) abrirBusqueda(false); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !caja.hidden) { abrirBusqueda(false); return; }
+      const t = e.target;
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && !(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable))) {
+        e.preventDefault(); abrirBusqueda(true);
+      }
+    });
+  }
+
+  /* ----------------- Avance: portada, temario y ruta de estudio ----------------- */
+  const estudiadasDe = {};
+  const setEstudiadas = u => estudiadasDe[u] || (estudiadasDe[u] = new Set(leer('guia-' + u + '-estudiadas', [])));
+  function estadoDe(lista) {
+    const ids = (lista || '').split(' ').filter(Boolean);
+    if (!ids.length) return null;
+    const hechas = ids.filter(x => { const k = x.indexOf(':'); return setEstudiadas(x.slice(0, k)).has(x.slice(k + 1)); }).length;
+    return hechas === ids.length ? 'hecho' : hechas ? 'parcial' : 'nada';
+  }
+  const TXT_ESTADO = { hecho: '✓ Estudiado', parcial: '◐ En curso', nada: '☐ Pendiente' };
+  function pintarAvance() {
+    $$('tr[data-secs]').forEach(tr => {
+      const e = estadoDe(tr.dataset.secs), td = $('.tm-estado', tr);
+      if (!td) return;
+      td.className = 'tm-estado ' + (e || '');
+      td.textContent = e ? TXT_ESTADO[e] : '—';
+    });
+    $$('.rt-sesion').forEach(li => {
+      const e = estadoDe(li.dataset.secs), sp = $('.rt-estado', li);
+      li.classList.toggle('hecha', e === 'hecho');
+      if (sp) { sp.className = 'rt-estado ' + (e || ''); sp.textContent = e ? TXT_ESTADO[e] : ''; }
+    });
+    const caja = $('#avance-global');
+    if (caja && B && B.secciones) {
+      caja.innerHTML = Object.keys(B.secciones).map(u => {
+        const secs = B.secciones[u].filter(x => !(enEts() && x.prof));
+        const hechas = secs.filter(x => setEstudiadas(u).has(x.id)).length;
+        const pct = secs.length ? Math.round(100 * hechas / secs.length) : 0;
+        return `<a class="av-unidad" href="${B.paginas[u].a}" style="text-decoration:none"><div class="av-nombre"><span>${esc(B.paginas[u].n)}</span>` +
+          `<span>${hechas}/${secs.length} secciones</span></div><div class="av-barra"><span style="width:${pct}%"></span></div></a>`;
+      }).join('');
+    }
+    const errores = Object.keys(leer('guia-errores', {})).length;
+    const notas = Object.values(leer('guia-abiertas', {}));
+    const sims = leer('guia-simulacros', []);
+    const ultima = leer('guia-ultima', null);
+    const DATOS = {
+      errores: errores ? `${errores} ejercicio${errores === 1 ? '' : 's'} por repasar` : 'Sin errores pendientes',
+      abiertas: notas.length ? `${notas.filter(n => n === 'bien').length} bien · ${notas.filter(n => n === 'medias').length} a medias · ${notas.filter(n => n === 'mal').length} mal` : 'Aún sin calificar',
+      simulacro: sims.length ? `Último: ${sims[sims.length - 1].nota.toFixed(1)}/10 · ${sims.length} hecho${sims.length === 1 ? '' : 's'}` : 'Aún no haces ninguno'
+    };
+    $$('[data-dato]').forEach(el => { if (DATOS[el.dataset.dato] !== undefined) el.textContent = DATOS[el.dataset.dato]; });
+    const cont = $('#continuar');
+    if (cont) {
+      if (ultima && B && B.paginas[ultima.u]) {
+        cont.hidden = false;
+        cont.href = B.paginas[ultima.u].a + '#' + ultima.id;
+        const sp = $('.ac-dato', cont); if (sp) sp.textContent = `${B.paginas[ultima.u].n} · ${ultima.t}`;
+      } else cont.hidden = true;
+    }
+  }
+  pintarAvance();
+  document.addEventListener('guia:modo', pintarAvance);
+  document.addEventListener('guia:errores', pintarAvance);
+
+  /* ------------- Preguntas tipo: resumen de la autocalificación ------------- */
+  const ptResumen = $('#pt-resumen');
+  if (ptResumen) {
+    const pintarPt = () => {
+      const ab = $$('.ejercicio.abierta');
+      const c = n => ab.filter(e => e.dataset.nota === n).length;
+      $('.pt-datos', ptResumen).innerHTML = `<span>${ab.length} preguntas</span><span class="pt-ok">✓ ${c('bien')} bien</span>` +
+        `<span class="pt-med">≈ ${c('medias')} a medias</span><span class="pt-mal">✗ ${c('mal')} mal</span><span>${ab.filter(e => !e.dataset.nota).length} sin calificar</span>`;
+    };
+    document.addEventListener('guia:nota', pintarPt);
+    const b = $('button', ptResumen);
+    if (b) b.addEventListener('click', () => {
+      const on = document.body.classList.toggle('pt-filtrado');
+      $$('.ejercicio.abierta').forEach(e => { e.hidden = on && e.dataset.nota === 'bien'; });
+      b.textContent = on ? 'Ver todas' : 'Ver solo las que no domino';
+    });
+    pintarPt();
+  }
+
+  // Lo que usan las demás páginas (práctica y simulacro)
+  window.GUIA_UI = { $, $$, guardar, leer, esc, irA, iniciarEjercicio, revelar, registrarError, enEts, GLOS };
+
+  // Si la página se abre con un #ancla (o cambia), abrir la profundización que la contenga y resaltarla
+  function alAncla(mover) {
+    if (location.hash.length < 2) return;
+    const d = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (!d) return;
+    const oculto = d.offsetParent === null;
+    abrirProf(d);
+    if (oculto || mover) d.scrollIntoView({ block: 'start' });
+    setTimeout(() => destellar(d), 400);
+  }
+  alAncla(false);
+  window.addEventListener('hashchange', () => alAncla(true));
 })();

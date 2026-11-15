@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Genera index.html (Unidad I) y unidad2.html (Unidad II) a partir de fuente/unidad1/ y fuente/unidad2/.
+Genera la portada (index.html), las tres unidades, el Laboratorio y las páginas de práctica
+(preguntas tipo, práctica y repaso) a partir de los archivos Markdown de fuente/.
 
   • Las fórmulas ($...$ y $$...$$) se pre-renderizan con KaTeX (Node.js) y a
     los símbolos se les agrega una explicación que aparece al pasar el cursor.
   • Los bloques ```python se EJECUTAN y su salida real se muestra debajo.
   • [[id]] crea un enlace a otra sección (↩ si está antes, ↪ si está después).
+  • Un título con «.prof» ({#id .prof}) marca la sección o el subtema como profundización:
+    el modo ETS lo pliega y no cuenta en el tiempo esencial.
 
 Requisitos
   Python 3: markdown-it-py, pygments, numpy, pandas, statsmodels, matplotlib, scipy, scikit-learn
@@ -37,11 +40,17 @@ AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 CACHE = AQUI / "cache"
 UNIDADES = {
-    "u1": {"carpeta": "unidad1", "salida": "index.html", "numero": "I", "nombre": "Unidad I",
+    # ---------------- Portada: mapa del temario, ruta de estudio y accesos ----------------
+    "inicio": {"carpeta": "inicio", "salida": "index.html", "numero": "", "nombre": "Inicio",
+               "titulo_pagina": "Guía de estudio · Análisis de Series de Tiempo (ETS)",
+               "descripcion": "Portada de la guía de estudio para el ETS de Análisis de Series de Tiempo: mapa del temario del IPN y de la guía oficial, ruta de estudio por sesiones, modo ETS, preguntas tipo, simulacro y hojas de repaso.",
+               "scripts": [], "indice_titulo": "Inicio", "sin_estudiada": True, "sin_tiempo": True,
+               "pie": "Guía de estudio · Análisis de Series de Tiempo. El avance se guarda en este navegador."},
+    "u1": {"carpeta": "unidad1", "salida": "unidad1.html", "numero": "I", "nombre": "Unidad I", "formulario": "formulario",
            "titulo_pagina": "Unidad I · Características de series de tiempo — Guía de estudio",
            "descripcion": "Guía de estudio interactiva de la Unidad I de Análisis de Series de Tiempo: componentes, estacionariedad, raíz unitaria, ADF, KPSS, ACF, PACF y Ljung-Box, con demostraciones paso a paso, ejemplos a mano, código Python y gráficas interactivas.",
            "scripts": []},
-    "u2": {"carpeta": "unidad2", "salida": "unidad2.html", "numero": "II", "nombre": "Unidad II",
+    "u2": {"carpeta": "unidad2", "salida": "unidad2.html", "numero": "II", "nombre": "Unidad II", "formulario": "formulario2",
            "titulo_pagina": "Unidad II · Procesos lineales: AR, MA, ARMA, ARIMA y SARIMA(X) — Guía de estudio",
            "descripcion": "Guía de estudio interactiva de la Unidad II de Análisis de Series de Tiempo: pronósticos de referencia con statsforecast, operador rezago, AR, MA, ARMA, ARIMA, SARIMA, SARIMAX, máxima verosimilitud, AIC/BIC, diagnóstico de residuos, ARCH, validación temporal y métricas de pronóstico.",
            "scripts": ["assets/js/ts2.js", "assets/js/widgets2.js"],
@@ -58,7 +67,7 @@ UNIDADES = {
                (r"e_\{t-[0-9a-z]+\}", "e-res-j"), (r"e_t(?![A-Za-z0-9])", "e-res"), (r"e_\{t\}", "e-res"),
                (r"(?<![A-Za-z\\{])L(?![A-Za-z])", "L-op"),
            ]},
-    "u3": {"carpeta": "unidad3", "salida": "unidad3.html", "numero": "III", "nombre": "Unidad III",
+    "u3": {"carpeta": "unidad3", "salida": "unidad3.html", "numero": "III", "nombre": "Unidad III", "formulario": "formulario3",
            "titulo_pagina": "Unidad III · Análisis espectral y filtrado — Guía de estudio",
            "descripcion": "Guía de estudio interactiva de la Unidad III de Análisis de Series de Tiempo: periodicidad y ciclo, dominio de la frecuencia, densidad espectral, transformada de Fourier, periodograma, Welch, estimación paramétrica, espectro cruzado, coherencia y filtros lineales, con demostraciones, ejemplos a mano, Python y gráficas interactivas.",
            "scripts": ["assets/js/ts2.js", "assets/js/ts3.js", "assets/js/widgets3.js"],
@@ -89,7 +98,7 @@ UNIDADES = {
     "lab": {"carpeta": "laboratorio/inicio", "salida": "laboratorio.html", "numero": "Lab", "nombre": "Laboratorio",
             "titulo_pagina": "Laboratorio · Análisis completos de series de tiempo — Guía de estudio",
             "descripcion": "Laboratorio de Análisis de Series de Tiempo: elige un dataset y recorre un análisis completo, paso a paso, con las herramientas de las tres unidades, código Python con su salida real y prueba y error.",
-            "scripts": ["assets/js/lab.js"], "indice_titulo": "Laboratorio",
+            "scripts": ["assets/js/lab.js"], "indice_titulo": "Laboratorio", "sin_tiempo": True,
             "pie": "Laboratorio · Análisis de Series de Tiempo. Todo el código se ejecuta al generar la página; las gráficas muestran sus resultados reales."},
     "lab-manchas": {"carpeta": "laboratorio/manchas_solares", "salida": "lab-manchas-solares.html", "numero": "Lab",
                     "nombre": "Laboratorio · Manchas solares", "en_nav": False, "nav_activo": "lab",
@@ -98,7 +107,31 @@ UNIDADES = {
                     "scripts": ["assets/js/lab.js"], "indice_titulo": "Flujo · Manchas solares",
                     "pie": "Laboratorio · Manchas solares. Todo el código se ejecuta al generar la página; las gráficas y tablas muestran sus resultados reales.",
                     "reglas": [(r"\\hat\{y\}", "yhat"), (r"\\omega(?![A-Za-z_])", "omega3"), (r"\\lambda(?![A-Za-z])", "lambda-hp")]},
+    # ---------------- Práctica para el examen ----------------
+    "preguntas": {"carpeta": "preguntas", "salida": "preguntas-tipo.html", "numero": "", "nombre": "Preguntas tipo",
+                  "titulo_pagina": "Preguntas tipo del ETS con respuesta modelo — Guía de estudio",
+                  "descripcion": "Las 21 preguntas tipo de la Guía para ETS de Análisis de Series de Tiempo, cada una con su respuesta modelo redactada como en el examen, los puntos que debe tener y el enlace al tema.",
+                  "scripts": [], "indice_titulo": "Preguntas tipo", "sin_estudiada": True,
+                  "pie": "Preguntas tipo · Análisis de Series de Tiempo. Tus respuestas y tu autocalificación se guardan en este navegador.",
+                  "reglas": [(r"\\hat\{y\}", "yhat"), (r"\\omega(?![A-Za-z_])", "omega3")]},
+    "practica": {"carpeta": "practica", "salida": "practica.html", "numero": "", "nombre": "Práctica",
+                 "titulo_pagina": "Práctica: simulacro, repaso de errores e interpretar salidas — Guía de estudio",
+                 "descripcion": "Simulacro de examen con ejercicios al azar de las tres unidades, repaso de los ejercicios fallados y generador de salidas para interpretar (ACF/PACF, ADF y KPSS, Ljung–Box, summary de SARIMAX y periodograma).",
+                 "scripts": ["assets/js/ts2.js", "assets/js/ts3.js", "assets/datos/banco-u1.js", "assets/datos/banco-u2.js",
+                             "assets/datos/banco-u3.js", "assets/datos/banco-preguntas.js", "assets/js/practica.js"],
+                 "indice_titulo": "Práctica", "sin_estudiada": True, "sin_tiempo": True,
+                 "pie": "Práctica · Análisis de Series de Tiempo. Las salidas para interpretar se generan en tu navegador con las mismas fórmulas que statsmodels y scipy."},
+    "repaso": {"carpeta": "repaso", "salida": "repaso.html", "numero": "", "nombre": "Repaso",
+               "titulo_pagina": "Hojas de repaso por unidad — Guía de estudio",
+               "descripcion": "Hojas de repaso de las tres unidades de Análisis de Series de Tiempo: lo que debes llevarte de cada tema, fórmulas, tablas de hipótesis, flujo de análisis y errores comunes, listas para leer de un vistazo o imprimir.",
+               "scripts": [], "indice_titulo": "Hojas de repaso", "sin_estudiada": True, "sin_tiempo": True,
+               "pie": "Hojas de repaso · Análisis de Series de Tiempo. Se arman con los resúmenes y formularios de cada unidad."},
 }
+# Las páginas que usan datos de otras (anclas, tiempos, resúmenes, ejercicios) se generan después de ellas
+ORDEN_BUILD = ["u1", "u2", "u3", "lab", "lab-manchas", "preguntas", "practica", "repaso", "inicio"]
+DATOS = RAIZ / "assets" / "datos"
+CORTO = {"u1": "U I", "u2": "U II", "u3": "U III", "lab": "Lab", "lab-manchas": "Lab", "preguntas": "Preguntas",
+         "practica": "Práctica", "repaso": "Repaso", "inicio": "Inicio"}
 
 # Estado de cada pastilla del Laboratorio: clase CSS, icono y etiqueta
 ESTADOS = {"azul": ("🔵", "Exploración"), "verde": ("✅", "Logrado"), "amarillo": ("🟡", "Funciona con reservas"),
@@ -289,6 +322,42 @@ def titulo_html(texto):
                    else html.escape(p) for p in partes)
 
 
+def titulo_plano(texto):
+    """Título sin HTML ni emojis iniciales (para el buscador y los datos de la práctica)."""
+    t = html.unescape(re.sub(r"<[^>]+>", "", titulo_html(texto)))
+    return re.sub(r"^[^\w$¿¡(«]+\s*", "", t).strip()
+
+
+def minutos(m, paso=5):
+    """Redondea un tiempo de estudio: múltiplos de 5 minutos (mínimo 5) o al minuto si paso = 1."""
+    if paso == 1:
+        return max(1, int(round(m)))
+    return max(5, int(round(m / paso)) * paso)
+
+
+def texto_minutos(m):
+    m = int(m)
+    if m < 60:
+        return f"{m} min"
+    h, r = divmod(m, 60)
+    return f"{h} h" if r == 0 else f"{h} h {r} min"
+
+
+def peso_nodo(n):
+    """Minutos de estudio que aporta un nodo: lectura a unas 170 palabras por minuto más un extra por tipo de bloque."""
+    pal = lambda t: len(re.findall(r"\S+", t))
+    if n[0] == "md":
+        return pal(n[1]) / 170
+    if n[0] == "code":
+        return 0 if "oculto" in n[1].split() else 0.4 + pal(n[2]) / 250
+    if n[0] == "widget":
+        return 1.5
+    if n[0] == "cont":
+        extra = {"guiado": 2, "demo": 1, "interactivo": 2, "ejercicio": 0.8, "abierta": 3, "ejemplo": 0.5, "pastilla": 1.5}
+        return pal("\n".join(n[3])) / 170 + extra.get(n[1], 0)
+    return 0
+
+
 md = MarkdownIt("commonmark", {"html": True, "typographer": False}).enable("table").enable("strikethrough")
 FORMATO = HtmlFormatter(nowrap=True)
 
@@ -309,7 +378,20 @@ NIVELES = {"básico": "basico", "basico": "basico", "intermedio": "intermedio", 
 
 
 class Documento:
-    def __init__(self):
+    def __init__(self, clave="", cfg=None, externos=None):
+        self.clave = clave
+        self.cfg = cfg or {}
+        self.externos = externos or {}
+        self.sec_id = None          # id de la sección (##) en curso
+        self.sub_id = None          # id del subtema (###) en curso
+        self.sec_prof = False       # la sección en curso es de profundización
+        self.sub_prof = False       # el subtema en curso es de profundización
+        self.sub_abierta = False
+        self.t_sec = {}             # id de sección → [minutos esenciales, minutos totales]
+        self.t_sub = {}             # id de subtema → minutos
+        self.ejercicios = []        # datos de cada ejercicio (para la práctica)
+        self.n_abierta = 0
+        self.busq = []              # entradas extra del buscador (definiciones)
         self.math = []
         self.refs = []
         self.anclas = {}
@@ -400,7 +482,45 @@ class Documento:
         if id_ in self.anclas:
             self.errores.append(f"id repetido: {id_}")
         self.orden += 1
-        self.anclas[id_] = {"num": num, "titulo": titulo, "tipo": tipo, "orden": self.orden}
+        self.anclas[id_] = {"num": num, "titulo": titulo, "tipo": tipo, "orden": self.orden,
+                            "sec": self.sec_id, "prof": bool(self.sec_prof or self.sub_prof)}
+
+    def info_tema(self, tema):
+        """Datos del primer [[enlace]] de un texto: unidad, id, sección y si es de profundización."""
+        m = re.search(r"\[\[([\w:-]+)", tema or "")
+        if not m:
+            return None
+        id_ = m.group(1)
+        if ":" in id_:
+            pref, rid = id_.split(":", 1)
+            a = self.externos.get(pref, {}).get("anclas", {}).get(rid)
+            return {"u": pref, "id": rid, "sec": a.get("sec"), "prof": bool(a.get("prof"))} if a else None
+        a = self.anclas.get(id_)
+        return {"u": self.clave, "id": id_, "sec": a.get("sec"), "prof": bool(a.get("prof"))} if a else None
+
+    def calcular_tiempos(self, listas):
+        """Recorre los nodos de todos los archivos y suma el tiempo de estudio por sección y por subtema."""
+        sec = sub = None
+        sec_prof = sub_prof = False
+        for nodos in listas:
+            for n in nodos:
+                if n[0] == "h":
+                    id_ = n[3] or slug(n[2])
+                    if n[1] == 2:
+                        sec, sub, sec_prof, sub_prof = id_, None, n[4], False
+                        self.t_sec[sec] = [0.0, 0.0]
+                    elif n[1] == 3:
+                        sub, sub_prof = id_, n[4]
+                        self.t_sub[sub] = 0.0
+                    continue
+                if sec is None:
+                    continue
+                m = peso_nodo(n)
+                self.t_sec[sec][1] += m
+                if not (sec_prof or sub_prof):
+                    self.t_sec[sec][0] += m
+                if sub is not None:
+                    self.t_sub[sub] += m
 
     # ------------------------------ parser ---------------------------------
     def parsear(self, lineas):
@@ -422,10 +542,10 @@ class Documento:
                 nodos.append(("code", info, "\n".join(cod)))
                 i = j + 1
                 continue
-            m = re.match(r"^(#{2,4}) (.+?)(?:\s*\{#([\w-]+)\})?\s*$", l)
+            m = re.match(r"^(#{2,4}) (.+?)(?:\s*\{#([\w-]+)(\s+\.prof)?\})?\s*$", l)
             if m:
                 vaciar()
-                nodos.append(("h", len(m.group(1)), m.group(2), m.group(3)))
+                nodos.append(("h", len(m.group(1)), m.group(2), m.group(3), bool(m.group(4))))
                 i += 1
                 continue
             m = re.match(r"^:::(\w+)\s*(.*)$", l)
@@ -485,35 +605,62 @@ class Documento:
             return ""
         raise ValueError(tipo)
 
-    def render_h(self, nivel, titulo, id_):
+    def boton_prof(self, id_, titulo, nivel):
+        """Botón que queda a la vista en el modo ETS en lugar de un bloque de profundización."""
+        que = "Sección de profundización" if nivel == 2 else "Profundización"
+        return (f'<button type="button" class="prof-stub" data-para="{id_}" aria-expanded="false">'
+                f'<span class="ps-ico" aria-hidden="true">➕</span><span class="ps-txt"><b>{que}</b> · {titulo_html(titulo)}</span>'
+                f'<span class="ps-min">@@TP:{id_}@@</span><span class="ps-acc"></span></button>')
+
+    def render_h(self, nivel, titulo, id_, prof=False):
         id_ = id_ or slug(titulo)
         if nivel == 2:
             self.sec += 1
             self.sub = 0
             num = str(self.sec)
-            self.ancla(id_, num, titulo, "seccion")
             previo = self.cerrar_seccion()
+            self.sec_id, self.sub_id, self.sec_prof, self.sub_prof = id_, None, prof, False
+            self.ancla(id_, num, titulo, "seccion")
             self.abierta = True
-            self.toc.append({"id": id_, "num": num, "titulo": titulo, "subs": []})
+            self.toc.append({"id": id_, "num": num, "titulo": titulo, "subs": [], "prof": prof})
             self.mapa.append({"id": id_, "num": num, "titulo": titulo, "texto": ""})
             t = self.md_inline(titulo)
-            return (f'{previo}<section class="seccion" data-seccion="{id_}">'
-                    f'<h2 id="{id_}"><span class="h-num">{num}</span><span class="h-txt">{t}</span></h2>')
+            clase = "seccion prof" if prof else "seccion"
+            boton = self.boton_prof(id_, titulo, 2) if prof else ""
+            return (f'{previo}<section class="{clase}" data-seccion="{id_}">{boton}'
+                    f'<h2 id="{id_}"><span class="h-num">{num}</span><span class="h-txt">{t}</span></h2>@@T:{id_}@@')
         if nivel == 3:
             self.sub += 1
             num = f"{self.sec}.{self.sub}"
+            previo = self.cerrar_sub()
+            self.sub_id, self.sub_prof = id_, prof
             self.ancla(id_, num, titulo, "sub")
-            self.toc[-1]["subs"].append({"id": id_, "num": num, "titulo": titulo})
-            return f'<h3 id="{id_}"><span class="h-num">{num}</span> {self.md_inline(titulo)}</h3>'
+            self.toc[-1]["subs"].append({"id": id_, "num": num, "titulo": titulo, "prof": bool(prof or self.sec_prof)})
+            self.sub_abierta = True
+            clase = "sub prof" if prof else "sub"
+            boton = self.boton_prof(id_, titulo, 3) if prof else ""
+            return (f'{previo}<!--SUB {id_}--><div class="{clase}" data-sub="{id_}">{boton}'
+                    f'<h3 id="{id_}"><span class="h-num">{num}</span> {self.md_inline(titulo)}</h3>')
         self.ancla(id_, None, titulo, "menor")
         return f'<h4 id="{id_}">{self.md_inline(titulo)}</h4>'
+
+    def cerrar_sub(self):
+        if not self.sub_abierta:
+            return ""
+        self.sub_abierta = False
+        self.sub_prof = False
+        self.sub_id = None
+        return "</div><!--/SUB-->"
 
     def cerrar_seccion(self):
         if not self.abierta:
             return ""
         s = self.toc[-1]
         self.abierta = False
-        return (f'<div class="fin-seccion"><button class="btn-estudiada" data-seccion="{s["id"]}">'
+        previo = self.cerrar_sub()
+        if self.cfg.get("sin_estudiada"):
+            return f"{previo}</section>"
+        return (f'{previo}<div class="fin-seccion"><button class="btn-estudiada" data-seccion="{s["id"]}">'
                 f'<span class="ico">☐</span> Marcar «{titulo_html(s["titulo"])}» como estudiada</button></div></section>')
 
     def ejecutar(self, codigo, esperar_error=False):
@@ -536,7 +683,7 @@ class Documento:
                     self.errores.append("Error al ejecutar Python:\n" + codigo + "\n" + traceback.format_exc())
                 print(f"{type(e).__name__}: {e}")
             for a in w:
-                if issubclass(a.category, (DeprecationWarning, PendingDeprecationWarning, FutureWarning)):
+                if issubclass(a.category, (DeprecationWarning, PendingDeprecationWarning, FutureWarning, SyntaxWarning)):
                     continue
                 if "Matplotlib" in str(a.message) or "FigureCanvasAgg" in str(a.message):
                     continue
@@ -628,6 +775,12 @@ class Documento:
             return self.render_pastilla(cab, hijos, id_)
         if tipo == "ejercicio":
             return self.render_ejercicio(cab, hijos)
+        if tipo == "abierta":
+            return self.render_abierta(cab, hijos, id_)
+        if tipo == "temario":
+            return self.render_temario(cab, hijos)
+        if tipo == "ruta":
+            return self.render_ruta(hijos)
         if tipo == "cols":
             partes, actual = [], []
             for l in hijos:
@@ -670,10 +823,18 @@ class Documento:
         idattr = f' id="{id_}"' if id_ else ""
         titulo = f'<span class="b-titulo">{self.md_inline(cab)}</span>' if cab else ""
         cabecera = f'<span class="b-ico">{ico}</span><span class="b-tipo">{etiqueta}</span>{titulo}'
+        if tipo == "definicion" and cab:
+            self.busq.append({"t": cab, "i": id_ or self.sub_id or self.sec_id, "p": bool(self.sec_prof or self.sub_prof)})
         if tipo == "demo":
             return (f'<details class="bloque b-demo"{idattr} open><summary class="b-cab">{cabecera}'
                     f'<span class="b-plegar"></span></summary><div class="b-cuerpo">{cuerpo}</div></details>')
-        return f'<div class="bloque b-{tipo}"{idattr}><div class="b-cab">{cabecera}</div><div class="b-cuerpo">{cuerpo}</div></div>'
+        bloque = f'<div class="bloque b-{tipo}"{idattr}><div class="b-cab">{cabecera}</div><div class="b-cuerpo">{cuerpo}</div></div>'
+        if tipo == "resumen":      # las hojas de repaso reúnen estos bloques
+            # Sin id es el resumen de la sección (aunque caiga dentro de su último subtema);
+            # con id pertenece al subtema en curso y hereda su marca de profundización.
+            prof = self.sec_prof or (bool(id_) and self.sub_prof)
+            return f'<!--RS {self.sec_id}|{int(bool(prof))}-->{bloque}<!--/RS-->'
+        return bloque
 
     def render_pastilla(self, cab, hijos, id_):
         """Un paso del Laboratorio: objetivo, parámetros, código plegable, resultado, lectura y decisión."""
@@ -868,7 +1029,14 @@ class Documento:
             else:
                 texto.append(l)
         n = self.n_ejercicio
-        partes = [f'<div class="ejercicio" id="ej-{n}" data-correcta="{"" if correcta is None else correcta}">',
+        import hashlib
+        eid = f'{self.clave}-{hashlib.sha1(chr(10).join(enun).encode("utf-8")).hexdigest()[:8]}'
+        info = self.info_tema(tema)
+        prof = bool(info and info["prof"])
+        self.ejercicios.append({"e": eid, "u": self.clave, "n": n, "niv": nivel, "cl": clase, "tipo": "mc" if opciones else "sol",
+                                "su": info["u"] if info else self.clave, "sec": info["sec"] if info else None, "prof": prof})
+        partes = [f'<!--EJ {eid}--><div class="ejercicio" id="ej-{n}" data-eid="{eid}"{" data-prof=1" if prof else ""} '
+                  f'data-correcta="{"" if correcta is None else correcta}">',
                   f'<div class="ej-cab"><span class="ej-num">Ejercicio {n}</span>'
                   f'<span class="ej-nivel nivel-{clase}">{html.escape(nivel)}</span>'
                   f'<span class="ej-tema">{self.md_inline(tema.strip()) if tema.strip() else ""}</span></div>',
@@ -882,8 +1050,123 @@ class Documento:
                 self.errores.append(f"Ejercicio {n} sin respuesta marcada")
         etiqueta = "Ver respuesta" if opciones else "Ver solución paso a paso"
         partes.append(f'<div class="ej-acciones"><button type="button" class="btn-respuesta">{etiqueta}</button></div>')
-        partes.append(f'<div class="ej-solucion" hidden>{self.render(self.parsear(expl))}</div></div>')
+        partes.append(f'<div class="ej-solucion" hidden>{self.render(self.parsear(expl))}</div></div><!--/EJ-->')
         return "".join(partes)
+
+    def render_abierta(self, cab, hijos, id_):
+        """Pregunta de respuesta abierta: enunciado, --- respuesta modelo, +++ puntos que debe tener."""
+        import hashlib
+        self.n_abierta += 1
+        verbo, _, tema = cab.partition("|")
+        verbo = verbo.strip() or "Explique"
+        lim = [l.strip() for l in hijos]
+        if "---" not in lim:
+            self.errores.append(f"Pregunta abierta sin respuesta modelo: {cab}")
+            return ""
+        k = lim.index("---")
+        enun, resto = hijos[:k], hijos[k + 1:]
+        lim2 = [l.strip() for l in resto]
+        if "+++" in lim2:
+            j = lim2.index("+++")
+            modelo, puntos = resto[:j], [l.strip()[2:] for l in resto[j + 1:] if l.strip().startswith("- ")]
+        else:
+            modelo, puntos = resto, []
+        n = self.n_abierta
+        id_ = id_ or f"ab-{n}"
+        eid = f'{self.clave}-ab-{hashlib.sha1(chr(10).join(enun).encode("utf-8")).hexdigest()[:8]}'
+        info = self.info_tema(tema)
+        prof = bool(info and info["prof"])
+        self.ancla(id_, None, verbo, "abierta")
+        self.ejercicios.append({"e": eid, "u": self.clave, "n": n, "niv": verbo, "cl": "abierta", "tipo": "ab",
+                                "su": info["u"] if info else self.clave, "sec": info["sec"] if info else None, "prof": prof})
+        lista = "".join(f'<li><label><input type="checkbox"> <span>{self.md_inline(p)}</span></label></li>' for p in puntos)
+        bloque_puntos = (f'<div class="ab-puntos"><div class="ab-et">☑️ Tu respuesta debe tener</div><ul class="ab-lista">{lista}</ul></div>'
+                         if puntos else "")
+        return (f'<!--EJ {eid}--><div class="ejercicio abierta" id="{id_}" data-eid="{eid}" data-abierta="1"{" data-prof=1" if prof else ""}>'
+                f'<div class="ej-cab"><span class="ej-num">{html.escape(verbo)}</span><span class="ej-nivel nivel-abierta">Respuesta abierta</span>'
+                f'<span class="ej-tema">{self.md_inline(tema.strip()) if tema.strip() else ""}</span></div>'
+                f'<div class="ej-enunciado">{self.render(self.parsear(enun))}</div>'
+                f'<textarea class="ab-texto" rows="5" placeholder="Escribe aquí tu respuesta, como la redactarías en el examen. Se guarda en este navegador."></textarea>'
+                f'<div class="ej-acciones"><button type="button" class="btn-respuesta">Ver respuesta modelo</button></div>'
+                f'<div class="ej-solucion" hidden><div class="ab-modelo"><div class="ab-et">📝 Respuesta modelo</div>{self.render(self.parsear(modelo))}</div>'
+                f'{bloque_puntos}<div class="ab-nota"><span>¿Cómo te fue?</span>'
+                f'<button type="button" data-nota="bien">✓ Bien</button><button type="button" data-nota="medias">≈ A medias</button>'
+                f'<button type="button" data-nota="mal">✗ Mal</button></div></div></div><!--/EJ-->')
+
+    def enlace_externo(self, ref):
+        """'u1:ancla' → (html del enlace, datos del ancla). Para el mapa del temario y la ruta de estudio."""
+        pref, _, rid = ref.partition(":")
+        ext = self.externos.get(pref)
+        if not ext or rid not in ext["anclas"]:
+            self.errores.append(f"Referencia externa inexistente: {ref}")
+            return f"[[{ref}]]", None
+        a = ext["anclas"][rid]
+        titulo = re.sub(r"^[^\w$¿¡(«]+\s*", "", a["titulo"])
+        num = f'{a["num"]} ' if a.get("num") else ""
+        return (f'<a class="ref ref-unidad" href="{ext["archivo"]}#{rid}"><span class="ref-flecha">{CORTO.get(pref, pref)}</span> '
+                f'{num}{titulo_html(titulo)}</a>'), {"u": pref, "id": rid, **a}
+
+    def render_temario(self, cab, hijos):
+        """Tabla inciso → sección de la guía. Líneas «# Grupo» o «inciso | tema | u1:ancla u2:ancla | nota»."""
+        filas = []
+        for l in hijos:
+            l = l.strip()
+            if not l:
+                continue
+            if l.startswith("# "):
+                filas.append(f'<tr class="tm-grupo"><td colspan="4">{self.md_inline(l[2:])}</td></tr>')
+                continue
+            p = [x.strip() for x in l.split("|")]
+            inciso, tema, refs = p[0], p[1], (p[2].split() if len(p) > 2 else [])
+            nota = p[3] if len(p) > 3 else ""
+            enlaces, secs, profs = [], [], []
+            for r in refs:
+                h, a = self.enlace_externo(r)
+                enlaces.append(h)
+                if a:
+                    secs.append(f'{a["u"]}:{a.get("sec") or a["id"]}')
+                    profs.append(bool(a.get("prof")))
+            etiqueta = ('<span class="tm-tag tm-prof">profundización</span>' if profs and all(profs)
+                        else '<span class="tm-tag tm-ets">entra al ETS</span>' if profs else "")
+            nota_html = f'<div class="tm-nota">{self.md_inline(nota)}</div>' if nota else ""
+            clase = ' class="tm-solo-prof"' if profs and all(profs) else ""
+            filas.append(f'<tr{clase} data-secs="{" ".join(dict.fromkeys(secs))}"><td class="tm-num">{html.escape(inciso)}</td>'
+                         f'<td class="tm-tema">{self.md_inline(tema)} {etiqueta}{nota_html}</td>'
+                         f'<td class="tm-donde">{"".join(enlaces)}</td><td class="tm-estado"></td></tr>')
+        titulo = f'<caption>{self.md_inline(cab)}</caption>' if cab else ""
+        return (f'<div class="tabla temario"><table>{titulo}<thead><tr><th>Inciso</th><th>Tema</th><th>Dónde se estudia</th>'
+                f'<th>Avance</th></tr></thead><tbody>{"".join(filas)}</tbody></table></div>')
+
+    def render_ruta(self, hijos):
+        """Ruta de estudio. Cada línea: «título | u1:seccion u1:otra | nota | minutos extra»."""
+        items = []
+        for l in hijos:
+            l = l.strip()
+            if not l:
+                continue
+            p = [x.strip() for x in l.split("|")]
+            titulo, refs = p[0], (p[1].split() if len(p) > 1 else [])
+            nota = p[2] if len(p) > 2 else ""
+            extra = float(p[3]) if len(p) > 3 and p[3] else 0
+            enlaces, secs, t_ets, t_tot = [], [], extra, extra
+            for r in refs:
+                h, a = self.enlace_externo(r)
+                enlaces.append(h)
+                if not a:
+                    continue
+                t = self.externos[a["u"]].get("meta", {}).get("tiempos", {}).get(a["id"])
+                if t:
+                    t_ets += t[0]
+                    t_tot += t[1]
+                secs.append(f'{a["u"]}:{a.get("sec") or a["id"]}')
+            n = len(items) + 1
+            tiempo = (f'<span class="rt-min"><span class="t-ets">⏱ {texto_minutos(minutos(t_ets))}</span>'
+                      f'<span class="t-total">⏱ {texto_minutos(minutos(t_tot))}</span></span>')
+            nota_html = f'<p class="rt-nota">{self.md_inline(nota)}</p>' if nota else ""
+            items.append(f'<li class="rt-sesion" data-secs="{" ".join(dict.fromkeys(secs))}"><div class="rt-cab">'
+                         f'<span class="rt-num">Sesión {n}</span><span class="rt-titulo">{self.md_inline(titulo)}</span>{tiempo}'
+                         f'<span class="rt-estado"></span></div><div class="rt-secs">{"".join(enlaces)}</div>{nota_html}</li>')
+        return f'<ol class="ruta-estudio">{"".join(items)}</ol>'
 
 
 # ----------------------------------------------------------------------------
@@ -902,13 +1185,13 @@ def renderizar_katex(items):
 def construir(clave, externos):
     cfg = UNIDADES[clave]
     SALIDA = RAIZ / cfg["salida"]
-    doc = Documento()
+    doc = Documento(clave, cfg, externos)
     archivos = sorted((AQUI / cfg["carpeta"]).glob("*.md"))
     if not archivos:
         sys.exit(f"No hay archivos .md en {cfg['carpeta']}")
-    cuerpo = []
-    for a in archivos:
-        cuerpo.append(doc.render(doc.parsear(a.read_text(encoding="utf-8").splitlines())))
+    listas = [doc.parsear(a.read_text(encoding="utf-8").splitlines()) for a in archivos]
+    doc.calcular_tiempos(listas)
+    cuerpo = [doc.render(nodos) for nodos in listas]
     cuerpo.append(doc.cerrar_seccion())
     html_cuerpo = "\n".join(cuerpo)
 
@@ -964,17 +1247,43 @@ def construir(clave, externos):
     html_cuerpo = re.sub(r'(<li class="check"><label><input type="checkbox"> <span>.*?)</li>', r"\1</span></label></li>", html_cuerpo)
     html_cuerpo = re.sub(r"<table>(.*?)</table>", r'<div class="tabla"><table>\1</table></div>', html_cuerpo, flags=re.S)
 
+    # ---- tiempo estimado de cada sección (modo ETS y texto completo) ----
+    def sust_t(m):
+        if cfg.get("sin_tiempo"):
+            return ""
+        e, t = doc.t_sec.get(m.group(1), [0, 0])
+        if t < 1:
+            return ""
+        me, mt = texto_minutos(minutos(e)), texto_minutos(minutos(t))
+        if e < 0.5:
+            return f'<div class="sec-tiempo">⏱ <b>{mt}</b> · profundización: no entra en el modo ETS</div>'
+        if me == mt:
+            return f'<div class="sec-tiempo">⏱ <b>{mt}</b> de estudio</div>'
+        return (f'<div class="sec-tiempo"><span class="t-ets">⏱ <b>{me}</b> en modo ETS <small>· {mt} con la profundización</small></span>'
+                f'<span class="t-total">⏱ <b>{mt}</b> el texto completo <small>· {me} en modo ETS</small></span></div>')
+
+    def sust_tp(m):
+        t = doc.t_sub.get(m.group(1))
+        if t is None:
+            t = doc.t_sec.get(m.group(1), [0, 0])[1]
+        return f"⏱ {texto_minutos(minutos(t, 1))}"
+
+    html_cuerpo = re.sub(r"@@T:([\w-]+)@@", sust_t, html_cuerpo)
+    html_cuerpo = re.sub(r"@@TP:([\w-]+)@@", sust_tp, html_cuerpo)
+
     # ---- índice lateral y mapa ----
     toc = []
     for s in doc.toc:
-        clase_li = lambda x: f' class="t-pa t-{x["estado"]}"' if x.get("estado") else ""
+        def clase_li(x):
+            cl = ([f't-pa t-{x["estado"]}'] if x.get("estado") else []) + (["prof"] if x.get("prof") else [])
+            return f' class="{" ".join(cl)}"' if cl else ""
         subs = "".join(f'<li{clase_li(x)}><a href="#{x["id"]}" data-id="{x["id"]}"><span class="t-num">{x["num"]}</span>'
                        f'{titulo_html(x["titulo"])}</a></li>' for x in s["subs"])
-        toc.append(f'<li class="t-sec" data-seccion="{s["id"]}"><a href="#{s["id"]}" data-id="{s["id"]}">'
+        toc.append(f'<li class="t-sec{" prof" if s.get("prof") else ""}" data-seccion="{s["id"]}"><a href="#{s["id"]}" data-id="{s["id"]}">'
                    f'<span class="t-num">{s["num"]}</span>{titulo_html(s["titulo"])}'
                    f'<span class="t-check" aria-hidden="true"></span></a><ul>{subs}</ul></li>')
     mapa = "".join(
-        f'<a class="mapa-tarjeta" href="#{m["id"]}"><span class="mapa-num">{m["num"]}</span>'
+        f'<a class="mapa-tarjeta{" prof" if doc.anclas[m["id"]]["prof"] else ""}" href="#{m["id"]}"><span class="mapa-num">{m["num"]}</span>'
         f'<span class="mapa-titulo">{titulo_html(m["titulo"])}</span><span class="mapa-texto">{html.escape(m["texto"])}</span></a>'
         for m in doc.mapa)
     html_cuerpo = html_cuerpo.replace("@@MAPA@@", mapa)
@@ -988,6 +1297,72 @@ def construir(clave, externos):
             fases.append(f'<div class="pasos-fase"><div class="pasos-fase-cab"><span class="mapa-num">{s["num"]}</span>'
                          f'{titulo_html(s["titulo"])}</div><div class="pasos-fichas">{fichas}</div></div>')
     html_cuerpo = html_cuerpo.replace("@@PASOS@@", "".join(fases))
+
+    # ---- datos para las demás páginas: ejercicios, hojas de repaso, buscador y tiempos ----
+    salida = cfg["salida"]
+    enlazar = lambda h: h.replace('href="#', f'href="{salida}#')
+
+    def titulo_seccion(u, sec):
+        anclas = doc.anclas if u == clave else externos.get(u, {}).get("anclas", {})
+        a = anclas.get(sec)
+        return (f'{a["num"]} · ' if a and a.get("num") else "") + titulo_plano(a["titulo"]) if a else ""
+
+    doc.banco = []
+    for e in doc.ejercicios:
+        m = re.search(r"<!--EJ %s-->(.*?)<!--/EJ-->" % re.escape(e["e"]), html_cuerpo, re.S)
+        if m:
+            doc.banco.append({**e, "st": titulo_seccion(e["su"], e["sec"]), "h": enlazar(m.group(1))})
+
+    doc.repaso = {}
+    if cfg.get("formulario"):
+        res = [{"sec": m.group(1), "prof": m.group(2) == "1", "titulo": titulo_seccion(clave, m.group(1)), "html": enlazar(m.group(3))}
+               for m in re.finditer(r"<!--RS ([\w-]+)\|(\d)-->(.*?)<!--/RS-->", html_cuerpo, re.S)]
+        m = re.search(r'<section class="seccion[^"]*" data-seccion="%s">(.*?)<div class="fin-seccion">' % cfg["formulario"], html_cuerpo, re.S)
+        form = ""
+        if m:
+            form = re.sub(r"<!--SUB checklist\w*-->.*?<!--/SUB-->", "", m.group(1), flags=re.S)       # la checklist se queda en la unidad
+            form = re.sub(r'<h2 id=.*?</h2>|<div class="sec-tiempo">.*?</div>', "", form, flags=re.S)
+            form = re.sub(r'<h3 id="[\w-]+">', "<h3>", enlazar(form))
+        else:
+            doc.errores.append(f'No se encontró la sección de formulario «{cfg["formulario"]}»')
+        doc.repaso = {"resumenes": [r for r in res if r["sec"] != cfg["formulario"]], "formulario": form}
+
+    if clave == "repaso":
+        def sust_repaso(m):
+            u = m.group(1)
+            r = externos.get(u, {}).get("repaso")
+            if not r:
+                doc.errores.append(f"No hay datos de repaso de {u}: genera primero esa unidad")
+                return ""
+            arch = externos[u]["archivo"]
+            tarjetas = "".join(
+                f'<div class="rp-res{" prof" if x["prof"] else ""}"><a class="rp-origen" href="{arch}#{x["sec"]}">{html.escape(x["titulo"])} ↗</a>{x["html"]}</div>'
+                for x in r["resumenes"])
+            return (f'<h3 class="rp-h" id="rp-{u}-ideas"><span class="h-num">✓</span> Lo que debes llevarte de cada tema</h3>'
+                    f'<div class="rp-resumenes">{tarjetas}</div>'
+                    f'<h3 class="rp-h" id="rp-{u}-formulario"><span class="h-num">∑</span> Formulario, tablas y errores comunes</h3>'
+                    f'<div class="rp-formulario">{r["formulario"]}</div>')
+        html_cuerpo = re.sub(r"(?:<p>)?@@REPASO:(\w+)@@(?:</p>)?", sust_repaso, html_cuerpo)
+
+    # Primera sección donde aparece cada símbolo del glosario (el buscador lleva ahí)
+    cortes = [(m.start(), m.group(1)) for m in re.finditer(r'<section class="seccion[^"]*" data-seccion="([\w-]+)">', html_cuerpo)]
+    tips, k = {}, -1
+    for m in re.finditer(r'data-tip="([^"]+)"', html_cuerpo):
+        while k + 1 < len(cortes) and cortes[k + 1][0] < m.start():
+            k += 1
+        if k >= 0:
+            tips.setdefault(m.group(1), cortes[k][1])
+    tiempos = {i: [round(v[0], 1), round(v[1], 1)] for i, v in doc.t_sec.items()}
+    for i, v in doc.t_sub.items():
+        if i in doc.anclas:
+            tiempos[i] = [0 if doc.anclas[i]["prof"] else round(v, 1), round(v, 1)]
+    indice = [[i, a["tipo"], a["num"] or "", titulo_plano(a["titulo"]), int(a["prof"])]
+              for i, a in doc.anclas.items() if a["tipo"] in ("seccion", "sub", "menor", "bloque") and a["titulo"]]
+    indice += [[b["i"], "def", "", titulo_plano(b["t"]), int(b["p"])] for b in doc.busq if b["i"]]
+    doc.meta = {
+        "secciones": [{"id": s["id"], "num": s["num"], "titulo": titulo_plano(s["titulo"]), "prof": bool(s.get("prof"))} for s in doc.toc],
+        "tiempos": tiempos, "indice": indice, "tips": tips if clave in ("u1", "u2", "u3") else {},
+    }
 
     # ---- validación de símbolos ----
     usados = set(re.findall(r'data-tip="([^"]+)"', html_cuerpo))
@@ -1017,9 +1392,12 @@ def construir(clave, externos):
     SALIDA.write_text(final, encoding="utf-8")
 
     print(f"✓ {SALIDA.relative_to(RAIZ)}: {len(final) / 1024:.0f} KB · {len(doc.math)} fórmulas · "
-          f"{len(doc.toc)} secciones · {doc.n_ejercicio} ejercicios · {len(usados)} símbolos explicados")
+          f"{len(doc.toc)} secciones · {doc.n_ejercicio} ejercicios · {doc.n_abierta} preguntas abiertas · {len(usados)} símbolos explicados")
+    if clave in ("u1", "u2", "u3"):
+        e, t = sum(v[0] for v in doc.t_sec.values()), sum(v[1] for v in doc.t_sec.values())
+        print(f"  tiempo estimado: {texto_minutos(minutos(e))} en modo ETS · {texto_minutos(minutos(t))} el texto completo")
     sin_uso = sorted(set(glosario) - usados)
-    if sin_uso and not clave.startswith("lab"):
+    if sin_uso and clave in ("u1", "u2", "u3") and os.environ.get("GUIA_GLOSARIO"):
         print("  (claves de glosario sin usar: " + ", ".join(sin_uso) + ")")
     if doc.errores:
         print("\n".join("✗ " + e for e in doc.errores))
@@ -1027,21 +1405,70 @@ def construir(clave, externos):
     return doc
 
 
+def externo_de_cache(clave):
+    """Datos de una página que no se regenera: anclas, tiempos y repaso salen de fuente/cache/."""
+    f = CACHE / f"anclas_{clave}.json"
+    if not f.exists():
+        return None
+    e = {"archivo": UNIDADES[clave]["salida"], "nombre": UNIDADES[clave]["nombre"], "anclas": json.loads(f.read_text(encoding="utf-8")),
+         "meta": {}, "repaso": {}}
+    for nombre in ("meta", "repaso"):
+        g = CACHE / f"{nombre}_{clave}.json"
+        if g.exists():
+            e[nombre] = json.loads(g.read_text(encoding="utf-8"))
+    return e
+
+
+def escribir_buscador(externos):
+    """assets/datos/buscador.js: títulos, definiciones y glosario de todas las páginas (lo carga cada página)."""
+    glosario = json.loads((AQUI / "glosario.json").read_text(encoding="utf-8"))
+    paginas = {k: {"a": UNIDADES[k]["salida"], "c": CORTO.get(k, k), "n": UNIDADES[k]["nombre"]} for k in UNIDADES if k in externos}
+    entradas, tips = [], {}
+    for k in UNIDADES:
+        meta = externos.get(k, {}).get("meta", {})
+        entradas += [[k] + e for e in meta.get("indice", [])]
+        for clave, sec in meta.get("tips", {}).items():
+            tips.setdefault(clave, [k, sec])
+    limpio = lambda t: html.unescape(re.sub(r"<[^>]+>", "", t))
+    glos = [[k, limpio(v[1]), limpio(v[2])] + tips[k] for k, v in glosario.items() if k in tips]
+    secciones = {k: externos[k]["meta"].get("secciones", []) for k in ("u1", "u2", "u3") if k in externos}
+    DATOS.mkdir(parents=True, exist_ok=True)
+    datos = {"paginas": paginas, "entradas": entradas, "glosario": glos, "secciones": secciones}
+    (DATOS / "buscador.js").write_text("window.GUIA_BUSCADOR = " + json.dumps(datos, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/") + ";\n",
+                                       encoding="utf-8")
+    print(f"✓ assets/datos/buscador.js: {len(entradas)} títulos y definiciones · {len(glos)} símbolos")
+
+
 def main():
-    pedidas = sys.argv[1:] or list(UNIDADES)
-    externos = {}
+    pedidas = sys.argv[1:] or list(ORDEN_BUILD)
+    for p in pedidas:
+        if p not in UNIDADES:
+            sys.exit(f"Página desconocida: {p}. Opciones: {', '.join(ORDEN_BUILD)}")
     CACHE.mkdir(exist_ok=True)
-    for clave in UNIDADES:
-        copia = CACHE / f"anclas_{clave}.json"
+    DATOS.mkdir(parents=True, exist_ok=True)
+    # Todas las páginas parten de su caché, para que una unidad pueda enlazar a otra que se construye
+    # después (u1 → u2); cada página que se regenera reemplaza su entrada al terminar.
+    externos = {}
+    for clave in ORDEN_BUILD:
+        e = externo_de_cache(clave)
+        if e:
+            externos[clave] = e
+    for clave in ORDEN_BUILD:
         if clave not in pedidas:
-            # Las anclas de las unidades que no se regeneran salen de la caché (para los enlaces ⇠ entre unidades)
-            if copia.exists():
-                externos[clave] = {"anclas": json.loads(copia.read_text(encoding="utf-8")),
-                                   "archivo": UNIDADES[clave]["salida"], "nombre": UNIDADES[clave]["nombre"]}
             continue
         doc = construir(clave, externos)
-        copia.write_text(json.dumps(doc.anclas, ensure_ascii=False), encoding="utf-8")
-        externos[clave] = {"anclas": doc.anclas, "archivo": UNIDADES[clave]["salida"], "nombre": UNIDADES[clave]["nombre"]}
+        (CACHE / f"anclas_{clave}.json").write_text(json.dumps(doc.anclas, ensure_ascii=False), encoding="utf-8")
+        (CACHE / f"meta_{clave}.json").write_text(json.dumps(doc.meta, ensure_ascii=False), encoding="utf-8")
+        if doc.repaso:
+            (CACHE / f"repaso_{clave}.json").write_text(json.dumps(doc.repaso, ensure_ascii=False), encoding="utf-8")
+        if doc.banco and clave in ("u1", "u2", "u3", "preguntas"):
+            (DATOS / f"banco-{clave}.js").write_text(
+                "window.GUIA_BANCO = window.GUIA_BANCO || {};\nwindow.GUIA_BANCO[" + json.dumps(clave) + "] = "
+                + json.dumps({"archivo": UNIDADES[clave]["salida"], "nombre": UNIDADES[clave]["nombre"], "items": doc.banco},
+                             ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/") + ";\n", encoding="utf-8")
+        externos[clave] = {"anclas": doc.anclas, "archivo": UNIDADES[clave]["salida"], "nombre": UNIDADES[clave]["nombre"],
+                           "meta": doc.meta, "repaso": doc.repaso}
+    escribir_buscador(externos)
     return externos
 
 

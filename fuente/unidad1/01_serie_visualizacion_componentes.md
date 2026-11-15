@@ -167,7 +167,7 @@ ax.set_xlabel("Fecha"); ax.set_ylabel("Pasajeros")
 plt.show()
 ```
 
-### Gráfica estacional y boxplot por mes {#estacional-graf}
+### Gráfica estacional y boxplot por mes {#estacional-graf .prof}
 
 Para ver la **estacionalidad** se dibuja **una línea por año** con los meses en el eje horizontal. Si las líneas tienen la misma forma, hay estacionalidad; si además se separan hacia arriba, también hay tendencia.
 
@@ -189,7 +189,7 @@ Alterna entre «una línea por año» y «boxplot por mes». Prueba también con
 - En Python: `pivote.plot()` para las líneas y `sns.boxplot(x=mes, y=valor)` o `tabla.boxplot(column="y", by="mes")` para las cajas.
 :::
 
-### Gráfica de subseries por mes {#subseries}
+### Gráfica de subseries por mes {#subseries .prof}
 
 La gráfica estacional pone **un año por línea**. La gráfica de **subseries** hace lo contrario: junta todos los eneros en un tramo, todos los febreros en el siguiente, y así hasta diciembre. Cada tramo es la **subserie** de ese mes (sus 12 valores, de 1949 a 1960) y lleva una línea horizontal con su promedio.
 
@@ -230,7 +230,7 @@ Cada tramo es un mes con sus 12 años; la línea horizontal es su promedio. Camb
 - **Vista extra**: la tabla con el promedio de cada mes y cuánto creció entre el primer año y el último.
 :::
 
-### Gráfica de rezagos (lag plot) {#lagplot}
+### Gráfica de rezagos (lag plot) {#lagplot .prof}
 
 Un **lag plot** pone $y_{t-k}$ en el eje horizontal y $y_t$ en el vertical. Cada punto es una pareja de observaciones separadas $k$ periodos.
 
@@ -512,7 +512,7 @@ No son un fin en sí mismos: son una **forma de separar la serie en piezas inter
 La elección es **visual**: amplitud constante ⇒ aditivo; amplitud que crece con el nivel ⇒ multiplicativo (o aditivo sobre $\ln y_t$).
 :::
 
-### La media móvil centrada {#mm-centrada}
+### La media móvil centrada {#mm-centrada .prof}
 
 La descomposición clásica estima la tendencia con una **media móvil centrada**: un promedio con el mismo número de datos a cada lado de $t$.
 

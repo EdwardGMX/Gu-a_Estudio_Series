@@ -133,7 +133,7 @@ Una sola frecuencia no basta para afirmar que hay un retardo: hay que ver que la
 @ usa c1[1-4] c6[1-4]
 :::
 
-### Hay que suavizar: la coherencia cruda siempre vale 1 {#coherencia-cruda}
+### Hay que suavizar: la coherencia cruda siempre vale 1 {#coherencia-cruda .prof}
 
 Si se calcula la coherencia con los periodogramas crudos, sale **exactamente 1 en todas las frecuencias**, para cualquier par de series. No es un error de cálculo: es que no se promedió nada.
 
@@ -250,7 +250,7 @@ Cambia los argumentos y mira el código, la salida y la coherencia del PIB con l
 La correlación resume la relación con **un solo número** que mezcla todas las frecuencias. La coherencia da **una correlación (al cuadrado) por frecuencia**. Dos series pueden tener correlación moderada porque están muy relacionadas en el ciclo económico y nada en el ruido trimestral; la coherencia separa las dos cosas. Además, la coherencia no se afecta por un retardo (un desfase cambia la fase, no la coherencia), mientras que la correlación contemporánea sí baja si una serie va atrasada.
 :::
 
-:::examen Así te lo pueden preguntar: «Explique magnitud, fase y coherencia en espectros cruzados»
+:::examen Así te lo pueden preguntar: «Explique magnitud, fase y coherencia en espectros cruzados» {#ex-cruzado}
 «El espectro cruzado $f_{yx}(\omega)$ es la transformada de Fourier de la covarianza cruzada $\gamma_{yx}(k) = \Cov(y_{t+k}, x_t)$; como esta no es simétrica, $f_{yx}$ es complejo. Su **magnitud** $\lvert f_{yx}(\omega)\rvert$ mide la fuerza de la relación lineal en la frecuencia $\omega$; su **fase** $\varphi_{yx}(\omega) = \arg f_{yx}(\omega)$ mide el desfase entre los componentes de esa frecuencia (un retardo puro de $D$ periodos da $\varphi = -2\pi\omega D$, una recta); y la **coherencia** $\rho^2_{yx}(\omega) = \lvert f_{yx}\rvert^2/(f_x f_y)$, entre 0 y 1, es la fracción de la varianza de $y$ en esa frecuencia que se explica linealmente con $x$. Se estima suavizando (sin suavizar vale 1 siempre) y se compara con el umbral de la $F_{2,2L-2}$. Sirve para detectar ciclos comunes, cuál serie antecede a otra y si la relación solo existe en ciertas bandas, como la coherencia de 0.82 entre el PIB y la inversión en las frecuencias del ciclo económico.»
 :::
 

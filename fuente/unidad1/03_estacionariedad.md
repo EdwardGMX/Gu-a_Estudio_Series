@@ -474,6 +474,92 @@ Las dos series usan los **mismos choques**. Aplica cada tratamiento a cada serie
 - **Lectura**: el $\hat\rho(1)$ del resultado y si el tratamiento fue el correcto.
 :::
 
+### Regresión de tendencia {#regresion-tendencia .prof}
+
+«Restar la recta» [[tendencias]] exige estimarla primero. La herramienta es una regresión lineal donde la variable explicativa es el **tiempo**. Funciona muy bien con una tendencia determinística y es una trampa con una estocástica.
+
+:::definicion Regresión de tendencia
+$$y_t = \beta_0 + \beta_1\,t + \varepsilon_t, \qquad \hat\beta_1 = \frac{\sum_t (t - \bar t)(y_t - \bar y)}{\sum_t (t - \bar t)^2}, \qquad \hat\beta_0 = \bar y - \hat\beta_1\,\bar t$$
+
+- **Pronóstico**: $\hat y_{T+h} = \hat\beta_0 + \hat\beta_1\,(T + h)$, la recta prolongada.
+- **Con estacionalidad**: se agregan variables indicadoras de cada mes, $y_t = \beta_0 + \beta_1 t + \sum_{j=2}^{12}\gamma_j D_{jt} + \varepsilon_t$; $\gamma_j$ es el efecto del mes $j$ comparado con enero.
+- **Crecimiento porcentual**: con $\ln y_t$ como respuesta, $\beta_1$ es (aproximadamente) la tasa de crecimiento por periodo; en datos mensuales, la anual es $e^{12\beta_1} - 1$.
+- **Supuesto clave**: el error $\varepsilon_t$ es **estacionario**. Si la serie tiene raíz unitaria, la regresión es **espuria**.
+:::
+
+:::intuicion La recta solo sirve si la serie regresa a ella
+Una regresión sobre $t$ es «la mejor recta» que pasa por la gráfica. Si la serie oscila alrededor de esa recta (tendencia determinística), los residuos son el componente estacionario y la recta sirve para pronosticar. Si la serie es un paseo aleatorio, siempre habrá una recta que se vea bien **dentro** de la muestra, pero la serie no tiene por qué regresar a ella: el $R^2$ alto y el estadístico $t$ enorme son una ilusión.
+:::
+
+:::guiado Una recta con seis datos {#guia-reg-tendencia}
+| $t$ | $y_t$ | $t - \bar t$ | $y_t - \bar y$ | Producto | $(t - \bar t)^2$ | $\hat y_t$ | Residuo |
+|---|---|---|---|---|---|---|---|
+| 1 | 5 | −2.5 | −3 | 7.5 | 6.25 | 5.143 | −0.143 |
+| 2 | 7 | −1.5 | −1 | 1.5 | 2.25 | 6.286 | 0.714 |
+| 3 | 6 | −0.5 | −2 | 1 | 0.25 | 7.429 | −1.429 |
+| 4 | 9 | 0.5 | 1 | 0.5 | 0.25 | 8.571 | 0.429 |
+| 5 | 11 | 1.5 | 3 | 4.5 | 2.25 | 9.714 | 1.286 |
+| 6 | 10 | 2.5 | 2 | 5 | 6.25 | 10.857 | −0.857 |
+| **Suma** | 48 | 0 | 0 | 20 | 17.5 | 48 | 0 |
+---
+= \bar t = \frac{1 + 2 + \dots + 6}{6} = 3.5, \qquad \bar y = \frac{48}{6} = 8
+> Las dos medias.
+@ usa c1[1-6] c2[1-6]; da c2[7]
+= t - \bar t \quad\text{y}\quad y_t - \bar y
+> Las desviaciones respecto a cada media; las dos columnas suman 0.
+@ usa c1[1-6] c2[1-6]; da c3[1-7] c4[1-7]
+= \sum (t - \bar t)(y_t - \bar y) = 20, \qquad \sum (t - \bar t)^2 = 17.5
+> El numerador y el denominador de $\hat\beta_1$.
+@ usa c3[1-6] c4[1-6]; da c5[1-7] c6[1-7]
+= \hat\beta_1 = \frac{20}{17.5} = \frac{8}{7} = 1.143, \qquad \hat\beta_0 = 8 - \frac{8}{7}(3.5) = 8 - 4 = 4
+> La serie sube 1.143 unidades por periodo en promedio.
+@ usa c5[7] c6[7] c2[7]
+= \hat y_t = 4 + 1.143\,t, \qquad \text{residuo} = y_t - \hat y_t
+> Los residuos suman 0, como en toda regresión con constante. Si la tendencia es determinística, son la parte estacionaria de la serie.
+@ usa c1[1-6] c2[1-6]; da c7[1-7] c8[1-7]
+= \hat y_7 = 4 + \tfrac{8}{7}(7) = 12
+> El pronóstico del siguiente periodo prolonga la recta.
+:::
+
+En Python, con `statsmodels` (la fórmula `"y ~ t"` agrega la constante sola). Luego, AirPassengers en logaritmos con tendencia y un efecto por mes, y al final la trampa:
+
+```python
+import statsmodels.formula.api as smf
+import statsmodels.api as sm
+from statsmodels.stats.diagnostic import acorr_ljungbox
+
+d_t = pd.DataFrame({"t": np.arange(1, 7), "y": [5, 7, 6, 9, 11, 10]})
+print(smf.ols("y ~ t", data=d_t).fit().params.round(4).to_dict())        # el ejemplo a mano
+
+d_ap = pd.DataFrame({"ly": np.log(serie.values), "t": np.arange(len(serie)), "mes": serie.index.month})
+m_tend = smf.ols("ly ~ t + C(mes)", data=d_ap).fit()
+b1 = m_tend.params["t"]
+print(f"β1 = {b1:.5f} por mes → crecimiento anual ≈ {np.exp(12 * b1) - 1:.1%} | R² = {m_tend.rsquared:.3f}")
+p_lb = acorr_ljungbox(m_tend.resid, lags=[12])["lb_pvalue"].iloc[0]
+print(f"Residuos: ρ̂(1) = {m_tend.resid.autocorr(1):.2f} | Ljung–Box(12) p = {p_lb:.1e}")
+m_hac = smf.ols("ly ~ t + C(mes)", data=d_ap).fit(cov_type="HAC", cov_kwds={"maxlags": 12})
+print(f"Error estándar de β1: MCO = {m_tend.bse['t']:.6f} | HAC (Newey–West) = {m_hac.bse['t']:.6f}")
+
+# La trampa: paseos aleatorios SIN tendencia, regresados sobre t
+rng = np.random.default_rng(2)
+X_t = sm.add_constant(np.arange(144))
+falsas = np.mean([sm.OLS(rng.normal(size=144).cumsum(), X_t).fit().pvalues[1] < 0.05 for _ in range(500)])
+print(f"Paseos sin deriva: la prueba t declara «tendencia significativa» en {falsas:.0%} de 500 simulaciones (debería ser 5%)")
+```
+
+Tres lecturas:
+
+1. **AirPassengers crece cerca de 13% al año**, y la recta con efectos de mes explica el 98% de la variación de $\ln y_t$.
+2. **Los residuos no son ruido blanco** ($\hat\rho(1) \approx 0.8$ y Ljung–Box rechaza [[ljung-box]]). Los errores estándar de mínimos cuadrados suponen errores independientes y aquí salen demasiado chicos; los de Newey–West (HAC), que toleran autocorrelación, son más del doble. Lo usual es modelar ese error con un ARMA, que es lo que hace la Unidad II con las variables exógenas [[u2:exogenas]].
+3. **Regresión espuria**: con paseos aleatorios que no tienen tendencia determinística, la prueba $t$ «encuentra» una pendiente significativa en casi 9 de cada 10 casos. Antes de regresar sobre $t$, decide con la ADF (`"ct"`) y la KPSS qué tipo de tendencia hay [[especificaciones]].
+
+:::resumen Regresión de tendencia {#res-regresion-tendencia}
+- $\hat\beta_1 = \sum(t - \bar t)(y_t - \bar y)/\sum(t - \bar t)^2$, $\hat\beta_0 = \bar y - \hat\beta_1\bar t$; el pronóstico prolonga la recta.
+- Con dummies de mes se modela también la estacionalidad; con $\ln y_t$, $\beta_1$ es una tasa de crecimiento.
+- Solo es válida si el error es estacionario (tendencia determinística). Con raíz unitaria es una **regresión espuria**: $R^2$ y $t$ engañan.
+- Revisa los residuos (ACF, Ljung–Box); si están autocorrelacionados, usa errores HAC o modela el error con un ARMA.
+:::
+
 ### La diferenciación {#diferenciacion}
 
 :::definicion Operadores de diferencia

@@ -1,4 +1,4 @@
-## 🧵 Descomposición STL y pronóstico por descomposición {#stl}
+## 🧵 Descomposición STL y pronóstico por descomposición {#stl .prof}
 @mapa LOESS calculado a mano, el algoritmo de STL paso a paso, sus parámetros en statsmodels, la versión robusta ante atípicos, la fuerza de la tendencia y de la estacionalidad, y cómo pronosticar con una descomposición.
 
 ### Por qué otra descomposición {#stl-por-que}

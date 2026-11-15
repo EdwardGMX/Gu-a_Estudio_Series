@@ -62,7 +62,7 @@ Piensa en la densidad espectral como un **histograma** en el que el eje horizont
 :::
 :::
 
-### MA(1): la primera curva {#espectro-ma1}
+### MA(1): la primera curva {#espectro-ma1 .prof}
 
 :::demo Espectro del MA(1) {#demo-espectro-ma1}
 :::pasos
@@ -202,7 +202,7 @@ Un AR(2) con raíces complejas genera un ciclo [[u2:ar2-complejas]]. En el espec
 @ usa c6[1] c6[3]
 :::
 
-### ARMA: un cociente de polinomios {#espectro-arma}
+### ARMA: un cociente de polinomios {#espectro-arma .prof}
 
 :::definicion Espectro de un ARMA($p$, $q$)
 Si $\phi(L)\,y_t = \theta(L)\,\varepsilon_t$ es estacionario,
@@ -227,7 +227,7 @@ Mueve los coeficientes de un ARMA(2,1) con un término AR estacional opcional. L
 - **Vista extra**: los valores de $f$ en las frecuencias clave y la ubicación del pico con su periodo.
 :::
 
-### De la ACF al espectro, término a término {#acf-a-espectro}
+### De la ACF al espectro, término a término {#acf-a-espectro .prof}
 
 La forma real $f(\omega) = \gamma(0) + 2\sum_{k\ge 1}\gamma(k)\cos(2\pi\omega k)$ dice que el espectro es una **suma de cosenos**: cada rezago $k$ aporta una onda de periodo $1/k$ en el eje de frecuencias, con altura $2\gamma(k)$. Sumarlas una por una es la mejor forma de ver por qué una ACF que decae despacio produce un espectro concentrado cerca de cero.
 
@@ -240,7 +240,7 @@ Elige un proceso y cuántos rezagos $K$ sumar. La curva rosa es la suma parcial 
 - **Vista extra**: las autocovarianzas $\gamma(k)$ que se están sumando.
 :::
 
-### La varianza repartida por bandas {#varianza-bandas}
+### La varianza repartida por bandas {#varianza-bandas .prof}
 
 Como el área bajo $f$ es la varianza, el área en una **banda** de frecuencias es la varianza que aportan esas oscilaciones:
 
@@ -306,7 +306,7 @@ No: el paseo aleatorio no es estacionario y $\sum\lvert\gamma(k)\rvert$ no conve
 Porque $\lvert\theta(e^{-2\pi i\omega})\rvert^2$ se anula si $\theta(z)$ tiene una raíz **sobre** el círculo unitario. Ejemplo: $y_t = \varepsilon_t - \varepsilon_{t-1}$ (un ruido blanco sobrediferenciado) tiene $f(0) = 0$: le falta toda la potencia de largo plazo. Es la versión espectral del MA no invertible con $\theta = -1$ [[u2:demo-sobredif]].
 :::
 
-:::examen Así te lo pueden preguntar: «Defina densidad espectral y su relación con la autocovarianza»
+:::examen Así te lo pueden preguntar: «Defina densidad espectral y su relación con la autocovarianza» {#ex-densidad}
 «Para una serie débilmente estacionaria con autocovarianzas absolutamente sumables, la densidad espectral es la transformada de Fourier de la autocovarianza: $f(\omega) = \sum_k\gamma(k)e^{-2\pi i\omega k} = \gamma(0) + 2\sum_{k\ge1}\gamma(k)\cos(2\pi\omega k)$, con $\omega$ en ciclos por observación entre −1/2 y 1/2. La relación es biunívoca: $\gamma(k) = \int e^{2\pi i\omega k}f(\omega)\,d\omega$, y en particular $\gamma(0) = \int f(\omega)\,d\omega$, así que $f$ describe cómo se reparte la varianza entre frecuencias. Frecuencias bajas corresponden a patrones lentos, altas a variaciones rápidas, los picos a ciclos dominantes y un espectro plano al ruido blanco. Por ejemplo, un AR(1) con $\phi = 0.6$ tiene $f(\omega) = \sigma^2/(1.36 - 1.2\cos 2\pi\omega)$, concentrada en frecuencias bajas.»
 :::
 

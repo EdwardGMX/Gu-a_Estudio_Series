@@ -191,7 +191,7 @@ El AR(9) gana por casi 40 puntos de AIC al modelo que fuerza un «periodo 11»: 
 Es periódica en su **duración** (siempre 12 meses) aunque su forma o amplitud cambien lentamente. Para eso sirven los SARIMA con diferencia estacional (el patrón puede ir cambiando) o un modelo en logaritmos si la amplitud crece con el nivel. Lo que distingue un ciclo es que su **duración** cambia.
 :::
 
-:::examen Así te lo pueden preguntar: «Diferencie periodicidad y ciclo»
+:::examen Así te lo pueden preguntar: «Diferencie periodicidad y ciclo» {#ex-periodicidad}
 «Una **periodicidad** es una repetición exacta después de un intervalo constante: el patrón cumple $x_{t+P} = x_t$, como la estacionalidad anual de datos mensuales ($\Per = 12$). Un **ciclo** es un patrón recurrente aproximado cuya duración, amplitud o forma varían, como el ciclo solar (de 7 a 17 años, con media cercana a 11) o el ciclo económico. En la ACF, la periodicidad produce oscilaciones que no se apagan y el ciclo, oscilaciones amortiguadas; en el espectro, la periodicidad da un pico angosto en $1/P$ y sus armónicos, y el ciclo, una joroba ancha. La distinción importa porque un SARIMA estacional supone un periodo fijo; forzarlo sobre un ciclo produce un modelo difícil de defender, y es mejor usar términos AR que generen el ciclo.»
 :::
 

@@ -1,4 +1,4 @@
-## ✈️ AirPassengers en el dominio de la frecuencia {#ap-frecuencia}
+## ✈️ AirPassengers en el dominio de la frecuencia {#ap-frecuencia .prof}
 @mapa La serie de las unidades I y II vista con el periodograma: qué hace cada transformación con el espectro, por qué aparecen armónicos de 1/12, cómo se descompone el patrón estacional en oscilaciones y cómo luce el espectro del modelo de aerolínea.
 
 ### El espectro de cada transformación {#ap-transformaciones}

@@ -168,7 +168,7 @@ Mueve la amplitud, la frecuencia y la fase. Los puntos son lo que observarías e
 - **Vista extra**: el vector $(\beta_1, \beta_2)$ en el plano; su longitud es la amplitud y su ángulo, menos la fase.
 :::
 
-### La fórmula de Euler: una oscilación en un número complejo {#euler}
+### La fórmula de Euler: una oscilación en un número complejo {#euler .prof}
 
 Las fórmulas espectrales se escriben con la **exponencial compleja**, porque convierte las sumas de senos y cosenos en series geométricas, que sí sabemos sumar.
 
@@ -189,7 +189,7 @@ $e^{i\theta}$ es el punto del círculo unitario con ángulo $\theta$: tiene mód
 :::
 :::
 
-### Frecuencias de Fourier y ortogonalidad {#ortogonalidad}
+### Frecuencias de Fourier y ortogonalidad {#ortogonalidad .prof}
 
 Con $n$ datos hay $n$ frecuencias especiales, las **frecuencias de Fourier** $\omega_j = j/n$: las oscilaciones que caben exactamente $j$ veces en la muestra. Lo que las hace especiales es que sus senos y cosenos son **ortogonales**: no se «estorban» entre sí al hacer una regresión.
 
@@ -218,7 +218,7 @@ Con $n = 4$, las frecuencias de Fourier son $0, 1/4, 2/4$. Para $\omega = 1/4$: 
 Por eso en [[guia-amplitud-fase]] pudimos calcular $\beta_1$ y $\beta_2$ por separado, con $\beta = \frac{2}{n}\sum x_t\cdot(\text{regresor})$: con regresores ortogonales, cada coeficiente de mínimos cuadrados es su covarianza con $x_t$ dividida entre su propia suma de cuadrados ($n/2$).
 :::
 
-### El límite de Nyquist y el alias {#nyquist}
+### El límite de Nyquist y el alias {#nyquist .prof}
 
 Con datos tomados en tiempos enteros, la oscilación más rápida que se puede ver sube y baja en dos observaciones: frecuencia $1/2$. Es la **frecuencia de Nyquist**. Las oscilaciones más rápidas no desaparecen: se **disfrazan** de una oscilación más lenta.
 

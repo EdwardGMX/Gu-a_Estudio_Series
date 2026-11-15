@@ -1,5 +1,5 @@
 ## 🧩 Ejercicios de la Unidad I {#ejercicios}
-@mapa 54 ejercicios de opción múltiple, cálculo y lectura de gráficas, cada uno con su respuesta explicada.
+@mapa 62 ejercicios de opción múltiple, cálculo y lectura de gráficas, cada uno con su respuesta explicada, y 8 preguntas de respuesta abierta.
 
 Elige una opción y presiona **Ver respuesta**: se marca la correcta, se explica por qué y hay un enlace a la sección donde se estudia el tema. Los ejercicios de cálculo abierto tienen **Ver solución paso a paso**. Intenta resolverlos en papel antes de abrir la solución.
 
@@ -499,7 +499,7 @@ Cada barra tiene 5% de probabilidad de salir por azar: $40 \times 0.05 = 2$ en p
 Si fallaste algún ejercicio, usa el enlace ↩ de su encabezado para repasar esa sección y regresa con el botón **⤺ Volver**. Cuando domines todo, revisa la lista de [[checklist]].
 :::
 
-### Bloque F · Subseries, STL y pronóstico por descomposición {#ej-f}
+### Bloque F · Subseries, STL y pronóstico por descomposición {#ej-f .prof}
 
 :::ejercicio Básico | [[subseries]]
 En una gráfica de subseries mensual, el tramo de julio sube mucho más rápido que el de noviembre. ¿Qué indica?

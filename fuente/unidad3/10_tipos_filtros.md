@@ -72,7 +72,7 @@ Para proponer un filtro hay que **traducir periodos a frecuencias**, $\omega = 1
 
 En `scipy` se pasa la frecuencia con `fs`: `signal.butter(4, 1/6, btype="low", fs=1)` usa ciclos por observación; `signal.butter(4, 2, btype="low", fs=12)` usa ciclos por año en datos mensuales (2 ciclos por año = periodo de 6 meses).
 
-### El filtro ideal y por qué no existe {#filtro-ideal}
+### El filtro ideal y por qué no existe {#filtro-ideal .prof}
 
 :::demo La respuesta al impulso del pasa bajos ideal {#demo-filtro-ideal}
 :::pasos
@@ -134,7 +134,7 @@ Un pasa bajos ideal con corte $\omega_c$, truncado a $2M + 1$ pesos, con o sin v
 Se puede: calcular la DFT, poner en cero las frecuencias que no quieres y regresar con la transformada inversa. Pero eso trata la serie como si fuera **circular** (el último dato pegado al primero): si el final y el principio no coinciden, aparecen ondulaciones cerca de los bordes, y cada valor filtrado usa datos de toda la muestra, incluido el futuro. Por eso en economía se usan aproximaciones con un número finito de pesos (Baxter–King) o versiones adaptadas a muestras finitas (Christiano–Fitzgerald, `cffilter`), y en ingeniería, filtros FIR o IIR de diseño.
 :::
 
-### FIR o IIR {#fir-iir}
+### FIR o IIR {#fir-iir .prof}
 
 | | FIR (respuesta al impulso finita) | IIR (respuesta infinita, como Butterworth) |
 |---|---|---|
@@ -208,7 +208,7 @@ Cambia los argumentos de `butter` y del filtrado y mira el código, la salida y 
 - La tabla explica cada parámetro y su valor recomendado.
 :::
 
-### Causal o de fase cero {#fase-cero}
+### Causal o de fase cero {#fase-cero .prof}
 
 :::demo Filtrar hacia adelante y hacia atrás elimina la fase {#demo-filtfilt}
 :::pasos

@@ -71,7 +71,7 @@ for k in [1, 2, 3]:
 
 Las dos tendencias difieren menos de 0.4 ppm: con un buen diseño, el resultado no depende mucho del filtro. Los **filtros de muesca** quitan solo una banda angosta alrededor de cada frecuencia: después de aplicarlos en $1/12$ y $1/6$, el periodograma ya no tiene picos ahí, pero conserva el de $3/12$ (que no tocamos) y toda la tendencia.
 
-### Del requisito al orden {#orden-requisito}
+### Del requisito al orden {#orden-requisito .prof}
 
 En el paso 4 de la receta el orden se puede **calcular**. Supón que el requisito es: en datos mensuales, conservar al menos el 90% de la amplitud de los movimientos de 24 meses o más, y dejar como máximo el 10% de los de 12 meses o menos.
 
@@ -131,7 +131,7 @@ Escribe tus requisitos (qué periodos conservar y cuáles quitar, y con qué gan
 - **Vista extra**: el orden necesario para otros periodos de rechazo, con el mismo periodo de paso.
 :::
 
-### Filtros de muesca {#notch}
+### Filtros de muesca {#notch .prof}
 
 :::definicion Filtro de muesca (notch)
 Un rechaza banda muy angosto: ganancia 0 exactamente en $\omega_0$ y casi 1 en el resto. En `scipy`, `iirnotch(w0, Q, fs)`; el **factor de calidad** $Q$ controla el ancho de la muesca ($\text{ancho} \approx \omega_0/Q$): con $Q$ grande la muesca es angosta y casi no toca las frecuencias vecinas. Para quitar un patrón periódico que no es un coseno puro hay que poner una muesca en cada armónico $k/s$ que tenga potencia. Ejemplo: la interferencia de la red eléctrica (60 Hz) en una señal médica, o el patrón semanal ($1/7, 2/7, 3/7$) en datos diarios.
@@ -152,7 +152,7 @@ Cada escenario tiene una serie simulada con componentes conocidos y un objetivo.
 Desconfiar de ellos. Cerca de los bordes el filtro necesita datos que no existen: una media móvil centrada simplemente no se calcula ahí, Baxter–King los descarta, y `filtfilt` **inventa** datos reflejando la serie (`padtype="odd"`), así que los primeros y últimos valores dependen de ese relleno. Una regla práctica es no interpretar el primer ni el último periodo largo de lo que estás extrayendo (por ejemplo, un año en una tendencia mensual), y comparar el resultado con otro filtro: si dos diseños razonables coinciden en el centro y discrepan en las puntas, las puntas son poco confiables.
 :::
 
-:::examen Así te lo pueden preguntar: «Proponga un filtro para remover tendencia, ruido de alta frecuencia o una banda no deseada»
+:::examen Así te lo pueden preguntar: «Proponga un filtro para remover tendencia, ruido de alta frecuencia o una banda no deseada» {#ex-filtro}
 **Tendencia.** «Como la tendencia vive en las frecuencias más bajas, uso un **pasa altos**. La opción más sencilla es la diferencia $1 - L$, cuya ganancia $\lvert A(\omega)\rvert = 2\lvert\sin(\pi\omega)\rvert$ vale 0 en $\omega = 0$; si no quiero amplificar las frecuencias altas, uso un Butterworth pasa altos con corte en $1/P_{\max}$ (por ejemplo, $1/120$ en datos mensuales para quitar movimientos de más de 10 años) o el ciclo del HP. Verifico en el periodograma que desaparezca la potencia cerca de 0.»
 
 **Ruido de alta frecuencia.** «Uso un **pasa bajos** con corte por debajo de las frecuencias del ruido y por encima de las que quiero conservar: por ejemplo, un Butterworth de orden 4 con corte en $1/6$ para conservar los movimientos de más de 6 meses. Si es para describir la serie, lo aplico con `filtfilt` (fase cero); si es en tiempo real, con un filtro causal, sabiendo que introduce retraso. Una media móvil centrada es la alternativa simple, aunque su ganancia no cae a cero de forma monótona.»

@@ -199,7 +199,7 @@ Mueve el origen y mira cómo cada modelo pronostica los siguientes 12 meses con 
 - **Vista extra**: la tabla con MAE y MAPE totales de cada modelo.
 :::
 
-### Origen móvil con statsforecast {#ref-cv}
+### Origen móvil con statsforecast {#ref-cv .prof}
 
 Con las referencias del inicio de la unidad [[ref-statsforecast]], statsforecast hace el origen móvil con una sola llamada: `cross_validation` corta la serie en `n_windows` orígenes, separados `step_size` periodos, y en cada uno pronostica `h` periodos **reajustando** cada método con el pasado de ese origen.
 

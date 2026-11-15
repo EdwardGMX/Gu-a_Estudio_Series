@@ -216,7 +216,7 @@ print("np.roots espera el orden contrario:", np.round(np.roots(prod[::-1]), 4))
 `np.roots` espera los coeficientes de la potencia **más alta a la más baja** ($a_p z^p + \dots + a_0$), mientras que `ArmaProcess` y `numpy.polynomial` los esperan de la **más baja a la más alta** ($a_0 + a_1 z + \dots$). Si le pasas `[1, -0.2, -0.15]` a `np.roots`, estás resolviendo $z^2 - 0.2z - 0.15 = 0$, cuyas raíces son las **inversas** de las que buscas. Por eso arriba se invierte el arreglo con `[::-1]`.
 :::
 
-### Invertir un polinomio {#invertir}
+### Invertir un polinomio {#invertir .prof}
 
 Invertir $\phi(L)$ significa encontrar la serie de potencias $\phi(L)^{-1}$ tal que $\phi(L)\,\phi(L)^{-1} = 1$. Con ella, un AR se convierte en un MA(∞), y un MA en un AR(∞).
 
