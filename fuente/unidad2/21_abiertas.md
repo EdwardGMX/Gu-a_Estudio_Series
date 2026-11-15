@@ -89,3 +89,54 @@ La **media** está bien modelada: Ljung–Box no rechaza (0.62), así que los re
 - Relaciona Jarque–Bera y la curtosis con colas pesadas.
 - Consecuencia para los intervalos y una propuesta (GARCH, transformación o advertencia).
 :::
+
+### Bloque M · Holt y Holt–Winters {#ej2-m .prof}
+
+Ejercicios de [[holt]], el complemento de los pronósticos de referencia con tendencia y estacionalidad.
+
+:::ejercicio Básico | [[holt]]
+En el método de Holt con $\alpha = \beta = 0.5$ se tiene $\ell_{t-1} = 20$, $b_{t-1} = 2$ y llega $y_t = 25$. ¿Cuánto valen $\ell_t$ y el pronóstico a dos pasos $\hat y_{t+2 \mid t}$?
+- [ ] $\ell_t = 22.5$ y $\hat y_{t+2 \mid t} = 26.5$
+- [x] $\ell_t = 23.5$ y $\hat y_{t+2 \mid t} = 29$
+- [ ] $\ell_t = 25$ y $\hat y_{t+2 \mid t} = 29$
+- [ ] $\ell_t = 23.5$ y $\hat y_{t+2 \mid t} = 27.5$
+---
+:::pasos
+= \ell_t = 0.5(25) + 0.5(20 + 2) = 12.5 + 11 = 23.5
+> El nivel promedia el dato con lo esperado, $\ell_{t-1} + b_{t-1} = 22$.
+= b_t = 0.5(23.5 - 20) + 0.5(2) = 1.75 + 1 = 2.75
+> La pendiente promedia el cambio de nivel (3.5) con la pendiente anterior.
+= \hat y_{t+2 \mid t} = 23.5 + 2(2.75) = 29
+> La recta del pronóstico [[guia-holt]].
+:::
+:::
+
+:::ejercicio Básico | [[holt]]
+Las ventas mensuales de una cadena crecen año con año y cada diciembre tienen un pico que, **en porcentaje**, es siempre parecido (el pico crece con las ventas). ¿Qué método de suavizamiento conviene?
+- [ ] Suavizamiento exponencial simple.
+- [ ] Holt.
+- [ ] Holt–Winters aditivo.
+- [x] Holt–Winters multiplicativo.
+---
+Hay tendencia (descarta el simple) y estacionalidad (descarta Holt solo). Como el pico crece con el nivel, el efecto estacional es un **porcentaje**: multiplicativo, igual que en la descomposición [[u1:multiplicativo]]. Una alternativa equivalente es Holt–Winters aditivo sobre $\ln y_t$.
+:::
+
+:::ejercicio Intermedio | [[holt]]
+En el método de Holt se fija $\beta = 0$. ¿Qué pasa con la pendiente?
+- [ ] Se vuelve igual al último cambio de nivel en cada periodo.
+- [x] Nunca se actualiza: se queda en su valor inicial y el pronóstico usa siempre esa misma pendiente.
+- [ ] Vale cero, así que el método se convierte en el suavizamiento simple.
+- [ ] Se vuelve negativa.
+---
+Con $\beta = 0$: $b_t = 0 \cdot (\ell_t - \ell_{t-1}) + 1 \cdot b_{t-1} = b_{t-1}$. La pendiente queda fija en $b_1$, aunque el nivel sí se actualiza. El caso opuesto, $\beta = 1$, hace que la pendiente sea solo el último cambio de nivel.
+:::
+
+:::ejercicio Intermedio | [[holt]]
+Un Holt–Winters aditivo trimestral termina en un **segundo** trimestre con $\ell_T = 200$, $b_T = 3$ y efectos estacionales $(-4,\ +6,\ +9,\ -11)$ para T1 a T4. ¿Cuál es el pronóstico para dentro de dos trimestres?
+- [ ] 189
+- [x] 195
+- [ ] 206
+- [ ] 215
+---
+Dos trimestres después de un T2 es un **T4**, con efecto $-11$: $\hat y_{T+2 \mid T} = 200 + 2(3) - 11 = 195$. El primer pronóstico (T3) sería $200 + 3 + 9 = 212$.
+:::

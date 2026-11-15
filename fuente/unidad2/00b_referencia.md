@@ -1,5 +1,5 @@
 ## 🧱 Pronósticos de referencia (benchmarks) {#referencia}
-@mapa Antes de cualquier modelo: pronosticar, partir los datos y medir el error con MAE y RMSE; los cuatro métodos básicos y tres más (ventanas y suavizamiento exponencial), statsforecast, residuales, intervalos, referencias con logaritmo y descomposición, cómo elegir la referencia y los errores más frecuentes.
+@mapa Antes de cualquier modelo: pronosticar, partir los datos y medir el error con MAE y RMSE; los cuatro métodos básicos y tres más (ventanas y suavizamiento exponencial), Holt y Holt–Winters, statsforecast, residuales, intervalos, referencias con logaritmo y descomposición, cómo elegir la referencia y los errores más frecuentes.
 
 ### Por qué empezar por lo más simple {#ref-por-que}
 
@@ -383,6 +383,132 @@ Elige la serie, el método y su parámetro ($k$ o $\alpha$). Se compara contra l
 - **Abajo**: el MAE en la prueba para **todos** los valores del parámetro, con el valor actual marcado. Las líneas horizontales son el MAE de los cuatro básicos.
 - **Qué buscar**: con $k = 1$ o $\alpha = 1$ la curva toca el MAE del ingenuo; con $k = T$, el del promedio. En las ventas estables, una ventana grande es mejor; en el precio de la acción, la mejor memoria es casi ninguna.
 - **Vista extra**: los pesos que recibe cada dato pasado en el pronóstico (barras): parejos en la ventana, geométricos en el suavizamiento.
+:::
+
+### Holt y Holt–Winters: tendencia y estacionalidad {#holt .prof}
+
+El suavizamiento exponencial simple solo sigue un **nivel**, y por eso su pronóstico es plano. Si la serie crece o tiene estacionalidad, se le agregan más «memorias», cada una con su propia constante de suavizamiento. Son los dos métodos clásicos de suavizamiento que completan la lista de referencias.
+
+:::definicion Método de Holt (nivel y pendiente)
+$$\ell_t = \alpha\,y_t + (1 - \alpha)\,(\ell_{t-1} + b_{t-1})$$
+$$b_t = \beta\,(\ell_t - \ell_{t-1}) + (1 - \beta)\,b_{t-1}$$
+$$\hat{y}_{T+h \mid T} = \ell_T + h\,b_T$$
+
+- $\ell_t$ es el **nivel** y $b_t$ la **pendiente** (cuánto sube por periodo), con $0 \le \alpha, \beta \le 1$.
+- El nivel promedia el dato nuevo con lo que se esperaba, $\ell_{t-1} + b_{t-1}$; la pendiente promedia el último cambio de nivel con la pendiente anterior.
+- El pronóstico es una **recta** que parte del último nivel.
+:::
+
+:::definicion Método de Holt–Winters (nivel, pendiente y estacionalidad de periodo $m$)
+**Aditivo**, para una amplitud estacional constante:
+$$\ell_t = \alpha\,(y_t - s_{t-m}) + (1 - \alpha)\,(\ell_{t-1} + b_{t-1})$$
+$$b_t = \beta\,(\ell_t - \ell_{t-1}) + (1 - \beta)\,b_{t-1}$$
+$$s_t = \gamma\,(y_t - \ell_{t-1} - b_{t-1}) + (1 - \gamma)\,s_{t-m}$$
+$$\hat{y}_{T+h \mid T} = \ell_T + h\,b_T + s_{T+h-m} \qquad (h \le m)$$
+
+**Multiplicativo**, para una amplitud que crece con el nivel: el factor estacional divide en lugar de restar,
+$$\ell_t = \alpha\,\frac{y_t}{s_{t-m}} + (1 - \alpha)\,(\ell_{t-1} + b_{t-1})$$
+$$s_t = \gamma\,\frac{y_t}{\ell_{t-1} + b_{t-1}} + (1 - \gamma)\,s_{t-m}$$
+$$\hat{y}_{T+h \mid T} = (\ell_T + h\,b_T)\,s_{T+h-m}$$
+
+Para $h > m$ se repite el índice de la última temporada observada que corresponde a ese periodo.
+:::
+
+:::intuicion Tres perillas de memoria
+El suavizamiento simple estima **dónde está** la serie. Holt además estima **qué tan rápido se mueve** ($b_t$), y Holt–Winters recuerda **el calendario** ($s_t$: cuánto se separa cada mes de lo normal). Cada componente se actualiza como un suavizamiento simple, promediando lo nuevo con lo que ya se sabía, con su propia perilla: $\alpha$, $\beta$ o $\gamma$. Con $\beta$ chico la pendiente casi no cambia; con $\gamma$ chico el patrón estacional es casi fijo.
+:::
+
+:::guiado Holt con α = β = 0.5 en cinco datos {#guia-holt}
+| $t$ | $y_t$ | $\hat{y}_{t \mid t-1} = \ell_{t-1} + b_{t-1}$ | $\ell_t$ | $b_t$ |
+|---|---|---|---|---|
+| 1 | 10 | | 10 | 2 |
+| 2 | 12 | 12 | 12 | 2 |
+| 3 | 13 | 14 | 13.5 | 1.75 |
+| 4 | 15 | 15.25 | 15.125 | 1.6875 |
+| 5 | 18 | 16.8125 | 17.406 | 1.984 |
+| 6 | ? | 19.39 | | |
+---
+= \ell_1 = y_1 = 10, \qquad b_1 = y_2 - y_1 = 2
+> Un arranque sencillo: el primer nivel es el primer dato y la primera pendiente, el primer cambio. Los programas estiman estos valores iniciales; abajo se ve cómo dárselos a mano.
+@ usa c2[1-2]; da c4[1] c5[1]
+= \begin{gathered} \ell_2 = 0.5(12) + 0.5(10 + 2) = 12 \\ b_2 = 0.5(12 - 10) + 0.5(2) = 2 \end{gathered}
+> El dato cayó justo donde se esperaba (12), así que el nivel y la pendiente siguen el plan.
+@ usa c2[2] c4[1] c5[1]; da c3[2] c4[2] c5[2]
+= \begin{gathered} \ell_3 = 0.5(13) + 0.5(12 + 2) = 13.5 \\ b_3 = 0.5(13.5 - 12) + 0.5(2) = 1.75 \end{gathered}
+> Se esperaba 14 y llegó 13: el nivel queda a la mitad del camino y la pendiente baja un poco.
+@ usa c2[3] c4[2] c5[2]; da c3[3] c4[3] c5[3]
+= \begin{gathered} \ell_4 = 0.5(15) + 0.5(13.5 + 1.75) = 15.125 \\ b_4 = 0.5(1.625) + 0.5(1.75) = 1.6875 \end{gathered}
+> La misma regla, con el cambio de nivel $15.125 - 13.5 = 1.625$.
+@ usa c2[4] c4[3] c5[3]; da c3[4] c4[4] c5[4]
+= \begin{gathered} \ell_5 = 0.5(18) + 0.5(15.125 + 1.6875) = 17.406 \\ b_5 = 0.5(2.281) + 0.5(1.6875) = 1.984 \end{gathered}
+> El 18 sorprende hacia arriba: suben el nivel y la pendiente.
+@ usa c2[5] c4[4] c5[4]; da c3[5] c4[5] c5[5]
+= \hat{y}_{6 \mid 5} = 17.406 + 1.984 = 19.39, \qquad \hat{y}_{7 \mid 5} = 21.38, \qquad \hat{y}_{8 \mid 5} = 23.36
+> El pronóstico es la recta $\ell_5 + h\,b_5$: sube 1.984 por periodo. El suavizamiento simple habría dado un valor plano.
+@ usa c4[5] c5[5]; da c3[6]
+:::
+
+:::ejemplo Pronóstico de Holt–Winters aditivo con los estados finales
+Datos trimestrales. Al cerrar un cuarto trimestre, el modelo tiene $\ell_T = 100$, $b_T = 2$ y efectos estacionales $(-5,\ +3,\ +8,\ -6)$ para T1 a T4. El año siguiente:
+
+- T1: $100 + 1(2) - 5 = 97$
+- T2: $100 + 2(2) + 3 = 107$
+- T3: $100 + 3(2) + 8 = 114$
+- T4: $100 + 4(2) - 6 = 102$
+
+Cada trimestre combina la recta (nivel más $h$ pendientes) con su efecto estacional. En el **multiplicativo** los efectos son porcentajes, por ejemplo $(0.95,\ 1.03,\ 1.08,\ 0.94)$, y T1 sería $(100 + 2)(0.95) = 96.9$.
+:::
+
+```python
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+# 1) El ejemplo a mano. statsmodels pide el nivel y la pendiente ANTES del primer dato (ℓ0, b0):
+#    con ℓ0 = 8 y b0 = 2 se obtienen exactamente ℓ1 = 10 y b1 = 2.
+holt_mano = ExponentialSmoothing(np.array([10, 12, 13, 15, 18.0]), trend="add", initialization_method="known",
+                                 initial_level=8, initial_trend=2).fit(smoothing_level=0.5, smoothing_trend=0.5,
+                                                                       optimized=False)
+print("niveles:   ", holt_mano.level.round(4))
+print("pendientes:", holt_mano.trend.round(4))
+print("pronóstico:", holt_mano.forecast(3).round(4))
+```
+
+Ahora AirPassengers, con la misma prueba de 1960 que las demás referencias:
+
+```python
+from statsforecast.models import Holt, HoltWinters
+
+sf_hw = StatsForecast(models=[Holt(season_length=12),
+                              HoltWinters(season_length=12, error_type="A", alias="HW-aditivo"),
+                              HoltWinters(season_length=12, error_type="M", alias="HW-multiplicativo"),
+                              SeasonalNaive(season_length=12), RandomWalkWithDrift()], freq="MS")
+fc_hw = sf_hw.forecast(df=train_df, h=12)
+for col in ["Holt", "HW-aditivo", "HW-multiplicativo", "SeasonalNaive", "RWD"]:
+    e = test_df["y"].values - fc_hw[col].values.astype("float64")
+    print(f"{col:18s} MAE = {np.mean(np.abs(e)):6.2f} | RMSE = {np.sqrt(np.mean(e ** 2)):6.2f}")
+
+sf_hw.fit(train_df)
+for m in sf_hw.fitted_[0, :3]:
+    print(f"{m.alias:18s} componentes ETS = {m.model_['components']}   α = {m.model_['par'][0]:.4f}")
+```
+
+Tres lecturas:
+
+1. **Holt sin estacionalidad empata con la deriva.** El ajuste eligió $\alpha \approx 1$: «el último dato más una pendiente», que es casi el ingenuo con deriva. Sin estacionalidad, ninguno de los dos alcanza al ingenuo estacional.
+2. **Holt–Winters sí gana**: el multiplicativo deja el MAE en 19.7, menos de la mitad que el ingenuo estacional (47.8), la referencia más difícil de vencer en esta serie [[ref-elegir]]. Que el multiplicativo supere al aditivo cuadra con la amplitud estacional que crece con el nivel [[u1:multiplicativo]].
+3. **statsforecast los implementa como modelos ETS** (error, tendencia, estacionalidad): `Holt` es ETS(A,A,N) y `HoltWinters` es ETS(A,A,A) o ETS(M,A,M) según `error_type`. Estima los parámetros y los valores iniciales por máxima verosimilitud y, además, decide si **amortiguar** la tendencia: la cuarta letra `D` de los componentes del aditivo indica que eligió una pendiente que se apaga con el horizonte.
+
+:::cuidado Antes de usar Holt o Holt–Winters
+- Holt proyecta la pendiente **para siempre**: a horizontes largos puede exagerar. Para eso existe la tendencia amortiguada.
+- Holt–Winters necesita al menos dos temporadas completas para arrancar los índices estacionales.
+- Así como el suavizamiento simple equivale a un ARIMA(0,1,1) [[demo-ses]], el método de Holt equivale a un ARIMA(0,2,2): son casos particulares de los modelos de la unidad.
+- Los parámetros se eligen con el entrenamiento; la comparación justa es en la prueba y contra las referencias [[ref-evaluar]].
+:::
+
+:::resumen Holt y Holt–Winters {#res-holt}
+- Holt: $\ell_t = \alpha y_t + (1 - \alpha)(\ell_{t-1} + b_{t-1})$, $b_t = \beta(\ell_t - \ell_{t-1}) + (1 - \beta)b_{t-1}$; pronóstico $\ell_T + h\,b_T$, una recta.
+- Holt–Winters agrega el componente estacional $s_t$ con su constante $\gamma$: aditivo si la amplitud es constante, multiplicativo si crece con el nivel.
+- En AirPassengers (prueba 1960), Holt–Winters multiplicativo (MAE 19.7) le gana con claridad al ingenuo estacional (47.8); Holt sin estacionalidad no le gana a la deriva.
+- statsforecast: `Holt(season_length=m)` y `HoltWinters(season_length=m, error_type="A" o "M")`, que son modelos ETS.
 :::
 
 ### Valores ajustados y residuales {#ref-residuos .prof}
