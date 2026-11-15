@@ -222,7 +222,7 @@ La media de los últimos $k$ valores ($a_j = 1/k$, $j = 0, \dots, k - 1$) tiene 
 
 Esta tabla explica la **sobrediferenciación** de la Unidad II [[u2:sobrediferenciar]]: si diferencias un ruido blanco, su espectro plano $\sigma^2$ se multiplica por $4\sin^2(\pi\omega)$; el área (la varianza) se **duplica** y la potencia se carga a las frecuencias altas, que en la ACF se ve como $\rho(1) = -0.5$.
 
-### El suavizamiento exponencial: pasa bajos con retraso {#ses-filtro}
+### El suavizamiento exponencial: pasa bajos con retraso {#ses-filtro .prof}
 
 Con pesos $a_j = \alpha(1 - \alpha)^j$ (serie geométrica), $A(\omega) = \frac{\alpha}{1 - (1 - \alpha)e^{-2\pi i\omega}}$. Con $\alpha = 0.3$: ganancia 1 en $\omega = 0$, $0.25$ en $\omega = 1/4$ y $0.18$ en $\omega = 1/2$. Es un pasa bajos, pero **causal**: su fase es negativa y retrasa las oscilaciones lentas unos $(1 - \alpha)/\alpha = 2.3$ periodos. Por eso el pronóstico SES siempre «llega tarde» a los cambios de nivel.
 

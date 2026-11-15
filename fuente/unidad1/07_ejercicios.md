@@ -499,7 +499,7 @@ Cada barra tiene 5% de probabilidad de salir por azar: $40 \times 0.05 = 2$ en p
 Si fallaste algún ejercicio, usa el enlace ↩ de su encabezado para repasar esa sección y regresa con el botón **⤺ Volver**. Cuando domines todo, revisa la lista de [[checklist]].
 :::
 
-### Bloque F · Subseries, STL y pronóstico por descomposición {#ej-f}
+### Bloque F · Subseries, STL y pronóstico por descomposición {#ej-f .prof}
 
 :::ejercicio Básico | [[subseries]]
 En una gráfica de subseries mensual, el tramo de julio sube mucho más rápido que el de noviembre. ¿Qué indica?

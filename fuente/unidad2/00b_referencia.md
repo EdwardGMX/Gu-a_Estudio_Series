@@ -66,7 +66,7 @@ Cada método **supone** algo sobre el futuro: que no hay memoria (promedio), que
 Las otras tres columnas llevan el nombre de la clase, pero `RandomWalkWithDrift()` produce la columna **`RWD`** (y `RWD-lo-80`, `RWD-hi-80`, …). Si buscas `"RandomWalkWithDrift"` en el DataFrame obtendrás un `KeyError`.
 :::
 
-### Los cuatro pronósticos a mano {#guia-ref-pron-sec}
+### Los cuatro pronósticos a mano {#guia-ref-pron-sec .prof}
 
 :::guiado Producción trimestral de refresco: cuatro pronósticos para 2022 {#guia-ref-pron}
 | $t$ | Trimestre | $y_t$ | Promedio | Ingenuo | Estacional | Deriva |
@@ -113,7 +113,7 @@ Las otras tres columnas llevan el nombre de la clase, pero `RandomWalkWithDrift(
 Consecuencia práctica: **solo importan $y_1$ y $y_T$**. Si el primer dato es atípico, la pendiente sale mal aunque los demás 130 datos sean perfectos. En el ejemplo, las diferencias son $4, -6, 4, 1, 4, -8, 6$ y su promedio es $5/7$, igual que $b$.
 :::
 
-### Evaluar a mano: ¿cuál le atinó a 2022? {#guia-ref-eval-sec}
+### Evaluar a mano: ¿cuál le atinó a 2022? {#guia-ref-eval-sec .prof}
 
 Al terminar 2022 se conocen los datos reales: **14, 18, 10 y 16**. Son la prueba de los cuatro pronósticos.
 
@@ -184,7 +184,7 @@ La regla general:
 | tiene tendencia **y** estacionalidad | ninguna de las cuatro basta | se necesita una referencia compuesta [[ref-transformadas]] o un modelo SARIMA |
 :::
 
-### El flujo de statsforecast {#ref-statsforecast}
+### El flujo de statsforecast {#ref-statsforecast .prof}
 
 `statsforecast` (de Nixtla) trabaja siempre con un DataFrame en **formato largo** con tres columnas obligatorias:
 
@@ -252,7 +252,7 @@ Porque los valores ajustados solo se guardan si los pides al pronosticar. Si lla
 Dan los mismos números. `fit` guarda los modelos ajustados (útil si vas a pronosticar varias veces o quieres inspeccionarlos con `sf.fitted_`), y `predict` pronostica con ellos. `forecast` hace todo en un solo paso sin guardarlos y es más eficiente cuando tienes miles de series. Para el examen basta con saber que son equivalentes.
 :::
 
-### Más referencias: ventanas y suavizamiento exponencial {#ref-ventanas}
+### Más referencias: ventanas y suavizamiento exponencial {#ref-ventanas .prof}
 
 Los cuatro métodos básicos son extremos: el promedio le da **el mismo peso a todos** los datos y el ingenuo le da **todo el peso al último**. Hay tres referencias intermedias, también en statsforecast, que viven entre esos dos extremos.
 
@@ -385,7 +385,7 @@ Elige la serie, el método y su parámetro ($k$ o $\alpha$). Se compara contra l
 - **Vista extra**: los pesos que recibe cada dato pasado en el pronóstico (barras): parejos en la ventana, geométricos en el suavizamiento.
 :::
 
-### Valores ajustados y residuales {#ref-residuos}
+### Valores ajustados y residuales {#ref-residuos .prof}
 
 :::definicion Ajustados y residuales de cada método
 El **valor ajustado** $\hat{y}_t$ es lo que el método habría pronosticado para $t$ con los datos hasta $t - 1$ (un paso adelante), y el **residual** es $\tip{e-res}{e_t} = y_t - \hat{y}_t$: lo que el método no explicó dentro del entrenamiento. Los errores de la prueba miden qué tan bien pronostica; los residuales dicen **si todavía queda algo que aprovechar**.
@@ -485,7 +485,7 @@ Elige la serie y el método. Los residuales se calculan sobre el entrenamiento (
 Una regla práctica es $2m$ para datos estacionales (24 en mensuales) y 10 si no hay estacionalidad. Las referencias casi no estiman nada (el ingenuo y el estacional, cero parámetros; el promedio y la deriva, uno), así que no hace falta corregir los grados de libertad. Lo importante es **no aplicar la prueba sobre los `NaN` iniciales**: `acorr_ljungbox` con un `NaN` devuelve `NaN`.
 :::
 
-### Intervalos de predicción {#ref-intervalos}
+### Intervalos de predicción {#ref-intervalos .prof}
 
 Un pronóstico puntual dice «lo más probable»; el **intervalo de predicción** dice entre qué valores caerá el dato real con una probabilidad dada. En statsforecast se piden con `level=[80, 95]`.
 
@@ -591,7 +591,7 @@ Las fórmulas suponen que los residuales son ruido blanco **normal** con media c
 Sí, **si el método es correcto**: de cada 10 pronósticos, en promedio 8 datos reales quedan dentro de su banda de 80%. No es un intervalo de confianza para un parámetro (como el de la media), sino para una observación futura: incluye el choque que todavía no ocurre, y por eso siempre es más ancho.
 :::
 
-### Referencias con logaritmo y con descomposición {#ref-transformadas}
+### Referencias con logaritmo y con descomposición {#ref-transformadas .prof}
 
 Las referencias se pueden aplicar a una **versión transformada** de la serie y luego regresar a la escala original. Es la manera de construir referencias más fuertes sin dejar de ser simples.
 
@@ -668,7 +668,7 @@ AirPassengers, prueba 1960. Elige la referencia, la escala y el nivel de la band
 - **Lectura**: MAE, RMSE y la cobertura observada de la banda. Compara la cobertura del estacional (3 de 12) con la de STL + deriva.
 :::
 
-### Cómo elegir la referencia {#ref-elegir}
+### Cómo elegir la referencia {#ref-elegir .prof}
 
 :::definicion Árbol de decisión
 1. **¿La serie tiene un patrón estacional claro?** (en la gráfica, o con picos de la ACF en $m, 2m, \dots$ [[u1:patrones]])
@@ -696,7 +696,7 @@ AirPassengers, prueba 1960. Elige la referencia, la escala y el nivel de la band
 Porque la referencia tiene que ser **difícil de vencer y fácil de explicar**. Si usas como vara una que ya es casi un modelo, nadie sabrá si el SARIMA gana por sus términos AR y MA o por la descomposición. Lo usual es reportar **dos**: la referencia simple natural (ingenuo estacional, en datos mensuales) y la mejor que encontraste.
 :::
 
-### Evaluar contra las referencias {#ref-evaluar}
+### Evaluar contra las referencias {#ref-evaluar .prof}
 
 La función `evaluate` de `utilsforecast` hace la comparación de un jalón: une el pronóstico con la prueba por `unique_id` y `ds`, y devuelve una fila por métrica y una columna por método.
 
@@ -726,7 +726,7 @@ La conclusión se escribe así: *«entre las cuatro referencias simples gana el 
 No está mal: es la evaluación más simple, respetando el orden. Su problema es que el resultado depende de qué pasó en ese 20%: con otra ventana de prueba, las distancias entre los métodos cambian, y a veces también el ganador. Más adelante, la validación con origen móvil promedia varios cortes y da una estimación más estable del error esperado [[ref-cv]]. Si el examen pide 80/20, hazlo así.
 :::
 
-### Errores frecuentes con las referencias {#ref-errores}
+### Errores frecuentes con las referencias {#ref-errores .prof}
 
 | Error | Qué pasa | Cómo evitarlo |
 |---|---|---|

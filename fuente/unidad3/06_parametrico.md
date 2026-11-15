@@ -192,7 +192,7 @@ $$\hat f(\omega) = \hat\sigma^2\,\frac{\lvert\hat\theta(e^{-2\pi i\omega})\rvert
 y describe a la serie después de las diferencias. Es lo que hicimos con el modelo de aerolínea en [[espectro-aerolinea]]. La desventaja: hereda los supuestos del modelo, incluido el periodo $s$ fijo; si lo que buscas es un ciclo de duración variable, el AR($p$) por AIC es más flexible.
 :::
 
-:::examen Así te lo pueden preguntar: «Compare la estimación espectral paramétrica y la no paramétrica»
+:::examen Así te lo pueden preguntar: «Compare la estimación espectral paramétrica y la no paramétrica» {#ex-espectral}
 «La estimación **no paramétrica** parte del periodograma, $I(\omega_j) = \lvert d(\omega_j)\rvert^2$, y lo estabiliza promediando frecuencias vecinas (Daniell) o segmentos (Welch). Hace pocos supuestos (solo estacionariedad) y es directa, pero el periodograma crudo es muy ruidoso y el suavizado cambia varianza por resolución. La **paramétrica** ajusta un modelo, típicamente un AR($p$) elegido con el AIC, y usa su fórmula $\hat f(\omega) = \hat\sigma^2/\lvert\hat\phi(e^{-2\pi i\omega})\rvert^2$. Produce una curva suave e interpretable, con buena resolución aun con pocos datos si el modelo es adecuado, pero depende de la especificación: un orden bajo pierde picos y uno alto crea picos falsos. En la práctica se usan juntos: si ambos muestran el mismo pico, la conclusión es sólida.»
 :::
 

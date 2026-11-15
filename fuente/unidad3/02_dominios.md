@@ -164,7 +164,7 @@ Elige un proceso y sus parámetros. Las tres gráficas muestran lo mismo en tres
 Por la misma razón por la que a veces conviene ver una canción como partitura y a veces como sonido. Con tres oscilaciones superpuestas, la ACF es una mezcla de tres cosenos difícil de descifrar; el espectro muestra tres picos separados. Y en el sentido contrario: un AR(1) se ve clarísimo en la PACF (un solo pico) y en el espectro es solo una curva que baja. Cada dominio simplifica distintas estructuras.
 :::
 
-:::examen Así te lo pueden preguntar: «¿En qué se diferencian el dominio del tiempo y el de la frecuencia?»
+:::examen Así te lo pueden preguntar: «¿En qué se diferencian el dominio del tiempo y el de la frecuencia?» {#ex-dominios}
 «En el **dominio del tiempo** se analizan los valores de la serie, sus rezagos y su autocorrelación: cuánto depende el valor actual de los anteriores. En el **dominio de la frecuencia** se analiza cómo se reparte la varianza entre oscilaciones de distintas frecuencias: qué periodicidades o ciclos dominan. Ambos contienen la misma información para una serie estacionaria (la densidad espectral es la transformada de Fourier de la autocovarianza), pero el espectral facilita detectar ciclos superpuestos o escondidos en ruido, comparar series por frecuencias y diseñar filtros, mientras que el temporal es el natural para modelar y pronosticar.»
 :::
 

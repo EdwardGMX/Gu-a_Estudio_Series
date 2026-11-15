@@ -108,7 +108,7 @@ Simulamos muchos paseos aleatorios (donde $H_0$ es cierta) y calculamos $\tau$ e
 - **Líneas discontinuas**: el crítico de la normal ($-1.645$) y el de Dickey–Fuller. El área del histograma a la izquierda de cada línea es la proporción de rechazos.
 :::
 
-### Dickey–Fuller calculada a mano {#df-mano}
+### Dickey–Fuller calculada a mano {#df-mano .prof}
 
 :::guiado Prueba DF (sin constante) con 10 datos {#guia-df}
 $$y = (3,\; 1,\; 2,\; -1,\; 0,\; -2,\; 1,\; 0,\; 2,\; 1)$$
@@ -485,7 +485,7 @@ print("Solo la primera mitad:"); print(diagnostico(quiebre[:150]))
 
 Con el salto, ADF no rechaza la raíz unitaria y KPSS rechaza la estacionariedad: la lectura conjunta dice «NO estacionaria», aunque cada mitad por separado es ruido blanco perfectamente estacionario. Recomendaciones: **grafica siempre** primero, analiza por tramos si hay un evento conocido y, si hace falta, usa pruebas que permiten una ruptura (por ejemplo, Zivot–Andrews).
 
-### ¿Qué tan confiable es la ADF? {#potencia}
+### ¿Qué tan confiable es la ADF? {#potencia .prof}
 
 La ADF tiene **poca potencia** cuando $\phi$ está cerca de 1: le cuesta distinguir «muy persistente» de «raíz unitaria», sobre todo con pocos datos.
 

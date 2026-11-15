@@ -12,7 +12,7 @@
 <div class="mapa">@@MAPA@@</div>
 </section>
 
-## 🧰 Caja de herramientas matemáticas {#herramientas}
+## 🧰 Caja de herramientas matemáticas {#herramientas .prof}
 @mapa Notación, sumatoria, esperanza, varianza, covarianza, logaritmos y serie geométrica: lo que usan todas las demostraciones.
 
 Antes de hablar de series de tiempo conviene tener a la mano **unas pocas reglas** de álgebra y probabilidad. Todas las demostraciones de la unidad se construyen con ellas, y cada vez que se use una verás un enlace ↩ que te trae de regreso a esta sección. Si ya las dominas, puedes saltar directo a [[serie]].

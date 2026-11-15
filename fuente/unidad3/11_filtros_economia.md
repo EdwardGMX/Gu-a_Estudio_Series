@@ -1,4 +1,4 @@
-## 🏛️ Filtros clásicos en economía: Hodrick–Prescott y Baxter–King {#filtros-economia}
+## 🏛️ Filtros clásicos en economía: Hodrick–Prescott y Baxter–King {#filtros-economia .prof}
 @mapa Dos filtros que se usan para separar la tendencia y el ciclo económico: el de Hodrick–Prescott (un pasa bajos y un pasa altos a la vez) y el de Baxter–King (un pasa banda), con su ganancia, su elección de parámetros y sus riesgos.
 
 ### El filtro de Hodrick–Prescott {#hp}

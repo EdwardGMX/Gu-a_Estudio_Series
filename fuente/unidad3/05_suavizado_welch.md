@@ -117,7 +117,7 @@ Elige la serie y cuántas ordenadas promediar. Compara el periodograma crudo con
 - **Vista extra**: los pesos $h_k$ del núcleo (simple o modificado), los grados de libertad y el factor por el que se multiplica $\hat f$ para obtener cada extremo del intervalo.
 :::
 
-### Ventanas y afilado (*tapering*) {#taper}
+### Ventanas y afilado (*tapering*) {#taper .prof}
 
 Antes de calcular el periodograma, se suele multiplicar la serie por una **ventana** que baja suavemente a cero en los extremos ([[fuga]]). Shumway y Stoffer recomiendan una ventana coseno que solo afila el 10% de los datos de cada lado. Dos efectos:
 
@@ -232,7 +232,7 @@ Cambia los argumentos de `welch` y mira el código, la salida y el espectro esti
 - La tabla de parámetros explica cada uno y su valor recomendado.
 :::
 
-### ¿Daniell o Welch? {#daniell-vs-welch}
+### ¿Daniell o Welch? {#daniell-vs-welch .prof}
 
 | | Daniell (promedio en frecuencia) | Welch (promedio en tiempo) |
 |---|---|---|
@@ -252,7 +252,7 @@ Los dos resuelven el mismo problema con la misma moneda: cambian **resolución**
 Empieza por la resolución que necesitas: si te interesa un ciclo de periodo $\Per$, la banda debe ser bastante más angosta que $1/\Per$; con Welch, que cada segmento contenga varias vueltas del ciclo ($M \ge 3\Per$ es una buena regla). Después prueba dos o tres valores: lo que se mantiene en todos es real; lo que aparece y desaparece al cambiar el suavizado es ruido.
 :::
 
-:::examen Así te lo pueden preguntar: «¿Por qué no basta el periodograma y qué hace el método de Welch?»
+:::examen Así te lo pueden preguntar: «¿Por qué no basta el periodograma y qué hace el método de Welch?» {#ex-welch}
 «El periodograma es un estimador casi insesgado de la densidad espectral, pero cada ordenada se distribuye aproximadamente como $f(\omega)\chi^2_2/2$: su desviación estándar es del mismo tamaño que lo que estima y no disminuye al aumentar $n$, por lo que es inconsistente y muy ruidoso. La solución es promediar: el suavizado de Daniell promedia $L$ ordenadas vecinas (varianza $\approx f^2/L$, ancho de banda $L/n$, $2L$ grados de libertad), y el método de Welch divide la serie en segmentos traslapados, les aplica una ventana, calcula el periodograma de cada uno y los promedia. Ambos reducen la varianza a cambio de resolución: más promedio da una curva más estable pero aplana los picos y funde frecuencias cercanas.»
 :::
 

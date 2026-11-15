@@ -100,7 +100,7 @@ No. La definición solo pide media 0, varianza constante y autocorrelación cero
 No. «No correlacionado» solo descarta relaciones **lineales** entre $\varepsilon_t$ y $\varepsilon_{t-k}$. Puede quedar dependencia de otro tipo; el ejemplo clásico es la volatilidad: después de un choque grande suele venir otro grande (de cualquier signo). Los valores no se correlacionan, pero sus **cuadrados** sí. Eso es exactamente un proceso ARCH [[arch]].
 :::
 
-### La gran idea: una serie es un filtro de choques {#filtro-lineal}
+### La gran idea: una serie es un filtro de choques {#filtro-lineal .prof}
 
 Todos los modelos de esta unidad comparten una misma estructura. Se llaman **procesos lineales** porque escriben el valor de hoy como una **suma ponderada de choques** de ruido blanco:
 
@@ -168,7 +168,7 @@ Choques: $\varepsilon_1 = 1,\ \varepsilon_2 = -2,\ \varepsilon_3 = 0.5,\ \vareps
 En esta guía (y en statsmodels) el MA se escribe con **más**: $y_t = \varepsilon_t + \theta\,\varepsilon_{t-1}$. Algunos libros (Box–Jenkins, R antiguo) usan $y_t = \varepsilon_t - \theta\,\varepsilon_{t-1}$. Es el mismo modelo con $\theta$ de signo contrario. Antes de interpretar un coeficiente, revisa la convención. En el AR todos usan $y_t = \phi\,y_{t-1} + \varepsilon_t$, pero `ArmaProcess` pide el polinomio $1 - \phi L$, es decir, `ar=[1, -phi]` [[ar-python]].
 :::
 
-### Números complejos en cinco minutos {#complejos}
+### Números complejos en cinco minutos {#complejos .prof}
 
 Para saber si un AR es estacionario hay que encontrar las **raíces** de un polinomio [[raices]], y a veces esas raíces son números complejos. Esto es todo lo que necesitas.
 
@@ -210,7 +210,7 @@ Resolvemos $1 - z + 0.5\,z^2 = 0$, que es el polinomio de un AR(2) con $\phi_1 =
 @ usa c2[6]
 :::
 
-### La esperanza condicional: la mejor predicción {#esperanza-cond}
+### La esperanza condicional: la mejor predicción {#esperanza-cond .prof}
 
 Pronosticar es responder: *dado todo lo que sé hasta hoy, ¿qué valor espero mañana?* Matemáticamente es una **esperanza condicional**, que se escribe $\E[y_{t+1} \mid y_t, y_{t-1}, \dots]$ o, más corto, $\E_t[y_{t+1}]$.
 
