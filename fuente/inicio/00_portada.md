@@ -101,7 +101,7 @@ Los incisos del programa oficial de la unidad de aprendizaje. Los que dicen **pr
 1.2.1 | Alcances de las pruebas estadísticas y estacionariedad como propiedad de escala | u1:hipotesis u1:conjunta u1:potencia
 1.2.2 | Estacionariedad de la media, homoscedasticidad y estacionariedad en sentido amplio | u1:debil u1:moviles
 1.2.3 | Estacionariedad en sentido amplio: razones de su existencia e implicaciones | u1:importancia u1:no-plana
-1.2.4 | Pruebas de tendencia y ruptura en la media, para homoscedasticidad y función de autocorrelación estacionaria | u1:adf u1:kpss u1:rupturas u1:prueba-tendencia u1:pruebas-ruptura u1:pruebas-varianza
+1.2.4 | Pruebas de tendencia y ruptura en la media, para homoscedasticidad y función de autocorrelación estacionaria | u1:adf u1:kpss u1:rupturas u1:prueba-tendencia u1:pruebas-ruptura u1:pruebas-varianza u1:mapa-pruebas
 # Unidad II · Procesos lineales en tiempo discreto
 2.1.1 | Procesos autorregresivos | u2:ar
 2.1.2 | Procesos de promedio móvil | u2:ma

@@ -87,3 +87,99 @@ La ACF original, cercana a 1 y con caída muy lenta, indica **no estacionariedad
 - Modelo final: ARIMA(0,1,1).
 - Menciona una verificación (pruebas de estacionariedad, residuos o sobrediferenciación).
 :::
+
+### Bloque H · Tendencia, rupturas, varianza y regresión sobre el tiempo {#ej-h .prof}
+
+Ejercicios de los temas de profundización del inciso 1.2.4 del temario: [[prueba-tendencia]], [[pruebas-ruptura]], [[pruebas-varianza]] y [[regresion-tendencia]].
+
+:::ejercicio Básico | [[prueba-tendencia]]
+Con los datos $y = (2,\ 4,\ 3,\ 5,\ 6)$, ¿cuánto vale el estadístico $S$ de Mann–Kendall?
+- [ ] 4
+- [x] 8
+- [ ] 9
+- [ ] 10
+---
+Hay $\binom{5}{2} = 10$ parejas. Solo una baja (el 4 contra el 3 que le sigue); las otras 9 suben. $S = 9 - 1 = 8$. El máximo posible sería 10, si todas subieran [[guia-mk]].
+:::
+
+:::ejercicio Intermedio | [[prueba-tendencia]]
+La prueba de Mann–Kendall aplicada a un paseo aleatorio **sin deriva** de 120 datos da $Z = -9.3$. ¿Cuál es la lectura correcta?
+- [ ] La serie tiene una tendencia determinística decreciente muy fuerte.
+- [ ] La serie es estacionaria.
+- [x] La prueba rechaza porque supone datos independientes; la autocorrelación del paseo crea rachas que parecen tendencia.
+- [ ] Hay que usar una pendiente de Sen positiva para corregir el signo.
+---
+Mann–Kendall supone que, bajo $H_0$, los datos son independientes. Un paseo aleatorio forma rachas largas que «votan» casi siempre en la misma dirección, y la prueba rechaza aunque no haya tendencia determinística. Para distinguir tendencia determinística de estocástica se usa la ADF con `"ct"` y la KPSS [[especificaciones]].
+:::
+
+:::ejercicio Intermedio | [[pruebas-ruptura]]
+En una prueba de Chow para un cambio de media en una fecha conocida, con $n = 20$: $\mathrm{SCR}_R = 50$, $\mathrm{SCR}_1 = 8$ y $\mathrm{SCR}_2 = 12$. ¿Cuánto vale $F$?
+- [ ] 1.5
+- [ ] 2.5
+- [x] 27
+- [ ] 30
+---
+:::pasos
+= \mathrm{SCR}_1 + \mathrm{SCR}_2 = 20, \qquad k = 1
+> El modelo libre tiene una media por tramo.
+= F = \frac{(50 - 20)/1}{20/(20 - 2)} = \frac{30}{1.111} = 27
+> Se compara con $F_{1,\,18}(0.95) = 4.41$: se rechaza que la media sea la misma en los dos tramos.
+:::
+:::
+
+:::ejercicio Intermedio | [[pruebas-ruptura]]
+Una serie con un salto de nivel da ADF p-value = 0.40. La prueba de Zivot–Andrews da p-value = 0.01 y ubica la ruptura en $t = 150$. ¿Qué concluyes?
+- [ ] La serie tiene raíz unitaria; hay que diferenciarla.
+- [x] La serie es estacionaria alrededor de una media que cambia en $t \approx 150$; la ADF no rechazaba por culpa de la ruptura.
+- [ ] Las dos pruebas se contradicen, así que no se puede concluir nada.
+- [ ] La ruptura hace que la serie tenga varianza infinita.
+---
+Zivot–Andrews es una ADF que permite una ruptura en fecha desconocida. Rechazar su nula (raíz unitaria) es evidencia de **estacionariedad con un cambio de nivel**. Es el caso típico de [[rupturas]]: la ADF sola confunde el salto con persistencia. Lo adecuado es modelar cada tramo o agregar una variable indicadora del cambio, no diferenciar.
+:::
+
+:::ejercicio Básico | [[pruebas-varianza]]
+A los residuos (sin tendencia) de una serie mensual se les aplica Breusch–Pagan contra $t$: p-value = 0.0001. En logaritmos: p-value = 0.17. ¿Qué indica?
+- [ ] La serie original es homoscedástica y el logaritmo la volvió heteroscedástica.
+- [x] La varianza de la serie original cambia con el tiempo; el logaritmo la estabiliza, lo que apunta a un modelo multiplicativo.
+- [ ] Las dos series tienen raíz unitaria.
+- [ ] Hay que aplicar dos diferencias.
+---
+La nula de Breusch–Pagan es **homoscedasticidad**. Se rechaza en la serie original (la varianza depende de $t$) y no en logaritmos. Es el patrón de AirPassengers: la amplitud crece con el nivel y el logaritmo la empareja [[multiplicativo]].
+:::
+
+:::ejercicio Básico | [[regresion-tendencia]]
+Con $t = 1, 2, 3, 4$ y $y = (3,\ 5,\ 6,\ 10)$ se ajusta $y_t = \beta_0 + \beta_1 t + \varepsilon_t$ por mínimos cuadrados. ¿Cuál es el pronóstico para $t = 5$?
+- [ ] 11
+- [x] 11.5
+- [ ] 12
+- [ ] 13.2
+---
+:::pasos
+= \bar t = 2.5, \quad \bar y = 6, \quad \sum(t - \bar t)(y_t - \bar y) = 4.5 + 0.5 + 0 + 6 = 11, \quad \sum(t - \bar t)^2 = 5
+> Las desviaciones de $t$ son $(-1.5, -0.5, 0.5, 1.5)$ y las de $y$, $(-3, -1, 0, 4)$.
+= \hat\beta_1 = 11/5 = 2.2, \qquad \hat\beta_0 = 6 - 2.2(2.5) = 0.5
+> La recta ajustada.
+= \hat y_5 = 0.5 + 2.2(5) = 11.5
+> El pronóstico prolonga la recta [[guia-reg-tendencia]].
+:::
+:::
+
+:::ejercicio Intermedio | [[regresion-tendencia]]
+Se ajusta $\ln y_t = 4.8 + 0.01\,t$ a una serie **mensual**. ¿Qué tasa de crecimiento anual implica, aproximadamente?
+- [ ] 1%
+- [ ] 10%
+- [x] 12.7%
+- [ ] 120%
+---
+$\beta_1 = 0.01$ es un crecimiento de cerca de 1% **mensual**. En un año, $e^{12(0.01)} - 1 = e^{0.12} - 1 = 0.127$, es decir, 12.7%. Es el orden de lo que crece AirPassengers [[regresion-tendencia]].
+:::
+
+:::ejercicio Reto | [[regresion-tendencia]]
+Al regresar un paseo aleatorio sin deriva sobre $t$ se obtiene $R^2 = 0.88$ y un estadístico $t$ de la pendiente de $-32.7$. Los residuos tienen $\hat\rho(1) = 0.75$. ¿Qué está pasando?
+- [ ] La serie tiene una tendencia determinística decreciente.
+- [ ] Hay que agregar dummies de mes para mejorar el ajuste.
+- [x] Es una regresión espuria: el error no es estacionario y las pruebas $t$ y el $R^2$ no son válidos.
+- [ ] El $R^2$ alto confirma que la recta sirve para pronosticar.
+---
+Con una tendencia **estocástica**, el residuo de la regresión sobre $t$ sigue siendo un paseo aleatorio [[tendencias]]. Las pruebas de mínimos cuadrados suponen un error estacionario; sin eso, la prueba $t$ rechaza en la gran mayoría de los casos aunque no haya pendiente. La alarma son los residuos muy persistentes. El tratamiento correcto es diferenciar.
+:::

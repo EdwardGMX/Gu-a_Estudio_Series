@@ -1,5 +1,5 @@
 ## 🧩 Ejercicios de la Unidad I {#ejercicios}
-@mapa 54 ejercicios de opción múltiple, cálculo y lectura de gráficas, cada uno con su respuesta explicada.
+@mapa 62 ejercicios de opción múltiple, cálculo y lectura de gráficas, cada uno con su respuesta explicada, y 8 preguntas de respuesta abierta.
 
 Elige una opción y presiona **Ver respuesta**: se marca la correcta, se explica por qué y hay un enlace a la sección donde se estudia el tema. Los ejercicios de cálculo abierto tienen **Ver solución paso a paso**. Intenta resolverlos en papel antes de abrir la solución.
 
