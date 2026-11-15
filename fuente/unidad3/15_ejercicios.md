@@ -1,5 +1,5 @@
 ## 🧩 Ejercicios de la Unidad III {#ejercicios3}
-@mapa 70 ejercicios de opción múltiple y de cálculo paso a paso, cada uno con su respuesta explicada y un enlace al tema.
+@mapa 74 ejercicios de opción múltiple y de cálculo paso a paso, cada uno con su respuesta explicada y un enlace al tema.
 
 Elige una opción y presiona **Ver respuesta**: se marca la correcta, se explica por qué y hay un enlace a la sección donde se estudia. Los ejercicios de cálculo abierto tienen **Ver solución paso a paso**. Intenta resolverlos en papel antes de abrir la solución.
 

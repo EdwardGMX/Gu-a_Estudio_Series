@@ -89,3 +89,47 @@ El máximo en $\omega \approx 0.09$ corresponde a un periodo de $1/0.09 \approx 
 - Señala que los dos estimadores coinciden.
 - Propone términos AR y descarta el SARIMA de periodo fijo.
 :::
+
+### Bloque J · Regresión con retraso y filtro de Wiener {#ej3-j .prof}
+
+Ejercicios de los incisos 3.4.2 y 3.4.3 del temario: [[ccf]], [[regresion-retraso]], [[senal-ruido]] y [[wiener]].
+
+:::ejercicio Básico | [[ccf]]
+¿Por qué se **preblanquea** antes de leer la correlación cruzada entre dos series?
+- [ ] Para que las dos series tengan la misma varianza.
+- [x] Porque si $x$ está autocorrelacionada, la CCF sale alta en muchos rezagos (eco de su persistencia) y la banda $\pm 2/\sqrt n$ deja de valer.
+- [ ] Para eliminar la relación entre $x$ y $y$ y comprobar que era espuria.
+- [ ] Porque la CCF solo se puede calcular con series de media cero.
+---
+La banda $\pm 2/\sqrt n$ supone que al menos una serie es ruido blanco. Se ajusta un AR a $x$, se usan sus residuos $w_t$ y se aplica **el mismo filtro** a $y$; la relación (los $\beta_r$) se conserva [[demo-preblanqueo]] y la CCF solo marca los rezagos verdaderos.
+:::
+
+:::ejercicio Intermedio | [[regresion-retraso]]
+Tras preblanquear, la CCF entre $\tilde y$ y $w$ solo sale de la banda en el rezago $k = 4$, con $\hat\rho = 0.5$, $s_{\tilde y} = 2$ y $s_w = 1$. ¿Qué modelo y qué coeficiente se proponen?
+- [ ] $y_t = \beta x_{t+4} + v_t$ con $\hat\beta = 0.25$
+- [x] $y_t = \beta x_{t-4} + v_t$ con $\hat\beta = 1$
+- [ ] $y_t = \beta x_{t-4} + v_t$ con $\hat\beta = 0.5$
+- [ ] $y_t = \beta x_t + v_t$ con $\hat\beta = 2$
+---
+Un pico en $k > 0$ de $\rho_{yx}(k) = \operatorname{corr}(y_{t+k}, x_t)$ significa que $y$ responde $k$ periodos **después** de $x$: el regresor es $x_{t-4}$. El coeficiente es $\hat\beta_4 = \hat\rho\,s_{\tilde y}/s_w = 0.5 \times 2/1 = 1$ [[demo-preblanqueo]]. En frecuencia, la fase sería una recta de pendiente $-2\pi(4)$ [[demo-retardo]].
+:::
+
+:::ejercicio Básico | [[wiener]]
+En el modelo señal más ruido, a cierta frecuencia $f_s(\omega) = 3$ y $f_n(\omega) = 1$. ¿Cuánto vale la ganancia del filtro de Wiener en esa frecuencia?
+- [ ] 0.25
+- [ ] 0.33
+- [x] 0.75
+- [ ] 3
+---
+$A(\omega) = f_s/(f_s + f_n) = 3/4 = 0.75$. La razón señal a ruido es 3 y $A = \mathrm{SNR}/(1 + \mathrm{SNR})$: se deja pasar el 75% de esa frecuencia, la fracción que es señal [[guia-wiener]].
+:::
+
+:::ejercicio Intermedio | [[wiener]]
+¿Cuál de estas afirmaciones sobre el filtro de Wiener es **falsa**?
+- [ ] Su ganancia es la coherencia entre la serie observada y la señal.
+- [ ] Su ganancia está entre 0 y 1 y no desfasa.
+- [x] Puede separar la señal del ruido aun dentro de una misma frecuencia, si se conocen bien los espectros.
+- [ ] El filtro de Hodrick–Prescott es un filtro de Wiener para un modelo particular de tendencia más ciclo.
+---
+Un filtro lineal solo decide **cuánto** de cada frecuencia deja pasar; dentro de una frecuencia, señal y ruido salen juntos. Por eso queda un error $f_sf_n/(f_s + f_n)$ que ningún filtro lineal elimina [[demo-wiener]]. Las otras tres son ciertas [[demo-hp-wiener]].
+:::
