@@ -47,7 +47,7 @@ Práctica · Simulacro y repaso de errores | | Haz un [simulacro](practica.html#
 Práctica · Hojas de repaso e interpretar salidas | | Lee las [hojas de repaso](repaso.html) de las tres unidades y resuelve diez salidas en [Interpretar salidas](practica.html#interpretar). Es la sesión de la víspera. | 75
 :::
 
-Lo complementario, para una segunda vuelta con el modo ETS apagado: los bloques marcados como **profundización** en cada unidad y el [Laboratorio de manchas solares](lab-manchas-solares.html), que recorre un análisis completo con las herramientas de las tres unidades.
+Lo complementario, para una segunda vuelta con el modo ETS apagado: los bloques marcados como **profundización** en cada unidad el [Laboratorio de manchas solares](lab-manchas-solares.html), que recorre un análisis completo con las herramientas de las tres unidades, y el [Laboratorio · Viento por unidades](lab-viento-unidades.html), que repasa la materia **tema por tema, en el orden del temario**, con datos reales de un aerogenerador.
 
 ## 🎯 Mapa de la Guía para ETS {#mapa-guia}
 
