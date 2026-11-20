@@ -1,7 +1,7 @@
 ## 📖 Introducción: el mismo viento, en el orden del temario {#intro}
 @mapa Qué es este análisis, en qué se distingue del primero y cómo está organizado.
 
-Este laboratorio usa **los mismos datos SCADA** que el [flujo del proyecto](lab-viento.html): la velocidad del viento de la turbina **MV01** de un parque eólico durante **2019**, medida cada 10 minutos. Allí el orden lo marcaba el flujo de trabajo de un proyecto (definir, preparar, modelar, evaluar). **Aquí el orden lo marca la materia**: cada herramienta aparece cuando el temario la presenta, se aplica al viento y se lee qué dice. Es una forma de estudiar la materia completa con una sola serie real.
+Este laboratorio usa **los mismos datos SCADA** que el primer análisis del proyecto (el flujo de trabajo completo, que ya no forma parte de la guía): la velocidad del viento de la turbina **MV01** de un parque eólico durante **2019**, medida cada 10 minutos. Allí el orden lo marcaba el flujo de trabajo de un proyecto (definir, preparar, modelar, evaluar). **Aquí el orden lo marca la materia**: cada herramienta aparece cuando el temario la presenta, se aplica al viento y se lee qué dice. Es una forma de estudiar la materia completa con una sola serie real.
 
 :::definicion Objetivo
 Recorrer **las tres unidades** del curso sobre una serie real y, con lo que cada unidad permite, **pronosticar la velocidad media horaria del viento en MV01 para las siguientes 24 horas**, cada medianoche. Al final, los modelos del temario se evalúan en un periodo que nadie vio y el resultado se compara con el del primer análisis.

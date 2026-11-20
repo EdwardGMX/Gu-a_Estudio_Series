@@ -69,14 +69,14 @@
 <span class="etiqueta">🧪 Laboratorio · Siguiendo el temario</span>
 <h1>🌬️ Viento por unidades: el SCADA de 2019, tema por tema</h1>
 <p class="bajada">Los mismos datos SCADA del aerogenerador MV01, ahora en el orden de la materia: primero la limpieza y la exploración, después todo lo de la Unidad I, luego la Unidad II (empezando por los modelos de referencia y los AR y MA solos) y al final la Unidad III. Cada paso usa solo lo visto antes, con muchas gráficas y algunas interactivas.</p>
-<div class="lab-selector"><span>Dataset:</span><a href="lab-manchas-solares.html">☀️ Manchas solares</a><a href="lab-viento.html">🌬️ Viento (flujo del proyecto)</a><a class="activo" href="lab-viento-unidades.html">🌬️ Viento por unidades</a><em>✈️ AirPassengers</em><em>🌋 CO₂</em><a href="laboratorio.html">← Todos los datasets</a></div>
+<div class="lab-selector"><span>Dataset:</span><a href="lab-manchas-solares.html">☀️ Manchas solares</a><a href="lab-proyecto-entrega3.html">⚡ Proyecto entrega 3</a><a class="activo" href="lab-viento-unidades.html">🌬️ Viento por unidades</a><em>✈️ AirPassengers</em><em>🌋 CO₂</em><a href="laboratorio.html">← Todos los datasets</a></div>
 <div class="lab-leyenda"><span style="background:var(--celeste-f);border-color:var(--celeste);color:var(--celeste-o)">🔵 Exploración</span><span style="background:var(--verde-f);border-color:var(--verde);color:var(--verde-o)">✅ Logrado</span><span style="background:var(--mantequilla-f);border-color:var(--mantequilla);color:var(--mantequilla-o)">🟡 Funciona con reservas</span><span style="background:var(--coral-f);border-color:var(--coral);color:var(--coral-o)">❌ Descartado</span></div>
 </section>
 
 
 <section class="seccion" data-seccion="intro"><h2 id="intro"><span class="h-num">0</span><span class="h-txt">📖 Introducción: el mismo viento, en el orden del temario</span></h2><div class="sec-tiempo">⏱ <b>5 min</b> de estudio</div>
 
-<p>Este laboratorio usa <strong>los mismos datos SCADA</strong> que el <a href="lab-viento.html">flujo del proyecto</a>: la velocidad del viento de la turbina <strong>MV01</strong> de un parque eólico durante <strong>2019</strong>, medida cada 10 minutos. Allí el orden lo marcaba el flujo de trabajo de un proyecto (definir, preparar, modelar, evaluar). <strong>Aquí el orden lo marca la materia</strong>: cada herramienta aparece cuando el temario la presenta, se aplica al viento y se lee qué dice. Es una forma de estudiar la materia completa con una sola serie real.</p>
+<p>Este laboratorio usa <strong>los mismos datos SCADA</strong> que el primer análisis del proyecto (el flujo de trabajo completo, que ya no forma parte de la guía): la velocidad del viento de la turbina <strong>MV01</strong> de un parque eólico durante <strong>2019</strong>, medida cada 10 minutos. Allí el orden lo marcaba el flujo de trabajo de un proyecto (definir, preparar, modelar, evaluar). <strong>Aquí el orden lo marca la materia</strong>: cada herramienta aparece cuando el temario la presenta, se aplica al viento y se lee qué dice. Es una forma de estudiar la materia completa con una sola serie real.</p>
 
 <div class="bloque b-definicion"><div class="b-cab"><span class="b-ico">📘</span><span class="b-tipo">Definición</span><span class="b-titulo">Objetivo</span></div><div class="b-cuerpo"><p>Recorrer <strong>las tres unidades</strong> del curso sobre una serie real y, con lo que cada unidad permite, <strong>pronosticar la velocidad media horaria del viento en MV01 para las siguientes 24 horas</strong>, cada medianoche. Al final, los modelos del temario se evalúan en un periodo que nadie vio y el resultado se compara con el del primer análisis.</p>
 </div></div>
@@ -6684,9 +6684,9 @@ Intervalo del 95% para φ: 0.9563 a 0.9703</pre></div></div></div><div class="pa
 </div><div class="pa-sec pa-dec"><div class="pa-et">➡️ Decisión y siguiente paso</div><p>🟡 Un aviso de no convergencia no se ignora: el modelo con exógenas físicas ya estaba descartado, pero si fuera el elegido habría que reestimarlo (más iteraciones, otro optimizador o variables reescaladas).</p>
 </div><div class="pa-sec pa-res"><div class="pa-et">📊 Resultado</div><div class="codigo c-solo-salida"><div class="c-salida"><div class="c-salida-cab">Salida del código</div><pre>                       φ        θ       σ²  segundos
 método                                              
-statespace       0.95820  0.07599  0.05882   0.20640
-innovations_mle  0.95789  0.07632  0.05882   0.19896
-hannan_rissanen  0.95792  0.07242  0.05955   0.12733
+statespace       0.95820  0.07599  0.05882   0.30828
+innovations_mle  0.95789  0.07632  0.05882   0.26361
+hannan_rissanen  0.95792  0.07242  0.05955   0.17266
 
 ¿Convergió la armónica? True | iteraciones: 7
 ¿Convergió el AR(3) en √y con temperatura y presión? False</pre></div></div></div><div class="pa-repaso"><span>📚 Repasa:</span> <a class="ref ref-unidad" href="unidad2.html#mv-statsmodels" title="Abre la Unidad II"><span class="ref-flecha">⇠</span> Unidad II · 11.7 Cómo lo hace statsmodels (y qué hacer cuando falla)</a> <a class="ref ref-unidad" href="unidad2.html#mv-arma" title="Abre la Unidad II"><span class="ref-flecha">⇠</span> Unidad II · 11.5 MA y ARMA: los choques hay que reconstruirlos</a></div></div></article>
@@ -6717,8 +6717,8 @@ hannan_rissanen  0.95792  0.07242  0.05955   0.12733
 ==============================================================================
 Dep. Variable:                 viento   No. Observations:                 5664
 Model:                 ARIMA(3, 0, 0)   Log Likelihood                 101.133
-Date:                Tue, 17 Nov 2026   AIC                           -184.266
-Time:                        22:17:01   BIC                           -124.489
+Date:                Thu, 19 Nov 2026   AIC                           -184.266
+Time:                        20:54:01   BIC                           -124.489
 Sample:                    01-01-2019   HQIC                          -163.447
                          - 08-24-2019                                         
 Covariance Type:                  opg                                         
@@ -9210,7 +9210,7 @@ Limitación: falta de variables
 </div><div class="pa-repaso"><span>📚 Repasa:</span> <a class="ref ref-unidad" href="unidad1.html#componentes" title="Abre la Unidad I"><span class="ref-flecha">⇠</span> Unidad I · 3 Componentes de una serie de tiempo</a> <a class="ref ref-unidad" href="unidad3.html#elnino-conclusion" title="Abre la Unidad III"><span class="ref-flecha">⇠</span> Unidad III · 14.5 Paso 7 · La conclusión, como se redacta en el examen</a></div></div></article>
 <div class="fin-seccion"><button class="btn-estudiada" data-seccion="final"><span class="ico">☐</span> Marcar «🏁 Evaluación final con los modelos del temario» como estudiada</button></div></section><section class="seccion" data-seccion="comparacion"><h2 id="comparacion"><span class="h-num">21</span><span class="h-txt">⚖️ Comparación con el primer análisis</span></h2><div class="sec-tiempo">⏱ <b>10 min</b> de estudio</div>
 
-<article class="pastilla pa-verde" id="comp-resultados"><header class="pa-cab"><span class="pa-num">Paso 191</span><span class="pa-estado">✅ Logrado</span><h3 class="pa-titulo">Aplicar · Los mismos días de prueba, dos análisis</h3></header><div class="pa-cuerpo"><div class="pa-sec pa-obj"><div class="pa-et">🎯 Objetivo</div><p>Comparar los resultados de este análisis con los del <a href="lab-viento.html#prueba-resultados">flujo del proyecto</a>, que usó <strong>las mismas fechas</strong> de entrenamiento, validación y prueba, el mismo protocolo (24 horas desde cada medianoche) y además modelos de aprendizaje automático y redes neuronales. Los números del primer análisis se copian de su tabla de prueba.</p>
+<article class="pastilla pa-verde" id="comp-resultados"><header class="pa-cab"><span class="pa-num">Paso 191</span><span class="pa-estado">✅ Logrado</span><h3 class="pa-titulo">Aplicar · Los mismos días de prueba, dos análisis</h3></header><div class="pa-cuerpo"><div class="pa-sec pa-obj"><div class="pa-et">🎯 Objetivo</div><p>Comparar los resultados de este análisis con los del primer análisis (el flujo del proyecto, ya retirado de la guía), que usó <strong>las mismas fechas</strong> de entrenamiento, validación y prueba, el mismo protocolo (24 horas desde cada medianoche) y además modelos de aprendizaje automático y redes neuronales. Los números del primer análisis se copian de su tabla de prueba.</p>
 </div><div class="pa-sec pa-par"><div class="pa-et">⚙️ Parámetros y por qué</div><div class="tabla"><table>
 <thead>
 <tr>

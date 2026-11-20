@@ -536,6 +536,12 @@ a.lab-ds:hover { transform: translateY(-3px); box-shadow: var(--sombra); }
 .w-tabla tr.descartado td { background: var(--coral-f); color: #8a3b3b; }
 .w-tabla tr.reserva td { background: var(--mantequilla-f); }
 .pastilla .widget { margin: 8px 0; }
+.lab-anim-ctr { align-items: flex-end; }
+.lab-anim-ctr .lab-play { align-self: center; min-width: 128px; background: var(--menta-f, #dff4ec); color: #1f6b52; }
+.lab-anim-ctr .lab-play.on { background: var(--mantequilla-f, #fff3cf); color: #7a5a00; }
+.lab-anim-ctr .w-control { flex: 1 1 260px; }
+.lab-anim-txt { min-height: 3.2em; transition: background .3s; }
+.nota-detalle { margin: 8px 0; padding: 8px 12px; border-radius: 10px; background: var(--mantequilla-f); border-left: 4px solid #e0b52a; font-size: .9rem; }
 
 .pa-verde { border-left-color: var(--verde-o); } .pa-verde .pa-cab { background: var(--verde-f); } .pa-verde .pa-estado { color: var(--verde-o); }
 .pa-amarillo { border-left-color: #e0b52a; } .pa-amarillo .pa-cab { background: var(--mantequilla-f); } .pa-amarillo .pa-estado { color: var(--mantequilla-o); }

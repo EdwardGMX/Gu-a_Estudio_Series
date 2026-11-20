@@ -2,7 +2,7 @@
 <span class="etiqueta">🧪 Laboratorio · Siguiendo el temario</span>
 <h1>🌬️ Viento por unidades: el SCADA de 2019, tema por tema</h1>
 <p class="bajada">Los mismos datos SCADA del aerogenerador MV01, ahora en el orden de la materia: primero la limpieza y la exploración, después todo lo de la Unidad I, luego la Unidad II (empezando por los modelos de referencia y los AR y MA solos) y al final la Unidad III. Cada paso usa solo lo visto antes, con muchas gráficas y algunas interactivas.</p>
-<div class="lab-selector"><span>Dataset:</span><a href="lab-manchas-solares.html">☀️ Manchas solares</a><a href="lab-viento.html">🌬️ Viento (flujo del proyecto)</a><a class="activo" href="lab-viento-unidades.html">🌬️ Viento por unidades</a><em>✈️ AirPassengers</em><em>🌋 CO₂</em><a href="laboratorio.html">← Todos los datasets</a></div>
+<div class="lab-selector"><span>Dataset:</span><a href="lab-manchas-solares.html">☀️ Manchas solares</a><a href="lab-proyecto-entrega3.html">⚡ Proyecto entrega 3</a><a class="activo" href="lab-viento-unidades.html">🌬️ Viento por unidades</a><em>✈️ AirPassengers</em><em>🌋 CO₂</em><a href="laboratorio.html">← Todos los datasets</a></div>
 <div class="lab-leyenda"><span style="background:var(--celeste-f);border-color:var(--celeste);color:var(--celeste-o)">🔵 Exploración</span><span style="background:var(--verde-f);border-color:var(--verde);color:var(--verde-o)">✅ Logrado</span><span style="background:var(--mantequilla-f);border-color:var(--mantequilla);color:var(--mantequilla-o)">🟡 Funciona con reservas</span><span style="background:var(--coral-f);border-color:var(--coral);color:var(--coral-o)">❌ Descartado</span></div>
 </section>
 

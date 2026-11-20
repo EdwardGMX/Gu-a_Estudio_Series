@@ -107,13 +107,13 @@ UNIDADES = {
                     "scripts": ["assets/js/lab.js"], "indice_titulo": "Flujo · Manchas solares",
                     "pie": "Laboratorio · Manchas solares. Todo el código se ejecuta al generar la página; las gráficas y tablas muestran sus resultados reales.",
                     "reglas": [(r"\\hat\{y\}", "yhat"), (r"\\omega(?![A-Za-z_])", "omega3"), (r"\\lambda(?![A-Za-z])", "lambda-hp")]},
-    "lab-viento": {"carpeta": "laboratorio/viento", "salida": "lab-viento.html", "numero": "Lab",
-                   "nombre": "Laboratorio · Viento en un parque eólico", "en_nav": False, "nav_activo": "lab",
-                   "titulo_pagina": "Laboratorio · Viento de un aerogenerador (SCADA 2019) — Guía de estudio",
-                   "descripcion": "Flujo completo con datos SCADA reales de un parque eólico en 2019: reparación del archivo, validación temporal, limpieza, imputación, análisis exploratorio, descomposición, estacionariedad, espectro, coherencia, modelos de referencia, SARIMA, Holt–Winters, regresión armónica, Ridge, gradient boosting y redes neuronales, con validación, prueba y diagnóstico de residuos.",
-                   "scripts": ["assets/js/lab.js"], "indice_titulo": "Flujo · Viento (SCADA)",
-                   "pie": "Laboratorio · Viento en un parque eólico. Datos SCADA proporcionados en clase. Todo el código se ejecuta al generar la página; las gráficas y tablas muestran sus resultados reales.",
-                   "reglas": [(r"\\hat\{y\}", "yhat"), (r"\\omega(?![A-Za-z_])", "omega3")]},
+    "lab-entrega3": {"carpeta": "laboratorio/proyecto_entrega3", "salida": "lab-proyecto-entrega3.html", "numero": "Lab",
+                     "nombre": "Laboratorio · Proyecto entrega 3", "en_nav": False, "nav_activo": "lab",
+                     "titulo_pagina": "Laboratorio · Proyecto entrega 3: pronóstico de la energía diaria de MV01 — Guía de estudio",
+                     "descripcion": "La tercera entrega del proyecto explicada paso a paso: energía diaria de la turbina MV01 en 2019, imputación, división 80/20, ADF, ACF/PACF, ARIMA(2,0,0) contra AutoARIMA, descomposición STL y pronóstico por componentes, validación con origen móvil y pronósticos a 73, 1 y 7 días, con gráficas animadas.",
+                     "scripts": ["assets/js/lab.js"], "indice_titulo": "Proyecto · entrega 3",
+                     "pie": "Laboratorio · Proyecto entrega 3. Energía diaria de MV01 calculada con los datos SCADA proporcionados en clase. Todo el código se ejecuta al generar la página; las gráficas y tablas muestran sus resultados reales.",
+                     "reglas": [(r"\\hat\{y\}", "yhat"), (r"\\omega(?![A-Za-z_])", "omega3")]},
     "lab-viento-u": {"carpeta": "laboratorio/viento_temario", "salida": "lab-viento-unidades.html", "numero": "Lab",
                      "nombre": "Laboratorio · Viento por unidades", "en_nav": False, "nav_activo": "lab",
                      "titulo_pagina": "Laboratorio · Viento por unidades: limpieza, EDA y las tres unidades con datos SCADA — Guía de estudio",
@@ -142,9 +142,9 @@ UNIDADES = {
                "pie": "Hojas de repaso · Análisis de Series de Tiempo. Se arman con los resúmenes y formularios de cada unidad."},
 }
 # Las páginas que usan datos de otras (anclas, tiempos, resúmenes, ejercicios) se generan después de ellas
-ORDEN_BUILD = ["u1", "u2", "u3", "lab", "lab-manchas", "lab-viento", "lab-viento-u", "preguntas", "practica", "repaso", "inicio"]
+ORDEN_BUILD = ["u1", "u2", "u3", "lab", "lab-manchas", "lab-entrega3", "lab-viento-u", "preguntas", "practica", "repaso", "inicio"]
 DATOS = RAIZ / "assets" / "datos"
-CORTO = {"u1": "U I", "u2": "U II", "u3": "U III", "lab": "Lab", "lab-manchas": "Lab", "lab-viento": "Lab", "lab-viento-u": "Lab", "preguntas": "Preguntas",
+CORTO = {"u1": "U I", "u2": "U II", "u3": "U III", "lab": "Lab", "lab-manchas": "Lab", "lab-entrega3": "Lab", "lab-viento-u": "Lab", "preguntas": "Preguntas",
          "practica": "Práctica", "repaso": "Repaso", "inicio": "Inicio"}
 
 # Estado de cada pastilla del Laboratorio: clase CSS, icono y etiqueta

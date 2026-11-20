@@ -2,7 +2,7 @@
 @mapa Qué tan cerca llegan los modelos del temario de los de aprendizaje automático del flujo del proyecto, y qué cambió por seguir el orden de las unidades.
 
 :::pastilla verde | Aplicar · Los mismos días de prueba, dos análisis | u2:metricas-ref {#comp-resultados}
-Comparar los resultados de este análisis con los del [flujo del proyecto](lab-viento.html#prueba-resultados), que usó **las mismas fechas** de entrenamiento, validación y prueba, el mismo protocolo (24 horas desde cada medianoche) y además modelos de aprendizaje automático y redes neuronales. Los números del primer análisis se copian de su tabla de prueba.
+Comparar los resultados de este análisis con los del primer análisis (el flujo del proyecto, ya retirado de la guía), que usó **las mismas fechas** de entrenamiento, validación y prueba, el mismo protocolo (24 horas desde cada medianoche) y además modelos de aprendizaje automático y redes neuronales. Los números del primer análisis se copian de su tabla de prueba.
 @@ Parámetros
 | Parámetro | Valor | Por qué |
 |---|---|---|

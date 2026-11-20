@@ -10,7 +10,7 @@ una sola vez, repara lo que se puede reparar y guarda en assets/datos/viento/:
 
 La función leer_linea() es la misma que se explica en el paso de limpieza del Laboratorio.
 
-Uso:  python3 fuente/laboratorio/viento/preparar_datos.py ruta/a/MV01-MV25_2019.txt
+Uso:  python3 fuente/laboratorio/viento_temario/preparar_datos.py ruta/a/MV01-MV25_2019.txt
 """
 import gzip
 import json
